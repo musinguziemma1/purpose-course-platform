@@ -5,6 +5,7 @@ import { NewsletterForm } from "@/components/site/newsletter-form";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
 import { getResources } from "@/db/queries";
+import { resourceFileTarget } from "@/lib/resource-files";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,11 @@ const ICONS = {
 
 export default async function ResourcesPage() {
   const resources = await getResources(20);
-  const featured = resources.filter((resource) => resource.isFeatured);
-  const rest = resources.filter((resource) => !resource.isFeatured);
-  const totalDownloads = resources.reduce((sum, resource) => sum + resource.downloadCount, 0);
+  const available = resources.filter((resource) => resourceFileTarget(resource.fileUrl));
+  const featured = available.filter((resource) => resource.isFeatured);
+  const featuredIds = new Set(featured.map((resource) => resource.id));
+  const rest = resources.filter((resource) => !featuredIds.has(resource.id));
+  const totalDownloads = available.reduce((sum, resource) => sum + resource.downloadCount, 0);
 
   return (
     <>
@@ -40,8 +43,7 @@ export default async function ResourcesPage() {
               Take the work home with you.
             </h1>
             <p className="mt-5 max-w-2xl text-[15.5px] leading-relaxed text-stone-600">
-              Every worksheet, guide and canvas used inside the Purpose Course. They are free to download and free to
-              use with your team, your small group or your class.
+              Practical starter worksheets, guides and planning canvases for your learning journey. Available files are free to download and use with your team, small group or class. More resources will be added as they are prepared.
             </p>
           </div>
           <div className="space-y-3">
@@ -55,8 +57,8 @@ export default async function ResourcesPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
             {[
-              [String(resources.length), "Resources"],
-              [totalDownloads.toLocaleString(), "Downloads"],
+              [String(available.length), "Available resources"],
+              [totalDownloads.toLocaleString(), "Download requests"],
               ["3", "Levels covered"],
               ["Free", "Always"],
             ].map(([value, label]) => (
@@ -89,7 +91,7 @@ export default async function ResourcesPage() {
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="text-[10px] uppercase tracking-[0.12em] text-paper/50">
-                        {resource.fileFormat} · {resource.fileSize}
+                        {resourceFileTarget(resource.fileUrl) ? `${resource.fileFormat} · ${resource.fileSize}` : "Coming soon"}
                       </span>
                     </div>
                     <h3 className="mt-4 font-serif text-2xl leading-snug">{resource.title}</h3>
@@ -98,12 +100,13 @@ export default async function ResourcesPage() {
                       <span className="text-[10.5px] uppercase tracking-[0.12em] text-paper/40">
                         {resource.level ?? "All levels"}
                       </span>
-                      <a
+                      {resourceFileTarget(resource.fileUrl) ? <a
+                        download
                         href={`/api/resources/${resource.slug}/download`}
                         className="inline-flex items-center gap-2 rounded-full bg-gold px-4 py-2 text-[12px] font-semibold text-ink transition-colors hover:bg-paper"
                       >
                         <Download className="h-3.5 w-3.5" /> Download
-                      </a>
+                      </a> : <span className="text-xs text-paper/65">Coming soon</span>}
                     </div>
                   </div>
                 </Reveal>
@@ -130,9 +133,10 @@ export default async function ResourcesPage() {
                       <p className="mt-1.5 flex-1 text-[12.5px] leading-relaxed text-stone-600">{resource.description}</p>
                       <div className="mt-4 flex items-center justify-between border-t border-navy/8 pt-3">
                         <span className="text-[10.5px] uppercase tracking-[0.1em] text-stone-400">
-                          {resource.fileFormat} · {resource.downloadCount} downloads
+                          {resourceFileTarget(resource.fileUrl) ? `${resource.fileFormat} · ${resource.fileSize}` : "Coming soon"}
                         </span>
-                        <a
+                        {resourceFileTarget(resource.fileUrl) ? <a
+                          download
                           href={`/api/resources/${resource.slug}/download`}
                           className={cn(
                             "inline-flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-[0.1em]",
@@ -140,7 +144,7 @@ export default async function ResourcesPage() {
                           )}
                         >
                           <Download className="h-3.5 w-3.5" /> Get it
-                        </a>
+                        </a> : <span className="text-xs text-stone-500">Coming soon</span>}
                       </div>
                     </div>
                   </Reveal>

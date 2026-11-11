@@ -1,0 +1,33 @@
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #122a4d; background: #e8e8e8; font: 10pt/1.45 Arial, sans-serif; }
+.sheet { width: 210mm; height: 297mm; padding: 17mm; position: relative; overflow: hidden; background: white; break-after: page; }
+.sheet:last-child { break-after: auto; }
+.brand { font-size: 9pt; letter-spacing: .18em; font-weight: 700; border-bottom: 2px solid #c9a227; padding-bottom: 9px; }
+.eyebrow { margin: 16px 0 4px; color: #806213; text-transform: uppercase; font-size: 8pt; letter-spacing: .12em; font-weight: 700; }
+h1 { font: bold 27pt/1.1 Georgia, serif; margin: 9px 0 12px; }
+h2 { font: bold 15pt/1.2 Georgia, serif; margin: 18px 0 8px; }
+h3 { font-size: 10pt; margin: 0 0 5px; }
+p { margin: 6px 0; }
+.intro { color: #485564; font-size: 10pt; margin-bottom: 15px; }
+.meta { display: flex; gap: 25px; margin: 15px 0; color: #485564; font-size: 9pt; }
+.meta span { flex: 1; border-bottom: 1px solid #aeb5bc; padding-bottom: 6px; }
+.principle { border-left: 3px solid #c9a227; padding: 8px 12px; margin: 11px 0; background: #faf8f2; }
+.principle p { margin: 2px 0; }
+.question { margin: 15px 0 10px; }
+.lines { height: 55px; background: repeating-linear-gradient(to bottom, transparent 0, transparent 26px, #ccd1d5 26px, #ccd1d5 27px); }
+.lines.tall { height: 82px; }
+.box { border: 1px solid #c9cdd1; border-radius: 5px; padding: 12px; margin: 14px 0; }
+.note { font-size: 8.5pt; color: #5e6771; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 12px 0; font-size: 9pt; }
+th { background: #122a4d; color: white; text-align: left; font-size: 8pt; padding: 9px; }
+td { border: 1px solid #b9c1c9; vertical-align: top; height: 58px; padding: 8px; }
+td.short { height: 38px; }
+.footer { position: absolute; bottom: 11mm; left: 17mm; right: 17mm; border-top: 1px solid #c9cdd1; padding-top: 6px; font-size: 7.5pt; color: #5e6771; display: flex; justify-content: space-between; }
+.step { color: #2f6b40; font-weight: bold; }
+.compact h1 { font-size: 25pt; }
+.compact h2 { margin-top: 14px; font-size: 14pt; }
+.compact td { height: 48px; }
+.compact .box { padding: 10px; margin: 12px 0; }
+@media screen { .sheet { margin: 16px auto; box-shadow: 0 2px 12px #0002; } }
+@media print { body { background: white; } .sheet { margin: 0; } }
