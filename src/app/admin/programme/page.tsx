@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AlertTriangle, ArrowRight, Bell, Building2, CalendarDays, Users } from "lucide-react";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Programme control" };
 
 export default async function AdminProgrammePage() {
+  await requireAdminPage("/admin/programme");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!can(user, "cohort.manage") && !canManagePeople(user)) redirect("/admin");

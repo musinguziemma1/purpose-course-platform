@@ -1,10 +1,11 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { ArrowRight, BookOpen, CalendarClock, FileAudio, FileText, ImageIcon, Layers, Library, Plus, Video } from "lucide-react";
 import { db } from "@/db";
 import { courseLevels } from "@/db/schema";
 import { getAcademyAdminStats, getAcademyTree, getLessonMediaCounts, getLiveSessions } from "@/db/courses";
 import { CourseForm, LevelForm } from "@/components/academy/admin-forms";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { formatDateTime, STATUS_META } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Academy builder" };
 
 export default async function AdminAcademyPage() {
+  await requireAdminPage("/admin/academy");
   const user = await getSessionUser();
   const [levels, tree, stats, media, live] = await Promise.all([
     db.select().from(courseLevels).orderBy(courseLevels.sortOrder),
@@ -20,7 +22,7 @@ export default async function AdminAcademyPage() {
     getLessonMediaCounts(),
     getLiveSessions({ limit: 4 }),
   ]);
-  const canAuthor = canManagePeople(user);
+  const canAuthor = canAuthorAcademy(user);
 
   return (
     <div className="space-y-5">

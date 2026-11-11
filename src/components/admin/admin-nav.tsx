@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 import { cn, initials } from "@/lib/utils";
+import { canAccessAdminPath } from "@/lib/admin-access";
 
 const ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -50,13 +51,12 @@ export function AdminNav({
   pendingReviews,
   reviewMode = false,
 }: {
-  user: { fullName: string; roleName: string; roleSlug: string; email: string };
+  user: { fullName: string; roleName: string; roleSlug: string; email: string; permissions: string[] };
   pendingReviews: number;
   reviewMode?: boolean;
 }) {
   const pathname = usePathname();
-  const canAdminister = ["admin", "super_admin", "platform_admin"].includes(user.roleSlug);
-  const visibleItems = ITEMS.filter((item) => !item.adminOnly || canAdminister);
+  const visibleItems = ITEMS.filter((item) => canAccessAdminPath(user, item.href));
   const activeHref = visibleItems
     .filter((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
@@ -147,6 +147,7 @@ export function AdminNav({
               <p className="text-[10px] uppercase tracking-[0.1em] text-paper/40">{user.roleName}</p>
             </div>
           </div>
+          <Link href="/account" className="mt-2 block text-center text-[11px] text-gold hover:underline">Account &amp; password</Link>
           <form action={logoutAction} className="mt-2.5">
             <button
               type="submit"

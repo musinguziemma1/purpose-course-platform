@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -26,6 +27,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Overview" };
 
 export default async function AdminOverviewPage() {
+  await requireAdminPage("/admin");
   const [user, stats, academy] = await Promise.all([
     getSessionUser(),
     getDashboardStats(),

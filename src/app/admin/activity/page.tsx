@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import { Activity } from "lucide-react";
 import { getActivityLogs } from "@/db/queries";
 import { formatDateTime, relativeTime } from "@/lib/utils";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Activity log" };
 
 export default async function AdminActivityPage() {
+  await requireAdminPage("/admin/activity");
   const logs = await getActivityLogs(80);
 
   return (

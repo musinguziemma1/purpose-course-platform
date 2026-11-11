@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
@@ -33,6 +34,7 @@ const RISK_TONE: Record<string, string> = {
 };
 
 export default async function AdminAnalyticsPage() {
+  await requireAdminPage("/admin/analytics");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!can(user, "analytics.view") && !can(user, "academy.oversee") && !can(user, "people.manage")) redirect("/admin");

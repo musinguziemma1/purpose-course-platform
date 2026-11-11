@@ -1,8 +1,9 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Check, Trash2 } from "lucide-react";
 import { getAssessmentForAdmin } from "@/db/assessments";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canManageAssessments, getSessionUser } from "@/lib/auth";
 import { QuestionForm } from "@/components/academy/assessment-forms";
 import { deleteQuestion } from "@/app/actions/assessments";
 import { formatDateTime } from "@/lib/utils";
@@ -12,10 +13,11 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function AdminAssessmentEditorPage({ params }: Params) {
+  await requireAdminPage("/admin/academy/assessments/[id]");
   const { id } = await params;
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canManagePeople(user)) redirect("/admin/academy");
+  if (!canManageAssessments(user)) redirect("/admin/academy");
 
   const record = await getAssessmentForAdmin(Number(id));
   if (!record) notFound();

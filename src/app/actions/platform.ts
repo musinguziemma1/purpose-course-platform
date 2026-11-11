@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   activityLogs,
+  authSessions,
   cohortMembers,
   cohortWeeks,
   cohorts,
@@ -30,6 +31,7 @@ import { getSessionUser } from "@/lib/auth";
 import { can, normalizeRole, type Permission } from "@/lib/rbac";
 import { notify, savePreference } from "@/lib/notifications";
 import { addThreadReply, communityReadable, findReadableTarget } from "@/db/community-access";
+import { canAssignRole } from "@/lib/admin-access";
 
 export type PlatformState = { ok?: boolean; error?: string; message?: string };
 
@@ -491,7 +493,16 @@ export async function changeRole(formData: FormData) {
   if (!profileId || profileId === user.profileId) return;
   const roleRows = await db.select().from(roles).where(eq(roles.slug, roleSlug)).limit(1);
   if (!roleRows[0]) return;
-  await db.update(profiles).set({ roleId: roleRows[0].id, updatedAt: new Date() }).where(eq(profiles.id, profileId));
+  const [target] = await db.select({ userId: profiles.userId, role: roles.slug }).from(profiles).innerJoin(roles, eq(profiles.roleId, roles.id)).where(eq(profiles.id, profileId)).limit(1);
+  if (!target || !canAssignRole(user, target.role, roleSlug)) return;
+  const changed = await db.transaction(async (tx) => {
+    const [locked] = await tx.select({ role: roles.slug }).from(profiles).innerJoin(roles, eq(profiles.roleId, roles.id)).where(eq(profiles.id, profileId)).for("update", { of: profiles }).limit(1);
+    if (!locked || !canAssignRole(user, locked.role, roleSlug)) return false;
+    await tx.update(profiles).set({ roleId: roleRows[0].id, updatedAt: new Date() }).where(eq(profiles.id, profileId));
+    await tx.delete(authSessions).where(eq(authSessions.userId, target.userId));
+    return true;
+  });
+  if (!changed) return;
   await notify({
     recipientIds: [profileId],
     templateKey: "account.role_changed",
@@ -505,17 +516,6 @@ export async function changeRole(formData: FormData) {
 export async function createOrganization(_prev: PlatformState, formData: FormData): Promise<PlatformState> {
   const user = await guard("org.manage");
   if (!user) return { error: "Organisation management permission required." };
-  const name = String(formData.get("name") ?? "").trim();
-  if (name.length < 3) return { error: "Give the organisation a name." };
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || `org-${Date.now()}`;
-  const [org] = await db
-    .insert(organizations)
-    .values({ name, slug, plan: String(formData.get("plan") ?? "partner"), country: String(formData.get("country") ?? "") || null })
-    .onConflictDoNothing()
-    .returning({ id: organizations.id });
-  if (org) await db.insert(orgMemberships).values({ organizationId: org.id, profileId: user.profileId, roleSlug: "super_admin" }).onConflictDoNothing();
-  await log(user.profileId, "org.created", `Created organisation “${name}”.`);
-  refresh(["/admin/people"]);
-  return { ok: true, message: `Organisation “${name}” created.` };
+  return { error: "This launch supports one organisation. Additional organisations are not enabled." };
 }
 

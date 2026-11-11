@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, discussionThreads, notifications, profiles } from "@/db/schema";
+import { activityLogs, discussionThreads } from "@/db/schema";
 import { canModerateCommunity, getSessionUser } from "@/lib/auth";
 
 export async function toggleThreadFlag(formData: FormData) {
@@ -40,7 +40,7 @@ export async function deleteThread(formData: FormData) {
   if (!user || !canModerateCommunity(user)) return;
   const threadId = Number(formData.get("threadId"));
   if (!threadId) return;
-  await db.delete(discussionThreads).where(eq(discussionThreads.id, threadId));
+  await db.update(discussionThreads).set({ isRemoved: true }).where(eq(discussionThreads.id, threadId));
   await db.insert(activityLogs).values({
     actorId: user.profileId,
     action: "community.delete_thread",
@@ -50,16 +50,4 @@ export async function deleteThread(formData: FormData) {
   });
   revalidatePath("/admin/community");
   revalidatePath("/community");
-}
-
-export async function seedWelcomeNotification() {
-  const rows = await db.select({ id: profiles.id }).from(profiles).limit(1);
-  if (!rows[0]) return;
-  await db.insert(notifications).values({
-    recipientId: rows[0].id,
-    type: "community",
-    title: "Community is live",
-    body: "A new discussion was opened in the Purpose Lounge.",
-    href: "/community",
-  });
 }

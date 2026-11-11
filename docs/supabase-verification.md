@@ -58,8 +58,9 @@ also restored while retaining the newly installed `cn` helper.
 
 These checks verify the database cutover and the flows above. They do not
 certify every application feature or complete the earlier launch audit.
-Existing seeded account passwords still need rotation or account removal
-before public deployment. Other authorization, publishing, assessment,
+The subsequent administrator-hardening work disabled all six seeded logins
+and provisioned the real owner account; see [administrator access](administrator-access.md).
+Other authorization, publishing, assessment,
 dependency and operational findings remain. Supabase Auth, Storage, Realtime,
 hosted backups/PITR and deployment configuration were not migrated or configured
 by this database change.

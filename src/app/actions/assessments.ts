@@ -17,7 +17,7 @@ import {
   profiles,
   roles,
 } from "@/db/schema";
-import { canManagePeople, getSessionUser, isMentor, isStudent } from "@/lib/auth";
+import { canManageAssessments, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { gradeAssessment, issueCertificate, syncCertificates } from "@/db/assessments";
 
 export type AssessmentState = { ok?: boolean; error?: string; message?: string };
@@ -112,7 +112,7 @@ export async function submitAssessmentAttempt(input: {
 
 export async function createAssessment(_prev: AssessmentState, formData: FormData): Promise<AssessmentState> {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return { error: "Administrator access required." };
+  if (!user || !canManageAssessments(user)) return { error: "Administrator access required." };
 
   const kind = String(formData.get("kind") ?? "session");
   const title = String(formData.get("title") ?? "").trim();
@@ -153,7 +153,7 @@ export async function createAssessment(_prev: AssessmentState, formData: FormDat
 
 export async function addQuestion(_prev: AssessmentState, formData: FormData): Promise<AssessmentState> {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return { error: "Administrator access required." };
+  if (!user || !canManageAssessments(user)) return { error: "Administrator access required." };
 
   const assessmentId = Number(formData.get("assessmentId"));
   const prompt = String(formData.get("prompt") ?? "").trim();
@@ -189,7 +189,7 @@ export async function addQuestion(_prev: AssessmentState, formData: FormData): P
 
 export async function deleteQuestion(formData: FormData) {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return;
+  if (!user || !canManageAssessments(user)) return;
   const questionId = Number(formData.get("questionId"));
   const assessmentId = Number(formData.get("assessmentId"));
   if (!questionId) return;
@@ -199,7 +199,7 @@ export async function deleteQuestion(formData: FormData) {
 
 export async function updatePassMark(formData: FormData) {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return;
+  if (!user || !canManageAssessments(user)) return;
   const levelId = Number(formData.get("levelId"));
   const passMark = Math.min(100, Math.max(50, Number(formData.get("passMark") ?? 80)));
   if (!levelId) return;
@@ -216,7 +216,7 @@ export async function updatePassMark(formData: FormData) {
 
 export async function createGroup(_prev: AssessmentState, formData: FormData): Promise<AssessmentState> {
   const user = await getSessionUser();
-  if (!user || (!canManagePeople(user) && !isMentor(user))) return { error: "Mentor or administrator access required." };
+  if (!user || (!canManageAssessments(user) && !isMentor(user))) return { error: "Mentor or administrator access required." };
 
   const name = String(formData.get("name") ?? "").trim();
   const courseId = Number(formData.get("courseId") ?? 0) || null;
@@ -270,7 +270,7 @@ export async function saveGroupSubmission(_prev: AssessmentState, formData: Form
     .from(groupMembers)
     .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.profileId, user.profileId)))
     .limit(1);
-  if (!membership[0] && !canManagePeople(user) && !isMentor(user)) return { error: "You are not a member of that group." };
+  if (!membership[0] && !canManageAssessments(user) && !isMentor(user)) return { error: "You are not a member of that group." };
 
   const existing = await db.select().from(groupSubmissions).where(eq(groupSubmissions.groupId, groupId)).limit(1);
 
@@ -316,7 +316,7 @@ export async function saveGroupSubmission(_prev: AssessmentState, formData: Form
 
 export async function gradeGroupSubmission(_prev: AssessmentState, formData: FormData): Promise<AssessmentState> {
   const user = await getSessionUser();
-  if (!user || (!isMentor(user) && !canManagePeople(user))) return { error: "Mentor access required." };
+  if (!user || (!isMentor(user) && !canManageAssessments(user))) return { error: "Mentor access required." };
   const submissionId = Number(formData.get("submissionId"));
   const score = Math.min(100, Math.max(0, Number(formData.get("score") ?? 0)));
   const feedback = String(formData.get("feedback") ?? "").trim();
@@ -358,7 +358,7 @@ export async function gradeGroupSubmission(_prev: AssessmentState, formData: For
 
 export async function issueCertificateForCourse(_prev: AssessmentState, formData: FormData): Promise<AssessmentState> {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return { error: "Administrator access required." };
+  if (!user || !canManageAssessments(user)) return { error: "Administrator access required." };
   const profileId = String(formData.get("profileId") ?? "");
   const courseId = Number(formData.get("courseId") ?? 0);
   if (!profileId || !courseId) return { error: "Choose a student and course." };

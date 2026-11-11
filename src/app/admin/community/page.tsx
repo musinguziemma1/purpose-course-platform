@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import { Lock, Pin, Trash2 } from "lucide-react";
 import { getThreadsWithPosts } from "@/db/queries";
 import { deleteThread, toggleThreadFlag } from "@/app/actions/community";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Community moderation" };
 
 export default async function AdminCommunityPage() {
+  await requireAdminPage("/admin/community");
   const [threads, user] = await Promise.all([getThreadsWithPosts(40), getSessionUser()]);
   const canModerate = canModerateCommunity(user);
 

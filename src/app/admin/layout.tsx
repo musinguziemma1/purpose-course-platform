@@ -5,10 +5,12 @@ import { and, count, eq, inArray } from "drizzle-orm";
 import { LogOut, ShieldAlert, Sparkles } from "lucide-react";
 import { db } from "@/db";
 import { articles } from "@/db/schema";
-import { getSessionUser, homePathForRole, isStaff } from "@/lib/auth";
+import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { CommandPalette } from "@/components/platform/command-palette";
 import { logoutAction } from "@/app/actions/auth";
+import { canAccessAdminPath, hasAdminWorkspace } from "@/lib/admin-access";
+import { can } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +22,19 @@ export const metadata = {
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/admin");
-  if (!isStaff(user)) redirect(homePathForRole(user.roleSlug));
+  if (!hasAdminWorkspace(user)) redirect(homePathForRole(user.roleSlug));
 
-  const pending = await db
+  const pending = can(user, "content.review") ? await db
     .select({ value: count() })
     .from(articles)
     .where(and(inArray(articles.status, ["submitted", "in_review", "approved"])))
-    .catch(() => [{ value: 0 }]);
+    .catch(() => [{ value: 0 }]) : [{ value: 0 }];
 
   return (
     <div className="min-h-screen bg-[#f6f2e9] lg:flex">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 self-start overflow-hidden bg-ink lg:block">
         <AdminNav
-          user={{ fullName: user.fullName, roleName: user.roleName, roleSlug: user.roleSlug, email: user.email }}
+          user={{ fullName: user.fullName, roleName: user.roleName, roleSlug: user.roleSlug, email: user.email, permissions: user.permissions }}
           pendingReviews={Number(pending[0]?.value ?? 0)}
           reviewMode={Boolean(user.isDemo)}
         />
@@ -87,7 +89,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             ["/admin/community", "Community"],
             ["/admin/activity", "Activity"],
             ["/admin/settings", "Settings"],
-          ].map(([href, label]) => (
+          ].filter(([href]) => canAccessAdminPath(user, href)).map(([href, label]) => (
             <Link
               key={href}
               href={href}

@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, Radio, Trash2, Video } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
@@ -7,7 +8,7 @@ import { getAcademyTree, getLiveSessions } from "@/db/courses";
 import { LiveSessionForm } from "@/components/academy/admin-forms";
 import { deleteLiveSession, setLiveStatus } from "@/app/actions/academy";
 import { ensureRoomCode } from "@/db/conference";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Live sessions" };
 
 export default async function AdminLivePage() {
+  await requireAdminPage("/admin/academy/live");
   const user = await getSessionUser();
   const [sessions, tree, hosts, mentors] = await Promise.all([
     getLiveSessions({ limit: 40 }),
@@ -35,8 +37,8 @@ export default async function AdminLivePage() {
     const code = row.session.roomCode ?? (await ensureRoomCode(row.session.id));
     if (code) roomCodes.set(row.session.id, code);
   }
-  const canSchedule = canManagePeople(user) || Boolean(user && ["mentor", "admin"].includes(user.roleSlug));
-  const hostOptions = canManagePeople(user) ? hosts : mentors;
+  const canSchedule = canAuthorAcademy(user) || Boolean(user && ["mentor", "admin"].includes(user.roleSlug));
+  const hostOptions = canAuthorAcademy(user) ? hosts : mentors;
 
   const counts = {
     scheduled: sessions.filter((row) => row.session.status === "scheduled").length,
@@ -124,7 +126,7 @@ export default async function AdminLivePage() {
                   >
                     Feed
                   </Link>
-                  {canManagePeople(user) ? (
+                  {canAuthorAcademy(user) ? (
                     <form action={deleteLiveSession}>
                       <input type="hidden" name="sessionId" value={row.session.id} />
                       <button

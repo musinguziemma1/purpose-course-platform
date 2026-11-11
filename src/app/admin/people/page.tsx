@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowUpRight, KeyRound, Mail, UserRound } from "lucide-react";
@@ -7,7 +8,7 @@ import { profiles, roles, users } from "@/db/schema";
 import { canManagePeople, getSessionUser, homePathForRole } from "@/lib/auth";
 import { ROLE_CATALOG } from "@/lib/roles";
 import { getOrganizations } from "@/db/learning";
-import { OrgForm } from "@/components/platform/forms";
+import { isDemoEnabled } from "@/lib/demo";
 import { InviteForm, RoleForm } from "@/components/admin/people-forms";
 import { formatDate } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "People & access" };
 
 export default async function AdminPeoplePage() {
+  await requireAdminPage("/admin/people");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!canManagePeople(user)) redirect("/admin");
@@ -147,10 +149,10 @@ export default async function AdminPeoplePage() {
               ))}
               {organizations.length === 0 ? <li className="text-[11.5px] text-stone-500">No organisations yet.</li> : null}
             </ul>
-            <div className="mt-2"><OrgForm /></div>
+            <p className="mt-3 text-xs text-stone-600">This launch serves one organisation. Additional organisations are not enabled.</p>
           </div>
 
-          <div className="admin-card p-5">
+          {isDemoEnabled() ? <div className="admin-card p-5">
             <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
               <KeyRound className="h-3.5 w-3.5 text-gold-dark" /> Demo access
             </p>
@@ -171,7 +173,7 @@ export default async function AdminPeoplePage() {
             <Link href="/login" className="mt-3 inline-flex text-[11px] font-semibold text-gold-dark hover:underline">
               Open one-click sign-in →
             </Link>
-          </div>
+          </div> : null}
         </div>
       </div>
     </div>

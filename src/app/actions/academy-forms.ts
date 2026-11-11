@@ -5,13 +5,13 @@ import { redirect } from "next/navigation";
 import { eq, max } from "drizzle-orm";
 import { db } from "@/db";
 import { courseModules, courses, lessons, liveSessions } from "@/db/schema";
-import { canManagePeople, getSessionUser, isMentor } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser, isMentor } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
 import { makeRoomCode } from "@/db/conference";
 
 async function requireAdmin() {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return null;
+  if (!user || !canAuthorAcademy(user)) return null;
   return user;
 }
 
@@ -158,7 +158,7 @@ export async function saveLessonForm(formData: FormData) {
 
 export async function createLiveSessionForm(formData: FormData) {
   const user = await getSessionUser();
-  if (!user || (!canManagePeople(user) && !isMentor(user))) return;
+  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return;
   const title = t(formData, "title");
   const startsAt = new Date(t(formData, "startsAt"));
   const type = t(formData, "type");
@@ -178,7 +178,7 @@ export async function createLiveSessionForm(formData: FormData) {
     meetingUrl: n(formData, "meetingUrl"),
     groupSize: Number(formData.get("groupSize") ?? 0) || null,
     courseId: t(formData, "courseId") ? Number(formData.get("courseId")) : null,
-    hostId: canManagePeople(user) && t(formData, "hostId") ? t(formData, "hostId") : user.profileId,
+    hostId: canAuthorAcademy(user) && t(formData, "hostId") ? t(formData, "hostId") : user.profileId,
     roomCode: makeRoomCode(),
   });
   refresh();

@@ -17,6 +17,7 @@ import {
 } from "@/db/schema";
 import { canPublishArticles, canReviewArticles, getSessionUser, roleAtLeast } from "@/lib/auth";
 import { estimateReadingMinutes, slugify, type ArticleStatusValue } from "@/lib/utils";
+import { can } from "@/lib/rbac";
 
 export type ActionState = { ok?: boolean; error?: string; message?: string };
 
@@ -132,7 +133,7 @@ async function syncTags(articleId: string, raw: string) {
 
 export async function saveArticle(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await getSessionUser();
-  if (!user || !roleAtLeast(user, "author")) return { error: "You need an editorial account to save articles." };
+  if (!user || (!can(user, "content.write") && !can(user, "content.review"))) return { error: "You need an editorial account to save articles." };
 
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();

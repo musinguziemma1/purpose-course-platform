@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, enrollments, notifications, profiles, roles } from "@/db/schema";
+import { activityLogs, authSessions, enrollments, notifications, profiles, roles } from "@/db/schema";
 import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canAssignRole } from "@/lib/admin-access";
 
 export type PeopleState = { ok?: boolean; error?: string; message?: string };
 
@@ -24,8 +25,17 @@ export async function updateProfileRole(_prev: PeopleState, formData: FormData):
   const profileRows = await db.select().from(profiles).where(eq(profiles.id, profileId)).limit(1);
   const profile = profileRows[0];
   if (!profile) return { error: "Profile not found." };
+  const [currentRole] = await db.select({ slug: roles.slug }).from(roles).where(eq(roles.id, profile.roleId)).limit(1);
+  if (!canAssignRole(user, currentRole?.slug ?? "guest", roleSlug)) return { error: "Only a Super Admin can grant or change Super Admin access." };
 
-  await db.update(profiles).set({ roleId: role.id, updatedAt: new Date() }).where(eq(profiles.id, profileId));
+  const changed = await db.transaction(async (tx) => {
+    const [locked] = await tx.select({ role: roles.slug }).from(profiles).innerJoin(roles, eq(profiles.roleId, roles.id)).where(eq(profiles.id, profileId)).for("update", { of: profiles }).limit(1);
+    if (!locked || !canAssignRole(user, locked.role, roleSlug)) return false;
+    await tx.update(profiles).set({ roleId: role.id, updatedAt: new Date() }).where(eq(profiles.id, profileId));
+    await tx.delete(authSessions).where(eq(authSessions.userId, profile.userId));
+    return true;
+  });
+  if (!changed) return { error: "The account role changed. Refresh before updating it." };
 
   if (roleSlug === "student") {
     const existing = await db.select().from(enrollments).where(eq(enrollments.profileId, profileId)).limit(1);

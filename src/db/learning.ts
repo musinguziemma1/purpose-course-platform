@@ -380,7 +380,9 @@ export async function getOrganizations() {
       memberCount: sql<number>`(select count(*) from ${orgMemberships} where ${orgMemberships.organizationId} = ${organizations.id})::int`,
     })
     .from(organizations)
-    .orderBy(asc(organizations.name));
+    .where(eq(organizations.status, "active"))
+    .orderBy(asc(organizations.id))
+    .limit(1);
 }
 
 export async function getRoleMatrix() {

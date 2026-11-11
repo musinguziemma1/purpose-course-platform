@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -13,6 +14,7 @@ export default async function AdminArticlesPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
+  await requireAdminPage("/admin/articles");
   const params = await searchParams;
   const status = (params.status ?? "all") as ArticleStatusValue | "all";
 

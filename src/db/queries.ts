@@ -29,6 +29,7 @@ import {
 import type { ArticleStatusValue } from "@/lib/utils";
 import { getSessionUser } from "@/lib/auth";
 import { groupReadable, threadReadable } from "@/db/community-access";
+import { can } from "@/lib/rbac";
 
 /* ------------------------------------------------------------------ *
  * Publishing automation — promotes scheduled articles when due
@@ -394,7 +395,10 @@ export async function getAdminArticles(options: {
   limit?: number;
 } = {}) {
   const { status = "all", query, authorId, limit = 100 } = options;
+  const viewer = await getSessionUser();
+  if (!viewer || (!can(viewer, "content.write") && !can(viewer, "content.review"))) return [];
   const filters = [];
+  if (!can(viewer, "content.review")) filters.push(eq(articles.authorId, viewer.profileId));
   if (status !== "all") filters.push(eq(articles.status, status));
   if (authorId) filters.push(eq(articles.authorId, authorId));
   if (query) filters.push(ilike(articles.title, `%${query}%`));
@@ -424,6 +428,8 @@ export async function getAdminArticles(options: {
 }
 
 export async function getArticleForAdmin(id: string) {
+  const viewer = await getSessionUser();
+  if (!viewer || (!can(viewer, "content.write") && !can(viewer, "content.review"))) return null;
   const rows = await db
     .select({
       article: articles,
@@ -435,7 +441,7 @@ export async function getArticleForAdmin(id: string) {
     .from(articles)
     .innerJoin(profiles, eq(articles.authorId, profiles.id))
     .leftJoin(categories, eq(articles.categoryId, categories.id))
-    .where(eq(articles.id, id))
+    .where(and(eq(articles.id, id), can(viewer, "content.review") ? undefined : eq(articles.authorId, viewer.profileId)))
     .limit(1);
   if (!rows[0]) return null;
 
@@ -468,6 +474,7 @@ export async function getArticleForAdmin(id: string) {
     db
       .select({ id: profiles.id, fullName: profiles.fullName, roleId: profiles.roleId })
       .from(profiles)
+      .where(can(viewer, "content.review") ? undefined : eq(profiles.id, viewer.profileId))
       .orderBy(asc(profiles.fullName)),
   ]);
 

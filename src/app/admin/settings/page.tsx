@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import { Lock, ShieldCheck } from "lucide-react";
 import { getSiteSettings, getTeam } from "@/db/queries";
 import { getSessionUser, canManageSettings } from "@/lib/auth";
@@ -45,6 +46,7 @@ const SETTING_GROUPS: { title: string; fields: { key: string; label: string; hin
 ];
 
 export default async function AdminSettingsPage() {
+  await requireAdminPage("/admin/settings");
   const [settings, user, team] = await Promise.all([getSiteSettings(), getSessionUser(), getTeam()]);
   const canEdit = canManageSettings(user);
 

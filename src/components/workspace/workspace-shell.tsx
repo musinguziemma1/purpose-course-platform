@@ -140,6 +140,7 @@ export function WorkspaceShell({
                 <p className="text-[10px] uppercase tracking-[0.1em] text-paper/40">{user.roleName}</p>
               </div>
             </div>
+            <Link href="/account" className="mt-2 block text-center text-[11px] text-gold hover:underline">Account &amp; password</Link>
             <form action={logoutAction} className="mt-2.5">
               <button
                 type="submit"

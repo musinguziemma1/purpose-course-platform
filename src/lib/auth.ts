@@ -1,6 +1,9 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
+import { cache } from "react";
+import { verifyPassword } from "../../scripts/password-security.mjs";
+export { hashPassword, verifyPassword } from "../../scripts/password-security.mjs";
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { authSessions, profiles, roles, users } from "@/db/schema";
@@ -10,21 +13,6 @@ import { isDemoEnabled } from "@/lib/demo";
 
 export const SESSION_COOKIE = "pc_session";
 const SESSION_DAYS = 14;
-
-export function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const derived = scryptSync(password, salt, 64).toString("hex");
-  return `scrypt:${salt}:${derived}`;
-}
-
-export function verifyPassword(password: string, stored: string) {
-  const [scheme, salt, digest] = stored.split(":");
-  if (scheme !== "scrypt" || !salt || !digest) return false;
-  const derived = scryptSync(password, salt, 64);
-  const expected = Buffer.from(digest, "hex");
-  if (expected.length !== derived.length) return false;
-  return timingSafeEqual(derived, expected);
-}
 
 export type SessionUser = {
   profileId: string;
@@ -58,11 +46,8 @@ export async function createSession(userId: string) {
   const isProduction = process.env.NODE_ENV === "production";
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    // Embedded previews are third-party contexts: SameSite=None + Partitioned
-    // keeps the session usable inside an iframe over HTTPS.
-    sameSite: isProduction ? "none" : "lax",
+    sameSite: "lax",
     secure: isProduction,
-    partitioned: isProduction,
     path: "/",
     expires: expiresAt,
   });
@@ -110,7 +95,7 @@ async function findByRoleSlug(roleSlug: string): Promise<SessionUser | null> {
  * workspace routes only, middleware may supply a review identity so the
  * dashboards can be inspected in environments that block third-party cookies.
  */
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
 
@@ -150,7 +135,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   } catch {
     return null;
   }
-}
+});
 
 export async function authenticate(email: string, password: string) {
   const rows = await db
@@ -173,19 +158,27 @@ export function roleAtLeast(user: SessionUser | null, role: string) {
 }
 
 export function canReviewArticles(user: SessionUser | null) {
-  return roleAtLeast(user, "editor");
+  return can(user, "content.review");
 }
 
 export function canPublishArticles(user: SessionUser | null) {
-  return roleAtLeast(user, "editor");
+  return can(user, "content.publish");
 }
 
 export function canManageSettings(user: SessionUser | null) {
-  return roleAtLeast(user, "admin");
+  return can(user, "org.manage");
 }
 
 export function canManagePeople(user: SessionUser | null) {
-  return roleAtLeast(user, "admin");
+  return can(user, "people.manage");
+}
+
+export function canAuthorAcademy(user: SessionUser | null) {
+  return can(user, "academy.author");
+}
+
+export function canManageAssessments(user: SessionUser | null) {
+  return can(user, "academy.assess");
 }
 
 export function canModerateCommunity(user: SessionUser | null) {

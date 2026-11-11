@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { ArrowRight, Inbox } from "lucide-react";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -11,6 +12,7 @@ export const metadata = { title: "Review queue" };
 const QUEUE_ORDER: ArticleStatusValue[] = ["submitted", "in_review", "approved", "revision_requested", "scheduled"];
 
 export default async function ReviewQueuePage() {
+  await requireAdminPage("/admin/reviews");
   const rows = await getAdminArticles({ status: "all", limit: 200 });
   const queued = rows
     .filter((row) => QUEUE_ORDER.includes(row.status as ArticleStatusValue))

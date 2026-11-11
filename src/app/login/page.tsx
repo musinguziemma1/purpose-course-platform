@@ -51,7 +51,7 @@ const ROLE_HIGHLIGHTS: Record<string, string[]> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; password?: string }>;
 }) {
   const user = await getSessionUser();
   if (user) redirect(homePathForRole(user.roleSlug));
@@ -160,6 +160,7 @@ export default async function LoginPage({
             environment.
           </p> : null}
 
+          {params.password === "changed" ? <p role="status" className="mt-4 rounded-lg border border-source/30 bg-source/5 px-3 py-2 text-sm text-source">Your password has been changed. Sign in with your new password.</p> : null}
           {params.error ? (
             <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               That sign-in could not be completed. Try again, or use the manual form below.

@@ -85,6 +85,13 @@ export const DEMO_ACCOUNTS: {
 
 export function homePathForRole(roleSlug: string | null | undefined) {
   switch (roleSlug) {
+    case "author":
+    case "editor":
+      return "/admin/articles";
+    case "moderator":
+      return "/admin/community";
+    case "program_manager":
+      return "/admin/academy";
     case "student":
     case "guest":
       return "/learn";

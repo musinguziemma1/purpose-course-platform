@@ -4,6 +4,7 @@ export const PERMISSIONS = {
   "org.manage": "Manage the organisation, billing and platform settings",
   "people.manage": "Invite people and assign roles",
   "people.view": "See the people directory",
+  "audience.view": "View newsletter subscribers and the audience waitlist",
   "content.write": "Draft and edit articles",
   "content.review": "Review, approve and publish articles",
   "content.publish": "Publish scheduled content",
@@ -53,7 +54,7 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     blurb: "Runs the platform day to day: people, academy, cohorts and settings.",
     workspace: "/admin",
     permissions: [
-      "people.manage", "people.view", "content.review", "content.publish", "academy.author",
+      "org.manage", "people.manage", "people.view", "audience.view", "content.review", "content.publish", "academy.author",
       "academy.assess", "academy.oversee", "cohort.manage", "mentorship.view", "community.moderate",
       "notifications.manage", "analytics.view",
     ],
@@ -77,7 +78,7 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     scope: "organisation",
     blurb: "Editorial desk: reviews, approves, schedules and publishes.",
     workspace: "/admin",
-    permissions: ["people.view", "content.write", "content.review", "content.publish", "community.moderate"],
+    permissions: ["people.view", "audience.view", "content.write", "content.review", "content.publish", "community.moderate"],
   },
   {
     slug: "instructor",

@@ -1,8 +1,9 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, FileAudio, FileText, ImageIcon, PenLine, Plus, Trash2, Video } from "lucide-react";
 import { getAcademyTree } from "@/db/courses";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { deleteCourse, deleteLesson, deleteModule, moveModule } from "@/app/actions/academy";
 
 export const dynamic = "force-dynamic";
@@ -10,11 +11,12 @@ export const dynamic = "force-dynamic";
 type Params = { params: Promise<{ id: string }> };
 
 export default async function AdminCourseEditorPage({ params }: Params) {
+  await requireAdminPage("/admin/academy/courses/[id]");
   const { id } = await params;
   const courseId = Number(id);
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canManagePeople(user)) redirect("/admin/academy");
+  if (!canAuthorAcademy(user)) redirect("/admin/academy");
   if (!courseId) notFound();
 
   const tree = await getAcademyTree({ includeDrafts: true });

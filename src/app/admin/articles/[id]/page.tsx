@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, ExternalLink, History, MessageSquare } from "lucide-react";
@@ -11,6 +12,7 @@ import { formatDateTime, relativeTime, STATUS_META, type ArticleStatusValue } fr
 export const dynamic = "force-dynamic";
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdminPage("/admin/articles/[id]");
   const { id } = await params;
   const [user, record] = await Promise.all([getSessionUser(), getArticleForAdmin(id)]);
   if (!record) notFound();

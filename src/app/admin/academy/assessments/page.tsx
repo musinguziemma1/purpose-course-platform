@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Award, ClipboardCheck, Plus, Target } from "lucide-react";
@@ -5,7 +6,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { assessmentAttempts, courseLevels, courseModules, courses, profiles } from "@/db/schema";
 import { getAssessmentAdminList, getCohortPerformance } from "@/db/assessments";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canManageAssessments, getSessionUser } from "@/lib/auth";
 import { AssessmentForm } from "@/components/academy/assessment-forms";
 import { updatePassMark } from "@/app/actions/assessments";
 import { formatDateTime } from "@/lib/utils";
@@ -15,9 +16,10 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Assessments" };
 
 export default async function AdminAssessmentsPage() {
+  await requireAdminPage("/admin/academy/assessments");
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canManagePeople(user)) redirect("/admin/academy");
+  if (!canManageAssessments(user)) redirect("/admin/academy");
 
   const [list, levels, courseRows, moduleRows, performance, recent] = await Promise.all([
     getAssessmentAdminList(),

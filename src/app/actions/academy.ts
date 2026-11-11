@@ -18,7 +18,7 @@ import {
   profiles,
   roles,
 } from "@/db/schema";
-import { canManagePeople, getSessionUser, isMentor, isStudent } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { syncCertificates } from "@/db/assessments";
 import { slugify } from "@/lib/utils";
 
@@ -53,7 +53,7 @@ async function log(actorId: string | undefined, action: string, description: str
 
 async function requireAdmin() {
   const user = await getSessionUser();
-  if (!user || !canManagePeople(user)) return null;
+  if (!user || !canAuthorAcademy(user)) return null;
   return user;
 }
 
@@ -375,7 +375,7 @@ export async function deleteLesson(formData: FormData) {
 export async function saveLiveSession(_prev: AcademyState, formData: FormData): Promise<AcademyState> {
   const user = await getSessionUser();
   if (!user) return { error: "Sign in required." };
-  if (!canManagePeople(user) && !isMentor(user)) return { error: "Only administrators and mentors can schedule live sessions." };
+  if (!canAuthorAcademy(user) && !isMentor(user)) return { error: "Only administrators and mentors can schedule live sessions." };
 
   const title = text(formData, "title");
   const type = text(formData, "type");
@@ -398,7 +398,7 @@ export async function saveLiveSession(_prev: AcademyState, formData: FormData): 
     meetingUrl: nullable(formData, "meetingUrl"),
     groupSize: Number(formData.get("groupSize") ?? 0) || null,
     courseId: courseIdRaw ? Number(courseIdRaw) : null,
-    hostId: isMentor(user) && !canManagePeople(user) ? user.profileId : text(formData, "hostId") ? String(formData.get("hostId")) : user.profileId,
+    hostId: isMentor(user) && !canAuthorAcademy(user) ? user.profileId : text(formData, "hostId") ? String(formData.get("hostId")) : user.profileId,
   });
 
   await log(user.profileId, "academy.live_created", `Scheduled “${title}” (${type.replace("_", " ")}).`);
@@ -409,7 +409,7 @@ export async function saveLiveSession(_prev: AcademyState, formData: FormData): 
 
 export async function setLiveStatus(formData: FormData) {
   const user = await getSessionUser();
-  if (!user || (!canManagePeople(user) && !isMentor(user))) return;
+  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return;
   const sessionId = Number(formData.get("sessionId"));
   const status = text(formData, "status");
   if (!sessionId || !["scheduled", "live", "ended", "cancelled"].includes(status)) return;
@@ -438,7 +438,7 @@ export async function setLiveStatus(formData: FormData) {
 
 export async function saveRecording(_prev: AcademyState, formData: FormData): Promise<AcademyState> {
   const user = await getSessionUser();
-  if (!user || (!canManagePeople(user) && !isMentor(user))) return { error: "Host access required." };
+  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return { error: "Host access required." };
   const sessionId = Number(formData.get("sessionId"));
   const recordingUrl = nullable(formData, "recordingUrl");
   if (!sessionId || !recordingUrl) return { error: "Paste the recording link first." };

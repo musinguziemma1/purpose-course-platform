@@ -17,7 +17,9 @@
     "db:check:supabase": "node scripts/supabase-db.mjs check",
     "db:verify:supabase": "node scripts/supabase-db.mjs verify",
     "test:database": "node --test scripts/database-config.test.mjs",
-    "test:security": "node --import tsx --test tests/*.test.mjs"
+    "test:security": "node --import tsx --test tests/*.test.mjs",
+    "admin:manage": "node scripts/manage-admin.mjs",
+    "test:passwords": "node --test scripts/password-security.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

@@ -14,13 +14,13 @@ not establish launch readiness.
 
 ## 1. Access control and learner privacy — in progress
 
-- [ ] Enforce permission checks on every administrative page and action.
+- [x] Enforce administrative route permissions before data loading; align navigation and editorial/ownership actions with permissions.
 - [x] Keep members-only communities, removed discussions, and their search results private.
 - [ ] Scope mentor reads and writes to assigned learners and respect assessment sharing consent.
 - [ ] Bind conference signals and controls to the authenticated participant and actual host.
 - [ ] Enforce learner enrollment and publication checks on learning endpoints.
-- [ ] Limit the first launch to one organization; disable additional-organization provisioning (user decision, 11 November 2026).
-- [ ] Replace or disable seeded production credentials with a usable administrator recovery path.
+- [x] Limit the first launch to one organization; disable additional-organization provisioning (user decision, 11 November 2026).
+- [x] Replace or disable seeded production credentials with a usable administrator recovery path.
 - [ ] Prevent stored script injection in structured metadata.
 
 ## 2. Publishing correctness
@@ -59,3 +59,21 @@ Reply insertion and count updates lock the thread and commit atomically. Five
 local PostgreSQL regression tests cover guests, nonmembers, members, moderators,
 removed/archived/orphaned content, and membership revocation. Test fixtures roll
 back without modifying the hosted application database.
+
+Administrator access: the owner account was created for the address supplied by
+the user, and all six seeded logins were deactivated with their sessions revoked.
+The generated password is stored only in an ignored local credentials file.
+Every administrative page now runs a route permission check before loading data;
+authors' article queries also enforce ownership. Numeric role seniority no
+longer grants editorial privileges. Super Admin role changes are restricted to
+Super Admins, with row locking and session revocation. Five role-policy tests
+and two password tests pass. Live Chrome sign-in verified the owner account and
+the HttpOnly/Secure/SameSite=Lax session cookie. See
+[administrator access and recovery](administrator-access.md).
+
+Local Chrome verification confirmed that authors cannot access audience,
+review, activity, settings or academy pages; foreign drafts are absent from
+their lists and direct links return 404. Password changes revoke prior sessions,
+reject the old password and accept the new one. The sign-in form now retains
+the email address after a rejected attempt. Test accounts and drafts were
+removed after verification.

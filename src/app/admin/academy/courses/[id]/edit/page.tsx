@@ -1,8 +1,9 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Plus, Save } from "lucide-react";
 import { getAcademyTree } from "@/db/courses";
-import { canManagePeople, getSessionUser } from "@/lib/auth";
+import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { saveCourseForm, saveLessonForm, saveModuleForm } from "@/app/actions/academy-forms";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +16,13 @@ const area = "w-full rounded-lg border border-navy/15 bg-white px-3 py-2 text-[1
 const submit = "inline-flex h-10 items-center gap-2 rounded-full bg-navy px-5 text-[12px] font-semibold text-paper hover:bg-navy-700";
 
 export default async function CourseEditPage({ params, searchParams }: Params) {
+  await requireAdminPage("/admin/academy/courses/[id]/edit");
   const { id } = await params;
   const query = await searchParams;
   const courseId = Number(id);
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (!canManagePeople(user)) redirect("/admin/academy");
+  if (!canAuthorAcademy(user)) redirect("/admin/academy");
   if (!courseId) notFound();
 
   const tree = await getAcademyTree({ includeDrafts: true });

@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Database, ShieldCheck } from "lucide-react";
@@ -129,6 +130,7 @@ const MODULES: { name: string; tables: { table: string; purpose: string }[] }[] 
 ];
 
 export default async function ArchitecturePage() {
+  await requireAdminPage("/admin/architecture");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!can(user, "analytics.view") && !can(user, "people.manage")) redirect("/admin");

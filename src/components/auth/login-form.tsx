@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { ArrowRight, Loader2, Lock, Mail } from "lucide-react";
 import { loginAction, type LoginState } from "@/app/actions/auth";
 import { Input, Label } from "@/components/ui/field";
@@ -9,6 +9,7 @@ const initialState: LoginState = {};
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
+  const [email, setEmail] = useState("");
 
   return (
     <form action={formAction} className="space-y-4">
@@ -22,6 +23,8 @@ export function LoginForm() {
             type="email"
             required
             autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
             className="pl-10"
           />

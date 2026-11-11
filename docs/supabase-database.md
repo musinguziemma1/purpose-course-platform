@@ -115,9 +115,10 @@ reconciliation and a fresh backup before rolling back after live writes.
 ## Remaining launch work
 
 This database migration does not resolve the broader application audit.
-Rotate or disable all seeded accounts before deployment, then complete record
-authorization, publishing and assessment workflow fixes, dependency updates,
+Seeded logins have since been disabled and the real owner account provisioned.
+Complete record authorization, publishing and assessment workflow fixes, dependency updates,
 operational email, content review, and production restore/deployment checks.
+Track current completion in [launch readiness](launch-readiness.md).
 
 References: [Supabase connection guidance](https://supabase.com/docs/guides/database/connecting-to-postgres),
 [SSL enforcement](https://supabase.com/docs/guides/platform/ssl-enforcement),

@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import { Download, Mail, Users } from "lucide-react";
 import { getEnrollments, getNewsletterPrincipleCounts, getSubscribers } from "@/db/queries";
 import { formatDate } from "@/lib/utils";
@@ -7,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Audience & students" };
 
 export default async function AdminStudentsPage() {
+  await requireAdminPage("/admin/students");
   const [enrollments, subscribers, principleCounts] = await Promise.all([
     getEnrollments(100),
     getSubscribers(200),

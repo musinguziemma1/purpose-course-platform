@@ -13,7 +13,7 @@ import {
   siteSettings,
   subscribers,
 } from "@/db/schema";
-import { getSessionUser, roleAtLeast } from "@/lib/auth";
+import { getSessionUser, canManageSettings } from "@/lib/auth";
 
 export type EnrollState = { ok?: boolean; error?: string; message?: string };
 
@@ -83,7 +83,7 @@ export async function enrollAction(_prev: EnrollState, formData: FormData): Prom
 
 export async function updateSettings(formData: FormData) {
   const user = await getSessionUser();
-  if (!user || !roleAtLeast(user, "admin")) return;
+  if (!user || !canManageSettings(user)) return;
 
   const updates: { key: string; value: string }[] = [];
   for (const [key, value] of formData.entries()) {

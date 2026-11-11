@@ -6,6 +6,10 @@ Purpose Course is an **enterprise-grade digital education and personal developme
 
 The platform combines **structured digital learning, assessments, personal development journeys, mentorship, community, collaboration, analytics, and intelligent learning experiences** within a scalable digital ecosystem.
 
+Implementation and launch verification are tracked in [the launch readiness checklist](docs/launch-readiness.md).
+For the current database and owner-account setup, see [Supabase operation](docs/supabase-database.md)
+and [administrator access and recovery](docs/administrator-access.md).
+
 Purpose Course is built around five foundational principles:
 
 > **Identity → Source → Purpose → Potential → Destiny**

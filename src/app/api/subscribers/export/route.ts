@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { canReviewArticles, getSessionUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 import { getSubscribers } from "@/db/queries";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await getSessionUser();
-  if (!user || !canReviewArticles(user)) {
+  if (!user || !can(user, "audience.view")) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 

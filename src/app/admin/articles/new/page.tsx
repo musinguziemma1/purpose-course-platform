@@ -1,9 +1,11 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ArticleForm } from "@/components/admin/article-form";
 import { getCategoryOptions } from "@/app/actions/publishing";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { canReviewArticles, getSessionUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +13,11 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "New article" };
 
 export default async function NewArticlePage() {
+  await requireAdminPage("/admin/articles/new");
   const user = await getSessionUser();
   const [categories, authors] = await Promise.all([
     getCategoryOptions(),
-    db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles),
+    db.select({ id: profiles.id, fullName: profiles.fullName }).from(profiles).where(canReviewArticles(user) ? undefined : eq(profiles.id, user!.profileId)),
   ]);
 
   return (

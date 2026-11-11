@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Bell, Mail, CheckCheck, Send, Clock } from "lucide-react";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Notifications" };
 
 export default async function AdminNotificationsPage() {
+  await requireAdminPage("/admin/notifications");
   const user = await getSessionUser();
   if (!user) redirect("/login");
   if (!can(user, "notifications.manage") && !can(user, "people.manage")) redirect("/admin");
