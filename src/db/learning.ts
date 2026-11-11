@@ -1,5 +1,7 @@
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { getSessionUser } from "@/lib/auth";
+import { communityReadable, threadReadable } from "@/db/community-access";
 import {
   cohortMembers,
   cohortWeeks,
@@ -129,6 +131,8 @@ export async function getMentors() {
  * ------------------------------------------------------------------ */
 
 export async function getCommunities(profileId?: string) {
+  const viewer = await getSessionUser();
+  profileId = viewer?.profileId;
   const rows = await db
     .select({
       community: communities,
@@ -139,13 +143,15 @@ export async function getCommunities(profileId?: string) {
         : sql<boolean>`false`,
     })
     .from(communities)
-    .where(eq(communities.isArchived, false))
+    .where(communityReadable(viewer))
     .orderBy(asc(communities.sortOrder));
   return rows;
 }
 
 export async function getCommunity(slug: string, profileId?: string) {
-  const rows = await db.select().from(communities).where(eq(communities.slug, slug)).limit(1);
+  const viewer = await getSessionUser();
+  profileId = viewer?.profileId;
+  const rows = await db.select().from(communities).where(and(eq(communities.slug, slug), communityReadable(viewer))).limit(1);
   const community = rows[0];
   if (!community) return null;
 
@@ -156,7 +162,7 @@ export async function getCommunity(slug: string, profileId?: string) {
       lastPostAt: sql<Date | null>`(select max(${discussionPosts.createdAt}) from ${discussionPosts} where ${discussionPosts.threadId} = ${discussionThreads.id})`,
     })
     .from(discussionThreads)
-    .where(and(eq(discussionThreads.communityId, community.id), eq(discussionThreads.isRemoved, false)))
+    .where(and(eq(discussionThreads.communityId, community.id), threadReadable(viewer)))
     .orderBy(desc(discussionThreads.isPinned), desc(discussionThreads.lastActivityAt))
     .limit(30);
 
@@ -183,6 +189,8 @@ export async function getCommunity(slug: string, profileId?: string) {
 }
 
 export async function getThread(threadId: number, profileId?: string) {
+  const viewer = await getSessionUser();
+  profileId = viewer?.profileId;
   const rows = await db
     .select({
       thread: discussionThreads,
@@ -195,7 +203,7 @@ export async function getThread(threadId: number, profileId?: string) {
     })
     .from(discussionThreads)
     .leftJoin(communities, eq(discussionThreads.communityId, communities.id))
-    .where(eq(discussionThreads.id, threadId))
+    .where(and(eq(discussionThreads.id, threadId), threadReadable(viewer)))
     .limit(1);
   if (!rows[0]) return null;
 

@@ -27,6 +27,8 @@ import {
   users,
 } from "@/db/schema";
 import type { ArticleStatusValue } from "@/lib/utils";
+import { getSessionUser } from "@/lib/auth";
+import { groupReadable, threadReadable } from "@/db/community-access";
 
 /* ------------------------------------------------------------------ *
  * Publishing automation — promotes scheduled articles when due
@@ -299,10 +301,11 @@ export type ThreadSummary = {
 };
 
 export async function getDiscussionGroups() {
-  return db.select().from(discussionGroups).orderBy(asc(discussionGroups.id));
+  return db.select().from(discussionGroups).where(groupReadable(await getSessionUser())).orderBy(asc(discussionGroups.id));
 }
 
 export async function getThreads(limit = 8): Promise<ThreadSummary[]> {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({
       id: discussionThreads.id,
@@ -318,6 +321,7 @@ export async function getThreads(limit = 8): Promise<ThreadSummary[]> {
     })
     .from(discussionThreads)
     .leftJoin(discussionGroups, eq(discussionThreads.groupId, discussionGroups.id))
+    .where(threadReadable(viewer))
     .orderBy(desc(discussionThreads.isPinned), desc(discussionThreads.lastActivityAt))
     .limit(limit);
 
@@ -326,7 +330,7 @@ export async function getThreads(limit = 8): Promise<ThreadSummary[]> {
   const posts = await db
     .select()
     .from(discussionPosts)
-    .where(inArray(discussionPosts.threadId, threadIds))
+    .where(and(inArray(discussionPosts.threadId, threadIds), eq(discussionPosts.isRemoved, false)))
     .orderBy(desc(discussionPosts.createdAt));
 
   const latestByThread = new Map<number, { authorName: string; body: string; createdAt: Date }>();
@@ -349,12 +353,12 @@ export async function getThreadsWithPosts(limit = 6) {
   const posts = await db
     .select()
     .from(discussionPosts)
-    .where(
+    .where(and(eq(discussionPosts.isRemoved, false),
       inArray(
         discussionPosts.threadId,
         threads.map((thread) => thread.id),
       ),
-    )
+    ))
     .orderBy(asc(discussionPosts.createdAt));
   return threads.map((thread) => ({
     ...thread,

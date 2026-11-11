@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, discussionPosts, discussionThreads } from "@/db/schema";
+import { activityLogs } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
+import { addThreadReply } from "@/db/community-access";
+import { can } from "@/lib/rbac";
 
 export async function POST(request: Request) {
+  const user = await getSessionUser();
+  if (!user || !can(user, "community.post")) return NextResponse.json({ error: "Sign in to reply." }, { status: 401 });
   let payload: { threadId?: number; body?: string; authorName?: string };
   try {
     payload = await request.json();
@@ -21,25 +24,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Write a short response before posting." }, { status: 422 });
   }
 
-  const threadRows = await db.select().from(discussionThreads).where(eq(discussionThreads.id, threadId)).limit(1);
-  const thread = threadRows[0];
+  const thread = await addThreadReply(threadId, body, user);
   if (!thread) return NextResponse.json({ ok: false, error: "Thread not found." }, { status: 404 });
-  if (thread.isLocked) return NextResponse.json({ ok: false, error: "This thread is locked." }, { status: 423 });
-
-  const user = await getSessionUser();
-  const authorName = user?.fullName ?? ((payload.authorName ?? "").trim() || "Community member");
-
-  await db.insert(discussionPosts).values({
-    threadId,
-    authorName,
-    authorId: user?.profileId ?? null,
-    body: body.slice(0, 1600),
-  });
-
-  await db
-    .update(discussionThreads)
-    .set({ replyCount: sql`${discussionThreads.replyCount} + 1`, lastActivityAt: new Date() })
-    .where(eq(discussionThreads.id, threadId));
+  const authorName = user.fullName;
 
   await db.insert(activityLogs).values({
     action: "community.reply",

@@ -1,5 +1,7 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { getSessionUser } from "@/lib/auth";
+import { threadReadable } from "@/db/community-access";
 import {
   articles,
   cohorts,
@@ -46,6 +48,7 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
   if (term.length < 2) return { query: term, groups: GROUPS.map((group) => ({ ...group, hits: [] })), total: 0 };
 
   const needle = `%${term}%`;
+  const viewer = await getSessionUser();
   const limit = options.limit ?? 6;
   const include = (type: SearchType) => !options.types || options.types.length === 0 || options.types.includes(type);
 
@@ -77,7 +80,7 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
           .from(lessons)
           .innerJoin(courseModules, eq(lessons.moduleId, courseModules.id))
           .innerJoin(courses, eq(courseModules.courseId, courses.id))
-          .where(and(eq(lessons.status, "published"), or(ilike(lessons.title, needle), ilike(lessons.summary, needle), ilike(lessons.body, needle))))
+          .where(and(eq(lessons.status, "published"), eq(courses.status, "published"), or(ilike(lessons.title, needle), ilike(lessons.summary, needle))))
           .limit(limit)
       : Promise.resolve([]),
     include("resource")
@@ -91,14 +94,14 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
       ? db
           .select({ id: discussionThreads.id, title: discussionThreads.title, prompt: discussionThreads.prompt, authorName: discussionThreads.authorName })
           .from(discussionThreads)
-          .where(and(eq(discussionThreads.isRemoved, false), or(ilike(discussionThreads.title, needle), ilike(discussionThreads.prompt, needle))))
+          .where(and(threadReadable(viewer), or(ilike(discussionThreads.title, needle), ilike(discussionThreads.prompt, needle))))
           .limit(limit)
       : Promise.resolve([]),
     include("person")
       ? db
           .select({ id: profiles.id, fullName: profiles.fullName, title: profiles.title, bio: profiles.bio })
           .from(profiles)
-          .where(or(ilike(profiles.fullName, needle), ilike(profiles.title, needle), ilike(profiles.bio, needle)))
+          .where(and(sql`exists (select 1 from ${articles} where ${articles.authorId} = ${profiles.id} and ${articles.status} = 'published')`, or(ilike(profiles.fullName, needle), ilike(profiles.title, needle), ilike(profiles.bio, needle))))
           .limit(limit)
       : Promise.resolve([]),
     include("event")
@@ -197,13 +200,14 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
 }
 
 export async function getSearchFacets() {
+  const viewer = await getSessionUser();
   const rows = await db.execute(sql`
     select 'article' as type, count(*)::int as value from articles where status = 'published'
     union all select 'course', count(*)::int from courses where status = 'published'
     union all select 'lesson', count(*)::int from lessons where status = 'published'
     union all select 'resource', count(*)::int from resources
-    union all select 'discussion', count(*)::int from discussion_threads where is_removed = false
-    union all select 'person', count(*)::int from profiles
+    union all select 'discussion', count(*)::int from discussion_threads where ${threadReadable(viewer)}
+    union all select 'person', count(*)::int from profiles where exists (select 1 from articles where articles.author_id = profiles.id and articles.status = 'published')
     union all select 'event', count(*)::int from live_sessions
   `);
   return (rows.rows as { type: SearchType; value: number }[]).map((row) => ({ ...row, value: Number(row.value) }));

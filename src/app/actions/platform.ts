@@ -29,6 +29,7 @@ import {
 import { getSessionUser } from "@/lib/auth";
 import { can, normalizeRole, type Permission } from "@/lib/rbac";
 import { notify, savePreference } from "@/lib/notifications";
+import { addThreadReply, communityReadable, findReadableTarget } from "@/db/community-access";
 
 export type PlatformState = { ok?: boolean; error?: string; message?: string };
 
@@ -185,13 +186,15 @@ export async function toggleCommunityMembership(formData: FormData) {
   if (!user) return;
   const communityId = Number(formData.get("communityId"));
   if (!communityId) return;
+  const [community] = await db.select().from(communities).where(and(eq(communities.id, communityId), communityReadable(user))).limit(1);
+  if (!community) return;
   const existing = await db
     .select()
     .from(communityMembers)
     .where(and(eq(communityMembers.communityId, communityId), eq(communityMembers.profileId, user.profileId)))
     .limit(1);
   if (existing[0]) await db.delete(communityMembers).where(eq(communityMembers.id, existing[0].id));
-  else await db.insert(communityMembers).values({ communityId, profileId: user.profileId });
+  else if (community.visibility === "public") await db.insert(communityMembers).values({ communityId, profileId: user.profileId }).onConflictDoNothing();
   revalidatePath("/community");
 }
 
@@ -204,6 +207,8 @@ export async function postThread(_prev: PlatformState, formData: FormData): Prom
   const threadType = String(formData.get("threadType") ?? "discussion");
   if (!communityId || title.length < 8) return { error: "Give the discussion a clear title." };
   if (prompt.length < 12) return { error: "Add context so others can respond well." };
+  const [allowedCommunity] = await db.select().from(communities).where(and(eq(communities.id, communityId), communityReadable(user))).limit(1);
+  if (!allowedCommunity) return { error: "Community not found or membership required." };
 
   await db.insert(discussionThreads).values({
     communityId,
@@ -227,14 +232,8 @@ export async function replyToThread(_prev: PlatformState, formData: FormData): P
   const body = String(formData.get("body") ?? "").trim();
   if (!threadId || body.length < 2) return { error: "Write a reply first." };
 
-  await db.insert(discussionPosts).values({ threadId, authorName: user.fullName, authorId: user.profileId, body: body.slice(0, 2000) });
-  await db
-    .update(discussionThreads)
-    .set({ replyCount: sql`${discussionThreads.replyCount} + 1`, lastActivityAt: new Date() })
-    .where(eq(discussionThreads.id, threadId));
-
-  const threadRows = await db.select().from(discussionThreads).where(eq(discussionThreads.id, threadId)).limit(1);
-  const thread = threadRows[0];
+  const thread = await addThreadReply(threadId, body, user);
+  if (!thread) return { error: "Discussion unavailable, locked, or membership required." };
   if (thread?.authorId && thread.authorId !== user.profileId) {
     await notify({
       recipientIds: [thread.authorId],
@@ -257,6 +256,7 @@ export async function toggleReaction(formData: FormData) {
   const emoji = String(formData.get("emoji") ?? "amen");
   const path = String(formData.get("path") ?? "/community");
   if (!targetId) return;
+  if (!(await findReadableTarget(targetType, targetId, user))) return;
 
   const existing = await db
     .select()
@@ -284,6 +284,7 @@ export async function reportContent(_prev: PlatformState, formData: FormData): P
   const reason = String(formData.get("reason") ?? "").trim();
   const detail = String(formData.get("detail") ?? "").trim() || null;
   if (!targetId || reason.length < 3) return { error: "Choose a reason for the report." };
+  if (!(await findReadableTarget(targetType, targetId, user))) return { error: "Content not available." };
 
   await db.insert(contentReports).values({ targetType, targetId, reporterId: user.profileId, reason, detail });
   await log(user.profileId, "community.reported", `Reported ${targetType} #${targetId} (${reason}).`);
