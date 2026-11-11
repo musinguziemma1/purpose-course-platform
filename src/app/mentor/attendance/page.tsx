@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CalendarCheck2, Clock, Users } from "lucide-react";
 import { db } from "@/db";
 import { profiles, roles } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
+import { learnerReadable } from "@/db/learner-access";
 import { getAttendanceForSession, getSessionsForAttendance } from "@/db/learning";
 import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
@@ -21,7 +22,7 @@ export default async function MentorAttendancePage() {
     .select({ id: profiles.id, fullName: profiles.fullName })
     .from(profiles)
     .innerJoin(roles, eq(profiles.roleId, roles.id))
-    .where(inArray(roles.slug, ["student"]));
+    .where(and(inArray(roles.slug, ["student"]), learnerReadable(profiles.id, user)));
 
   const withAttendance = sessions[0] ? await getAttendanceForSession(sessions[0].session.id) : [];
   const totalMarked = sessions.reduce((sum, row) => sum + Number(row.marked), 0);

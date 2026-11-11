@@ -1,5 +1,7 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { getSessionUser } from "@/lib/auth";
+import { canReadLearner, instrumentReadable } from "@/db/learner-access";
 import {
   achievements,
   articles,
@@ -269,6 +271,8 @@ export async function getProgrammeAnalytics() {
  * ------------------------------------------------------------------ */
 
 export async function getLearnerAnalytics(profileId: string) {
+  const viewer = await getSessionUser();
+  if (!(await canReadLearner(profileId, viewer))) throw new Error("Learner access required.");
   const [progressRows, attemptRows, goalRows, reflectionRows, achievementRows, certificateRows, instrumentRows, eventRows] = await Promise.all([
     db
       .select({ moduleCode: courseModules.sessionCode, lessonId: lessons.id, status: lessonProgress.status })
@@ -290,7 +294,7 @@ export async function getLearnerAnalytics(profileId: string) {
       .innerJoin(achievements, eq(learnerAchievements.achievementId, achievements.id))
       .where(eq(learnerAchievements.profileId, profileId)),
     db.select({ value: sql<number>`count(*)::int` }).from(certificates).where(eq(certificates.profileId, profileId)),
-    db.select().from(instrumentResults).where(eq(instrumentResults.profileId, profileId)).orderBy(desc(instrumentResults.createdAt)).limit(8),
+    db.select().from(instrumentResults).where(and(eq(instrumentResults.profileId, profileId), instrumentReadable(viewer))).orderBy(desc(instrumentResults.createdAt)).limit(8),
     db.select({ value: sql<number>`count(*)::int` }).from(learningEvents).where(eq(learningEvents.profileId, profileId)),
   ]);
 

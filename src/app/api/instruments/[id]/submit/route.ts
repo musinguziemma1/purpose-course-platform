@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, profiles, roles } from "@/db/schema";
+import { activityLogs, mentorAssignments, profiles, users } from "@/db/schema";
 import { submitInstrument } from "@/db/engine";
 import { getSessionUser } from "@/lib/auth";
 import { ensureDemoAccounts } from "@/db/accounts";
 import { notify } from "@/lib/notifications";
+import { can } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     user = await getSessionUser();
   }
   if (!user) return NextResponse.json({ error: "Sign in to save your assessment." }, { status: 401 });
+  if (!can(user, "instrument.take")) return NextResponse.json({ error: "Learner assessment access required." }, { status: 403 });
+  if (!payload || !Array.isArray(payload.responses) || payload.responses.length > 500 || !payload.responses.every((row) => row && Number.isInteger(row.itemId) && Number.isInteger(row.rawValue) && row.rawValue >= 1 && row.rawValue <= 5)) return NextResponse.json({ error: "Choose a valid response for each statement." }, { status: 422 });
 
   const result = await submitInstrument({
     instrumentId,
     profileId: user.profileId,
-    consentGiven: Boolean(payload.consentGiven),
-    sharedWithMentor: payload.sharedWithMentor !== false,
+    consentGiven: payload.consentGiven === true,
+    sharedWithMentor: payload.sharedWithMentor === true,
     responses: (payload.responses ?? []).map((row) => ({ itemId: Number(row.itemId), rawValue: Number(row.rawValue) })),
   });
 
@@ -47,15 +50,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     action: "instrument.completed",
     entityType: "instrument",
     entityId: String(instrumentId),
-    description: `Completed “${result.instrument.title}” v${result.instrument.version} — score ${result.result.overallScore} (${result.result.bandLabel}).`,
+    description: `Completed “${result.instrument.title}” v${result.instrument.version}.`,
   });
 
-  if (payload.sharedWithMentor !== false) {
+  if (payload.sharedWithMentor === true) {
     const mentors = await db
       .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"));
+      .from(mentorAssignments)
+      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
     if (mentors.length) {
       await notify({
         recipientIds: mentors.map((mentor) => mentor.id),

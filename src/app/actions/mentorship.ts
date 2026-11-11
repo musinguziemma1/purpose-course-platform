@@ -13,6 +13,7 @@ import {
   roles,
 } from "@/db/schema";
 import { getSessionUser, isMentor } from "@/lib/auth";
+import { canCoachLearner, coachingReadable, learnerReadable } from "@/db/learner-access";
 
 export type MentorState = { ok?: boolean; error?: string; message?: string };
 
@@ -40,7 +41,7 @@ export async function respondToRequest(formData: FormData) {
   const decision = String(formData.get("decision"));
   if (!sessionId || !["accept", "decline"].includes(decision)) return;
 
-  const rows = await db.select().from(coachingSessions).where(eq(coachingSessions.id, sessionId)).limit(1);
+  const rows = await db.select().from(coachingSessions).where(and(eq(coachingSessions.id, sessionId), coachingReadable(user))).limit(1);
   const session = rows[0];
   if (!session) return;
 
@@ -82,7 +83,7 @@ export async function completeCoachingSession(_prev: MentorState, formData: Form
   if (!sessionId) return { error: "Missing session." };
   if (notes.length < 20) return { error: "Add session notes (at least 20 characters) so the student has a record." };
 
-  const rows = await db.select().from(coachingSessions).where(eq(coachingSessions.id, sessionId)).limit(1);
+  const rows = await db.select().from(coachingSessions).where(and(eq(coachingSessions.id, sessionId), coachingReadable(user))).limit(1);
   const session = rows[0];
   if (!session) return { error: "That session no longer exists." };
   if (user.roleSlug === "mentor" && session.mentorId !== user.profileId) {
@@ -127,7 +128,7 @@ export async function reviewSubmission(_prev: MentorState, formData: FormData): 
     .select({ submission: assignmentSubmissions, assignment: assignments })
     .from(assignmentSubmissions)
     .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
-    .where(eq(assignmentSubmissions.id, submissionId))
+    .where(and(eq(assignmentSubmissions.id, submissionId), learnerReadable(assignmentSubmissions.profileId, user)))
     .limit(1);
   const record = rows[0];
   if (!record) return { error: "That submission no longer exists." };
@@ -171,20 +172,12 @@ export async function scheduleFollowUp(_prev: MentorState, formData: FormData): 
   const focus = String(formData.get("focus") ?? "").trim();
   const scheduledForRaw = String(formData.get("scheduledFor") ?? "");
   if (!studentId) return { error: "Choose a mentee." };
+  if (!(await canCoachLearner(studentId, user))) return { error: "That learner is not assigned to you." };
   if (title.length < 6) return { error: "Add a session title." };
   const scheduledAt = new Date(scheduledForRaw);
   if (!scheduledForRaw || Number.isNaN(scheduledAt.getTime())) return { error: "Choose a valid date and time." };
 
-  let mentorId = user.profileId;
-  if (user.roleSlug !== "mentor") {
-    const mentors = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"))
-      .limit(1);
-    mentorId = mentors[0]?.id ?? user.profileId;
-  }
+  const mentorId = user.profileId;
 
   const studentProfile = await db.select().from(profiles).where(eq(profiles.id, studentId)).limit(1);
   if (!studentProfile[0]) return { error: "That student could not be found." };

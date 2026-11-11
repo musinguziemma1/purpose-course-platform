@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { assignmentSubmissions, coachingSessions } from "@/db/schema";
 import { getSessionUser, homePathForRole, isMentor } from "@/lib/auth";
 import { WorkspaceShell, type WorkspaceNavItem } from "@/components/workspace/workspace-shell";
+import { coachingReadable, learnerReadable } from "@/db/learner-access";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,10 @@ export default async function MentorLayout({ children }: { children: ReactNode }
       .where(
         and(
           eq(coachingSessions.status, "requested"),
-          user.roleSlug === "mentor" ? eq(coachingSessions.mentorId, user.profileId) : undefined,
+          coachingReadable(user),
         ),
       ),
-    db.select({ value: count() }).from(assignmentSubmissions).where(eq(assignmentSubmissions.status, "submitted")),
+    db.select({ value: count() }).from(assignmentSubmissions).where(and(eq(assignmentSubmissions.status, "submitted"), learnerReadable(assignmentSubmissions.profileId, user))),
   ]);
 
   const nav: WorkspaceNavItem[] = [

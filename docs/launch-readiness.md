@@ -16,7 +16,7 @@ not establish launch readiness.
 
 - [x] Enforce administrative route permissions before data loading; align navigation and editorial/ownership actions with permissions.
 - [x] Keep members-only communities, removed discussions, and their search results private.
-- [ ] Scope mentor reads and writes to assigned learners and respect assessment sharing consent.
+- [x] Scope mentor reads and writes to assigned learners and respect assessment sharing consent.
 - [ ] Bind conference signals and controls to the authenticated participant and actual host.
 - [ ] Enforce learner enrollment and publication checks on learning endpoints.
 - [x] Limit the first launch to one organization; disable additional-organization provisioning (user decision, 11 November 2026).
@@ -41,7 +41,7 @@ not establish launch readiness.
 ## 4. Production operations and experience
 
 - [ ] Resolve dependency vulnerabilities and validate upgrades.
-- [ ] Deliver invitations and operational email through a configured provider.
+- [ ] Deliver invitations and operational email through Resend (selected by the user); configure a verified sender and API key.
 - [ ] Expose the staff contact inbox with appropriate access checks.
 - [ ] Correct analytics definitions and record real learning events.
 - [ ] Fix the identified mobile overflow, form labels, and missing public links.
@@ -77,3 +77,13 @@ their lists and direct links return 404. Password changes revoke prior sessions,
 reject the old password and accept the new one. The sign-in form now retains
 the email address after a rejected attempt. Test accounts and drafts were
 removed after verification.
+
+Mentor privacy: learner goals, notes, flags, attendance, coaching, group review,
+assessment results and analytics now enforce active assignment or programme
+oversight. Instrument results require explicit consent and sharing, including
+summary counts and notifications. Six PostgreSQL regression tests cover these
+scopes. Local Chrome/API verification confirmed that private results never reach
+mentor HTML, shared results notify only the assigned mentor, a forged goal update
+is rejected without changing the record, and revoked assignments immediately
+lose access. All 16 authorization tests, type checking, lint and the production
+build passed. Browser fixtures were removed afterward.

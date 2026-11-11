@@ -18,6 +18,7 @@ import {
   roles,
 } from "@/db/schema";
 import { canManageAssessments, getSessionUser, isMentor, isStudent } from "@/lib/auth";
+import { canCoachLearner, groupReviewable } from "@/db/learner-access";
 import { gradeAssessment, issueCertificate, syncCertificates } from "@/db/assessments";
 
 export type AssessmentState = { ok?: boolean; error?: string; message?: string };
@@ -223,6 +224,7 @@ export async function createGroup(_prev: AssessmentState, formData: FormData): P
   const memberIds = formData.getAll("memberIds").map((value) => String(value)).filter(Boolean).slice(0, 8);
   if (name.length < 3) return { error: "Give the group a name." };
   if (memberIds.length < 2) return { error: "Select at least two students for collaborative work." };
+  for (const memberId of memberIds) if (!(await canCoachLearner(memberId, user))) return { error: "A selected learner is not assigned to you." };
 
   const [group] = await db
     .insert(courseGroups)
@@ -321,13 +323,14 @@ export async function gradeGroupSubmission(_prev: AssessmentState, formData: For
   const score = Math.min(100, Math.max(0, Number(formData.get("score") ?? 0)));
   const feedback = String(formData.get("feedback") ?? "").trim();
   if (!submissionId) return { error: "Missing submission." };
+  if (!Number.isFinite(score)) return { error: "Choose a valid score." };
   if (feedback.length < 15) return { error: "Add informative feedback (15+ characters) alongside the score." };
 
   const rows = await db
     .select({ submission: groupSubmissions, group: courseGroups })
     .from(groupSubmissions)
     .innerJoin(courseGroups, eq(groupSubmissions.groupId, courseGroups.id))
-    .where(eq(groupSubmissions.id, submissionId))
+    .where(and(eq(groupSubmissions.id, submissionId), groupReviewable(user)))
     .limit(1);
   const record = rows[0];
   if (!record) return { error: "Submission not found." };

@@ -15,8 +15,11 @@ import {
   lessonProgress,
   liveSessions,
   profiles,
+  roles,
 } from "@/db/schema";
 import { getAcademyTree } from "@/db/courses";
+import { getSessionUser } from "@/lib/auth";
+import { groupReviewable, learnerReadable } from "@/db/learner-access";
 
 /* ------------------------------------------------------------------ *
  * Assessment catalogue
@@ -409,6 +412,7 @@ export type StudentPerformance = {
 };
 
 export async function getCohortPerformance(levelId?: number | null): Promise<StudentPerformance[]> {
+  const viewer = await getSessionUser();
   const students = await db
     .select({
       profileId: profiles.id,
@@ -417,7 +421,11 @@ export async function getCohortPerformance(levelId?: number | null): Promise<Stu
       title: profiles.title,
     })
     .from(profiles)
+    .innerJoin(roles, eq(profiles.roleId, roles.id))
+    .where(and(eq(roles.slug, "student"), learnerReadable(profiles.id, viewer)))
     .orderBy(asc(profiles.fullName));
+  const studentIds = students.map((student) => student.profileId);
+  if (!studentIds.length) return [];
 
   const tree = await getAcademyTree();
   const totalLessons = tree.reduce(
@@ -429,7 +437,7 @@ export async function getCohortPerformance(levelId?: number | null): Promise<Stu
     db
       .select({ profileId: lessonProgress.profileId, value: sql<number>`count(*)::int` })
       .from(lessonProgress)
-      .where(eq(lessonProgress.status, "completed"))
+      .where(and(eq(lessonProgress.status, "completed"), inArray(lessonProgress.profileId, studentIds)))
       .groupBy(lessonProgress.profileId),
     db
       .select({
@@ -441,12 +449,14 @@ export async function getCohortPerformance(levelId?: number | null): Promise<Stu
       })
       .from(assessmentAttempts)
       .innerJoin(assessments, eq(assessmentAttempts.assessmentId, assessments.id))
+      .where(inArray(assessmentAttempts.profileId, studentIds))
       .orderBy(asc(assessmentAttempts.submittedAt)),
     db
       .select({ profileId: groupMembers.profileId, groupId: groupMembers.groupId, groupName: courseGroups.name })
       .from(groupMembers)
-      .innerJoin(courseGroups, eq(groupMembers.groupId, courseGroups.id)),
-    db.select({ profileId: certificates.profileId, value: sql<number>`count(*)::int` }).from(certificates).groupBy(certificates.profileId),
+      .innerJoin(courseGroups, eq(groupMembers.groupId, courseGroups.id))
+      .where(inArray(groupMembers.profileId, studentIds)),
+    db.select({ profileId: certificates.profileId, value: sql<number>`count(*)::int` }).from(certificates).where(inArray(certificates.profileId, studentIds)).groupBy(certificates.profileId),
     db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
     db
       .select({
@@ -523,7 +533,7 @@ export async function getCohortPerformance(levelId?: number | null): Promise<Stu
 }
 
 export async function getAssessmentResults(filters: { assessmentId?: number; profileId?: string } = {}) {
-  const conditions = [];
+  const conditions = [learnerReadable(assessmentAttempts.profileId, await getSessionUser())];
   if (filters.assessmentId) conditions.push(eq(assessmentAttempts.assessmentId, filters.assessmentId));
   if (filters.profileId) conditions.push(eq(assessmentAttempts.profileId, filters.profileId));
 
@@ -544,6 +554,7 @@ export async function getAssessmentResults(filters: { assessmentId?: number; pro
 }
 
 export async function getAssessmentAdminList() {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({
       assessment: assessments,
@@ -551,9 +562,9 @@ export async function getAssessmentAdminList() {
       courseTitle: courses.title,
       moduleTitle: courseModules.title,
       questionCount: sql<number>`(select count(*) from ${assessmentQuestions} where ${assessmentQuestions.assessmentId} = ${assessments.id})::int`,
-      attemptCount: sql<number>`(select count(*) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id})::int`,
-      averageScore: sql<number | null>`(select round(avg(${assessmentAttempts.score})) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id})`,
-      passRate: sql<number | null>`(select round(100.0 * count(*) filter (where ${assessmentAttempts.passed}) / greatest(count(*),1)) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id})`,
+      attemptCount: sql<number>`(select count(*) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})::int`,
+      averageScore: sql<number | null>`(select round(avg(${assessmentAttempts.score})) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})`,
+      passRate: sql<number | null>`(select round(100.0 * count(*) filter (where ${assessmentAttempts.passed}) / greatest(count(*),1)) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})`,
     })
     .from(assessments)
     .leftJoin(courseLevels, eq(assessments.levelId, courseLevels.id))
@@ -564,6 +575,7 @@ export async function getAssessmentAdminList() {
 }
 
 export async function getAssessmentForAdmin(assessmentId: number) {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({
       assessment: assessments,
@@ -588,7 +600,7 @@ export async function getAssessmentForAdmin(assessmentId: number) {
       .select({ attempt: assessmentAttempts, studentName: profiles.fullName })
       .from(assessmentAttempts)
       .innerJoin(profiles, eq(assessmentAttempts.profileId, profiles.id))
-      .where(eq(assessmentAttempts.assessmentId, assessmentId))
+      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), learnerReadable(assessmentAttempts.profileId, viewer)))
       .orderBy(desc(assessmentAttempts.submittedAt))
       .limit(20),
   ]);
@@ -600,10 +612,11 @@ export async function getAssessmentForAdmin(assessmentId: number) {
  * ------------------------------------------------------------------ */
 
 export async function getGroupsForStudent(profileId: string) {
+  const viewer = await getSessionUser();
   const memberships = await db
     .select({ groupId: groupMembers.groupId })
     .from(groupMembers)
-    .where(eq(groupMembers.profileId, profileId));
+    .where(and(eq(groupMembers.profileId, profileId), learnerReadable(groupMembers.profileId, viewer)));
   const groupIds = memberships.map((row) => row.groupId);
   if (groupIds.length === 0) return [];
 
@@ -631,19 +644,24 @@ export async function getGroupsForStudent(profileId: string) {
 }
 
 export async function getGroupsForReview() {
+  const viewer = await getSessionUser();
   const groups = await db
     .select({ group: courseGroups, courseTitle: courses.title, mentorName: profiles.fullName })
     .from(courseGroups)
     .leftJoin(courses, eq(courseGroups.courseId, courses.id))
     .leftJoin(profiles, eq(courseGroups.mentorId, profiles.id))
+    .where(groupReviewable(viewer))
     .orderBy(desc(courseGroups.createdAt));
+  const groupIds = groups.map((row) => row.group.id);
+  if (!groupIds.length) return [];
 
   const [members, submissions] = await Promise.all([
     db
       .select({ groupId: groupMembers.groupId, profileId: groupMembers.profileId, fullName: profiles.fullName, role: groupMembers.role })
       .from(groupMembers)
-      .innerJoin(profiles, eq(groupMembers.profileId, profiles.id)),
-    db.select().from(groupSubmissions).orderBy(desc(groupSubmissions.updatedAt)),
+      .innerJoin(profiles, eq(groupMembers.profileId, profiles.id))
+      .where(inArray(groupMembers.groupId, groupIds)),
+    db.select().from(groupSubmissions).where(inArray(groupSubmissions.groupId, groupIds)).orderBy(desc(groupSubmissions.updatedAt)),
   ]);
 
   return groups.map((row) => ({

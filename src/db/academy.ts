@@ -1,6 +1,8 @@
 import "server-only";
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { getSessionUser } from "@/lib/auth";
+import { canReadLearner, coachingReadable, learnerReadable } from "@/db/learner-access";
 import {
   assignmentSubmissions,
   assignments,
@@ -9,6 +11,7 @@ import {
   courseSessions,
   enrollments,
   learningProgress,
+  mentorAssignments,
   profiles,
   reflections,
   roles,
@@ -21,6 +24,8 @@ import {
 export type StudentWorkspace = Awaited<ReturnType<typeof getStudentWorkspace>>;
 
 export async function getStudentWorkspace(profileId: string) {
+  const viewer = await getSessionUser();
+  if (!(await canReadLearner(profileId, viewer))) throw new Error("Learner access required.");
   const enrollmentRows = await db
     .select({
       enrollment: enrollments,
@@ -28,7 +33,7 @@ export async function getStudentWorkspace(profileId: string) {
     })
     .from(enrollments)
     .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
-    .where(eq(enrollments.profileId, profileId))
+    .where(and(eq(enrollments.profileId, profileId), learnerReadable(enrollments.profileId, viewer)))
     .orderBy(desc(enrollments.createdAt))
     .limit(1);
 
@@ -66,9 +71,9 @@ export async function getStudentWorkspace(profileId: string) {
       .orderBy(desc(reflections.createdAt))
       .limit(12),
     db
-      .select({ mentorId: coachingSessions.mentorId })
-      .from(coachingSessions)
-      .where(eq(coachingSessions.studentId, profileId))
+      .select({ mentorId: mentorAssignments.mentorId })
+      .from(mentorAssignments)
+      .where(and(eq(mentorAssignments.studentId, profileId), eq(mentorAssignments.status, "active")))
       .limit(1),
   ]);
 
@@ -123,6 +128,7 @@ export async function getStudentWorkspace(profileId: string) {
  * ------------------------------------------------------------------ */
 
 export async function getMentorWorkspace(mentorId: string) {
+  const viewer = await getSessionUser();
   const [sessionRows, pendingSubmissions, menteeRows, sharedReflections, allStudents] = await Promise.all([
     db
       .select({
@@ -132,7 +138,7 @@ export async function getMentorWorkspace(mentorId: string) {
       })
       .from(coachingSessions)
       .innerJoin(profiles, eq(coachingSessions.studentId, profiles.id))
-      .where(eq(coachingSessions.mentorId, mentorId))
+      .where(and(eq(coachingSessions.mentorId, mentorId), coachingReadable(viewer)))
       .orderBy(asc(coachingSessions.scheduledAt)),
     db
       .select({
@@ -143,20 +149,21 @@ export async function getMentorWorkspace(mentorId: string) {
       .from(assignmentSubmissions)
       .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
       .innerJoin(profiles, eq(assignmentSubmissions.profileId, profiles.id))
-      .where(inArray(assignmentSubmissions.status, ["submitted", "reviewed"]))
+      .where(and(inArray(assignmentSubmissions.status, ["submitted", "reviewed"]), learnerReadable(assignmentSubmissions.profileId, viewer)))
       .orderBy(desc(assignmentSubmissions.submittedAt))
       .limit(20),
     db
       .select({
-        studentId: coachingSessions.studentId,
+        studentId: mentorAssignments.studentId,
         studentName: profiles.fullName,
         studentTitle: profiles.title,
         sessions: count(coachingSessions.id),
       })
-      .from(coachingSessions)
-      .innerJoin(profiles, eq(coachingSessions.studentId, profiles.id))
-      .where(eq(coachingSessions.mentorId, mentorId))
-      .groupBy(coachingSessions.studentId, profiles.fullName, profiles.title),
+      .from(mentorAssignments)
+      .innerJoin(profiles, eq(mentorAssignments.studentId, profiles.id))
+      .leftJoin(coachingSessions, and(eq(coachingSessions.studentId, mentorAssignments.studentId), eq(coachingSessions.mentorId, mentorId)))
+      .where(and(eq(mentorAssignments.mentorId, mentorId), eq(mentorAssignments.status, "active"), learnerReadable(mentorAssignments.studentId, viewer)))
+      .groupBy(mentorAssignments.studentId, profiles.fullName, profiles.title),
     db
       .select({
         reflection: reflections,
@@ -164,7 +171,7 @@ export async function getMentorWorkspace(mentorId: string) {
       })
       .from(reflections)
       .innerJoin(profiles, eq(reflections.authorProfileId, profiles.id))
-      .where(inArray(reflections.visibility, ["mentor", "cohort"]))
+      .where(and(inArray(reflections.visibility, ["mentor", "cohort"]), learnerReadable(reflections.authorProfileId, viewer)))
       .orderBy(desc(reflections.createdAt))
       .limit(10),
     db
@@ -180,6 +187,7 @@ export async function getMentorWorkspace(mentorId: string) {
       .from(enrollments)
       .innerJoin(profiles, eq(enrollments.profileId, profiles.id))
       .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
+      .where(learnerReadable(enrollments.profileId, viewer))
       .orderBy(desc(enrollments.createdAt))
       .limit(30),
   ]);
@@ -213,6 +221,7 @@ export async function getMentorWorkspace(mentorId: string) {
 }
 
 export async function getProgressForStudents(profileIds: string[]) {
+  const viewer = await getSessionUser();
   if (!profileIds.length) return new Map<string, { completed: number; total: number; level: string | null }>();
   const rows = await db
     .select({
@@ -224,7 +233,7 @@ export async function getProgressForStudents(profileIds: string[]) {
     .from(enrollments)
     .leftJoin(learningProgress, eq(learningProgress.enrollmentId, enrollments.id))
     .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
-    .where(inArray(enrollments.profileId, profileIds))
+    .where(and(inArray(enrollments.profileId, profileIds), learnerReadable(enrollments.profileId, viewer)))
     .groupBy(enrollments.profileId, courseLevels.name);
 
   return new Map(

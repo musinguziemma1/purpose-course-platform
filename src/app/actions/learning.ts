@@ -10,10 +10,12 @@ import {
   coachingSessions,
   enrollments,
   learningProgress,
+  mentorAssignments,
   notifications,
   profiles,
   reflections,
   roles,
+  users,
 } from "@/db/schema";
 import { getSessionUser, isStudent } from "@/lib/auth";
 
@@ -215,22 +217,15 @@ export async function requestCoaching(_prev: LearningState, formData: FormData):
   if (scheduledAt.getTime() < Date.now()) return { error: "Pick a time in the future." };
 
   const existingMentor = await db
-    .select({ mentorId: coachingSessions.mentorId })
-    .from(coachingSessions)
-    .where(eq(coachingSessions.studentId, user.profileId))
+    .select({ mentorId: mentorAssignments.mentorId })
+    .from(mentorAssignments)
+    .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
+    .innerJoin(users, eq(profiles.userId, users.id))
+    .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)))
     .limit(1);
 
-  let mentorId = existingMentor[0]?.mentorId ?? null;
-  if (!mentorId) {
-    const mentorRows = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"))
-      .limit(1);
-    mentorId = mentorRows[0]?.id ?? null;
-  }
-  if (!mentorId) return { error: "No mentor is available yet — contact the course desk." };
+  const mentorId = existingMentor[0]?.mentorId ?? null;
+  if (!mentorId) return { error: "An active mentor has not been assigned yet. Contact the course desk." };
 
   const enrollment = await myEnrollment(user.profileId);
 

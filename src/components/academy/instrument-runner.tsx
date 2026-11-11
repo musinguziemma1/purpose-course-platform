@@ -47,7 +47,7 @@ export function InstrumentRunner({
 }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [consent, setConsent] = useState(false);
-  const [share, setShare] = useState(true);
+  const [share, setShare] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);

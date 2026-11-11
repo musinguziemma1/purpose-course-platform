@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { getSessionUser } from "@/lib/auth";
 import { communityReadable, threadReadable } from "@/db/community-access";
+import { canOverseeLearners, instrumentReadable, learnerReadable, liveManageable } from "@/db/learner-access";
 import {
   cohortMembers,
   cohortWeeks,
@@ -14,6 +15,7 @@ import {
   discussionPosts,
   discussionThreads,
   instrumentResults,
+  instrumentSessions,
   instruments,
   learnerFlags,
   learnerGoals,
@@ -27,6 +29,7 @@ import {
   reactions,
   roles,
   sessionAttendance,
+  users,
 } from "@/db/schema";
 
 /* ------------------------------------------------------------------ *
@@ -34,26 +37,28 @@ import {
  * ------------------------------------------------------------------ */
 
 export async function getLearnerGoals(studentId: string) {
+  const viewer = await getSessionUser();
   return db
     .select({ goal: learnerGoals, mentorName: profiles.fullName })
     .from(learnerGoals)
     .leftJoin(profiles, eq(learnerGoals.mentorId, profiles.id))
-    .where(eq(learnerGoals.studentId, studentId))
+    .where(and(eq(learnerGoals.studentId, studentId), learnerReadable(learnerGoals.studentId, viewer)))
     .orderBy(asc(learnerGoals.status), asc(learnerGoals.dueAt));
 }
 
 export async function getMentoringNotes(studentId: string) {
+  const viewer = await getSessionUser();
   return db
     .select({ note: mentoringNotes, mentorName: profiles.fullName })
     .from(mentoringNotes)
     .innerJoin(profiles, eq(mentoringNotes.mentorId, profiles.id))
-    .where(and(eq(mentoringNotes.studentId, studentId), eq(mentoringNotes.visibility, "shared")))
+    .where(and(eq(mentoringNotes.studentId, studentId), eq(mentoringNotes.visibility, "shared"), learnerReadable(mentoringNotes.studentId, viewer)))
     .orderBy(desc(mentoringNotes.createdAt))
     .limit(12);
 }
 
 export async function getLearnerFlags(studentId?: string) {
-  const conditions = [eq(learnerFlags.status, "open")];
+  const conditions = [eq(learnerFlags.status, "open"), learnerReadable(learnerFlags.studentId, await getSessionUser())];
   if (studentId) conditions.push(eq(learnerFlags.studentId, studentId));
   return db
     .select({
@@ -69,6 +74,8 @@ export async function getLearnerFlags(studentId?: string) {
 }
 
 export async function getMentorRoster(mentorId: string) {
+  const viewer = await getSessionUser();
+  if (!viewer || (viewer.profileId !== mentorId && !canOverseeLearners(viewer))) return [];
   const assignments = await db
     .select({
       studentId: mentorAssignments.studentId,
@@ -80,7 +87,7 @@ export async function getMentorRoster(mentorId: string) {
     })
     .from(mentorAssignments)
     .innerJoin(profiles, eq(mentorAssignments.studentId, profiles.id))
-    .where(eq(mentorAssignments.mentorId, mentorId))
+    .where(and(eq(mentorAssignments.mentorId, mentorId), eq(mentorAssignments.status, "active"), learnerReadable(mentorAssignments.studentId, viewer)))
     .orderBy(asc(profiles.fullName));
 
   const ids = assignments.map((row) => row.studentId);
@@ -89,8 +96,8 @@ export async function getMentorRoster(mentorId: string) {
   const [goals, flags, notes, results, attendance] = await Promise.all([
     db.select().from(learnerGoals).where(inArray(learnerGoals.studentId, ids)),
     db.select().from(learnerFlags).where(inArray(learnerFlags.studentId, ids)),
-    db.select().from(mentoringNotes).where(inArray(mentoringNotes.studentId, ids)),
-    db.select().from(instrumentResults).where(inArray(instrumentResults.profileId, ids)),
+    db.select().from(mentoringNotes).where(and(inArray(mentoringNotes.studentId, ids), sql`(${mentoringNotes.visibility} = 'shared' or ${mentoringNotes.mentorId} = ${viewer.profileId})`)),
+    db.select().from(instrumentResults).where(and(inArray(instrumentResults.profileId, ids), instrumentReadable(viewer))),
     db.select().from(sessionAttendance).where(inArray(sessionAttendance.profileId, ids)),
   ]);
 
@@ -122,7 +129,8 @@ export async function getMentors() {
     .select({ id: profiles.id, fullName: profiles.fullName, title: profiles.title })
     .from(profiles)
     .innerJoin(roles, eq(profiles.roleId, roles.id))
-    .where(inArray(roles.slug, ["mentor", "instructor", "super_admin", "platform_admin"]))
+    .innerJoin(users, eq(profiles.userId, users.id))
+    .where(and(inArray(roles.slug, ["mentor", "instructor", "super_admin", "platform_admin"]), eq(users.isActive, true)))
     .orderBy(asc(profiles.fullName));
 }
 
@@ -332,6 +340,7 @@ export async function getUpcomingCohortSessions(cohortId: number) {
 }
 
 export async function getAttendanceForSession(sessionId: number) {
+  const viewer = await getSessionUser();
   return db
     .select({
       attendance: sessionAttendance,
@@ -339,11 +348,12 @@ export async function getAttendanceForSession(sessionId: number) {
     })
     .from(sessionAttendance)
     .innerJoin(profiles, eq(sessionAttendance.profileId, profiles.id))
-    .where(eq(sessionAttendance.liveSessionId, sessionId))
+    .where(and(eq(sessionAttendance.liveSessionId, sessionId), learnerReadable(sessionAttendance.profileId, viewer), sql`exists (select 1 from ${liveSessions} where ${liveSessions.id} = ${sessionAttendance.liveSessionId} and ${liveManageable(viewer)})`))
     .orderBy(asc(profiles.fullName));
 }
 
 export async function getAttendanceForProfile(profileId: string) {
+  const viewer = await getSessionUser();
   return db
     .select({
       attendance: sessionAttendance,
@@ -352,12 +362,13 @@ export async function getAttendanceForProfile(profileId: string) {
     })
     .from(sessionAttendance)
     .innerJoin(liveSessions, eq(sessionAttendance.liveSessionId, liveSessions.id))
-    .where(eq(sessionAttendance.profileId, profileId))
+    .where(and(eq(sessionAttendance.profileId, profileId), learnerReadable(sessionAttendance.profileId, viewer)))
     .orderBy(desc(liveSessions.startsAt))
     .limit(12);
 }
 
 export async function getSessionsForAttendance() {
+  const viewer = await getSessionUser();
   return db
     .select({
       session: liveSessions,
@@ -365,6 +376,7 @@ export async function getSessionsForAttendance() {
       cohortName: sql<string | null>`(select name from ${cohorts} c where c.id = ${liveSessions.cohortId})`,
     })
     .from(liveSessions)
+    .where(liveManageable(viewer))
     .orderBy(desc(liveSessions.startsAt))
     .limit(20);
 }
@@ -405,29 +417,33 @@ export async function getOutboxWithNames(limit = 40) {
 }
 
 export async function getInstrumentResultsOverview() {
+  const viewer = await getSessionUser();
   return db
     .select({
       result: instrumentResults,
       instrumentTitle: instruments.title,
       instrumentSlug: instruments.slug,
-      version: instruments.version,
+      version: instrumentSessions.instrumentVersion,
       studentName: profiles.fullName,
-      shared: sql<boolean>`true`,
+      shared: instrumentSessions.sharedWithMentor,
     })
     .from(instrumentResults)
     .innerJoin(instruments, eq(instrumentResults.instrumentId, instruments.id))
     .innerJoin(profiles, eq(instrumentResults.profileId, profiles.id))
+    .innerJoin(instrumentSessions, eq(instrumentResults.sessionId, instrumentSessions.id))
+    .where(instrumentReadable(viewer))
     .orderBy(desc(instrumentResults.createdAt))
     .limit(40);
 }
 
 export async function countPendingMentorWork(mentorId: string) {
+  const viewer = await getSessionUser();
   const [flags, goals] = await Promise.all([
-    db.select({ value: count() }).from(learnerFlags).where(eq(learnerFlags.status, "open")),
+    db.select({ value: count() }).from(learnerFlags).where(and(eq(learnerFlags.status, "open"), learnerReadable(learnerFlags.studentId, viewer))),
     db
       .select({ value: count() })
       .from(learnerGoals)
-      .where(and(eq(learnerGoals.mentorId, mentorId), eq(learnerGoals.status, "active"))),
+      .where(and(eq(learnerGoals.mentorId, mentorId), eq(learnerGoals.status, "active"), learnerReadable(learnerGoals.studentId, viewer))),
   ]);
   return { openFlags: Number(flags[0]?.value ?? 0), activeGoals: Number(goals[0]?.value ?? 0) };
 }

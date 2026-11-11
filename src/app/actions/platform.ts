@@ -32,6 +32,7 @@ import { can, normalizeRole, type Permission } from "@/lib/rbac";
 import { notify, savePreference } from "@/lib/notifications";
 import { addThreadReply, communityReadable, findReadableTarget } from "@/db/community-access";
 import { canAssignRole } from "@/lib/admin-access";
+import { canCoachLearner, canOverseeLearners, learnerReadable, liveManageable } from "@/db/learner-access";
 
 export type PlatformState = { ok?: boolean; error?: string; message?: string };
 
@@ -41,7 +42,7 @@ async function log(actorId: string | null, action: string, description: string, 
 
 async function guard(permission: Permission) {
   const user = await getSessionUser();
-  if (!user || !can(user, permission)) return null;
+  if (!user || (!can(user, permission) && !(permission === "mentorship.coach" && canOverseeLearners(user)))) return null;
   return user;
 }
 
@@ -89,6 +90,7 @@ export async function createGoal(_prev: PlatformState, formData: FormData): Prom
   const description = String(formData.get("description") ?? "").trim() || null;
   const dueRaw = String(formData.get("dueAt") ?? "");
   if (!studentId || title.length < 6) return { error: "Choose a learner and write a specific goal." };
+  if (!(await canCoachLearner(studentId, user))) return { error: "That learner is not assigned to you." };
 
   await db.insert(learnerGoals).values({
     studentId,
@@ -117,8 +119,9 @@ export async function updateGoalProgress(_prev: PlatformState, formData: FormDat
   const status = String(formData.get("status") ?? "active");
   const reviewNotes = String(formData.get("reviewNotes") ?? "").trim() || null;
   if (!goalId) return { error: "Missing goal." };
+  if (!Number.isFinite(progress)) return { error: "Choose a valid progress percentage." };
 
-  await db
+  const updated = await db
     .update(learnerGoals)
     .set({
       progress,
@@ -126,7 +129,9 @@ export async function updateGoalProgress(_prev: PlatformState, formData: FormDat
       reviewNotes,
       updatedAt: new Date(),
     })
-    .where(eq(learnerGoals.id, goalId));
+    .where(and(eq(learnerGoals.id, goalId), learnerReadable(learnerGoals.studentId, user)))
+    .returning({ id: learnerGoals.id });
+  if (!updated.length) return { error: "Goal not found or learner access denied." };
 
   await log(user.profileId, "mentorship.goal_reviewed", `Updated goal #${goalId} to ${progress}% (${status}).`);
   refresh(["/mentor/learners", "/learn/goals"]);
@@ -139,6 +144,7 @@ export async function addMentoringNote(_prev: PlatformState, formData: FormData)
   const studentId = String(formData.get("studentId") ?? "");
   const body = String(formData.get("body") ?? "").trim();
   if (!studentId || body.length < 20) return { error: "Write at least a sentence of session notes." };
+  if (!(await canCoachLearner(studentId, user))) return { error: "That learner is not assigned to you." };
 
   await db.insert(mentoringNotes).values({ studentId, mentorId: user.profileId, body, visibility: "shared" });
   await notify({
@@ -158,6 +164,7 @@ export async function raiseLearnerFlag(_prev: PlatformState, formData: FormData)
   const reason = String(formData.get("reason") ?? "").trim();
   const severity = String(formData.get("severity") ?? "attention");
   if (!studentId || reason.length < 10) return { error: "Give a short reason for the follow-up." };
+  if (!(await canCoachLearner(studentId, user))) return { error: "That learner is not assigned to you." };
 
   await db.insert(learnerFlags).values({ studentId, mentorId: user.profileId, reason, severity });
   await notify({ recipientIds: [studentId], templateKey: "mentor.flagged", vars: { reason } });
@@ -171,10 +178,12 @@ export async function resolveLearnerFlag(formData: FormData) {
   if (!user) return;
   const flagId = Number(formData.get("flagId"));
   if (!flagId) return;
-  await db
+  const updated = await db
     .update(learnerFlags)
     .set({ status: "resolved", resolvedAt: new Date(), resolutionNote: String(formData.get("resolutionNote") ?? "Resolved") })
-    .where(eq(learnerFlags.id, flagId));
+    .where(and(eq(learnerFlags.id, flagId), learnerReadable(learnerFlags.studentId, user)))
+    .returning({ id: learnerFlags.id });
+  if (!updated.length) return;
   await log(user.profileId, "mentorship.flag_resolved", `Resolved learner flag #${flagId}.`);
   refresh(["/mentor/learners", "/learn/goals"]);
 }
@@ -427,6 +436,10 @@ export async function markAttendance(_prev: PlatformState, formData: FormData): 
   const studentIds = formData.getAll("studentIds").map((value) => String(value));
   if (!sessionId) return { error: "Choose a session." };
   if (studentIds.length === 0) return { error: "Select at least one participant." };
+  if (!Number.isFinite(minutes) || minutes < 0) return { error: "Choose a valid attendance duration." };
+  const [allowedSession] = await db.select({ id: liveSessions.id }).from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveManageable(user))).limit(1);
+  if (!allowedSession) return { error: "Only the session host or programme administrator can mark attendance." };
+  for (const studentId of studentIds) if (!(await canCoachLearner(studentId, user))) return { error: "A selected learner is not assigned to you." };
 
   for (const profileId of studentIds) {
     await db
