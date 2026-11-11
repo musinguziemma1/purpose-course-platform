@@ -43,6 +43,10 @@ type Connection = {
 
 const POLL_MS = 1200;
 
+class ConferenceError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
+
 export function VideoRoom({
   roomCode,
   selfName,
@@ -97,7 +101,7 @@ export function VideoRoom({
       setLatency(Math.round(performance.now() - started));
       if (!response.ok) {
         const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Signalling failed");
+        throw new ConferenceError(data.error ?? "Signalling failed", response.status);
       }
       return (await response.json()) as Record<string, unknown>;
     },
@@ -292,13 +296,33 @@ export function VideoRoom({
         for (const signal of signals) {
           await handleSignal(signal);
         }
-      } catch {
-        /* transient — keep the room alive and retry */
+      } catch (cause) {
+        if (cause instanceof ConferenceError && [401, 403, 404].includes(cause.status)) {
+          cancelled = true;
+          if (pollTimer) clearInterval(pollTimer);
+          Array.from(connections.current.keys()).forEach(closeConnection);
+          localStreamRef.current?.getTracks().forEach((track) => track.stop());
+          screenStreamRef.current?.getTracks().forEach((track) => track.stop());
+          setError("This session ended or your room access was removed.");
+          setStatus("error");
+        }
       }
     }
 
     async function handleSignal(signal: SignalEnvelope) {
       const remotePeerId = signal.fromPeer;
+      if (signal.kind === "control") {
+        if (signal.payload.action === "mute-all") {
+          localStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = false; });
+          stateRef.current.micOn = false;
+          setMicOn(false);
+        }
+        if (signal.payload.action === "lower-hands") {
+          stateRef.current.handRaised = false;
+          setHandRaised(false);
+        }
+        return;
+      }
       if (signal.kind === "offer") {
         const entry = ensureConnection(remotePeerId, false);
         const sdp = signal.payload.sdp as string | undefined;

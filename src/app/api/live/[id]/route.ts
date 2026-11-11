@@ -1,23 +1,23 @@
 import { NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { liveMessages, liveSessions } from "@/db/schema";
-import { getSessionUser, isMentor, isStudent } from "@/lib/auth";
-import { ensureDemoAccounts } from "@/db/accounts";
+import { getSessionUser } from "@/lib/auth";
+import { liveReadable } from "@/db/learning-access";
+import { canOverseeLearners } from "@/db/learner-access";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const { id } = await params;
   const sessionId = Number(id);
-  if (!sessionId) return NextResponse.json({ error: "Bad session" }, { status: 400 });
+  if (!Number.isSafeInteger(sessionId) || sessionId < 1) return NextResponse.json({ error: "Bad session" }, { status: 400 });
 
-  const [sessionRows, messages] = await Promise.all([
-    db.select().from(liveSessions).where(eq(liveSessions.id, sessionId)).limit(1),
-    db.select().from(liveMessages).where(eq(liveMessages.liveSessionId, sessionId)).orderBy(asc(liveMessages.createdAt)).limit(200),
-  ]);
-
+  const sessionRows = await db.select().from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
   if (!sessionRows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const messages = await db.select().from(liveMessages).where(eq(liveMessages.liveSessionId, sessionId)).orderBy(asc(liveMessages.createdAt)).limit(200);
   return NextResponse.json({
     status: sessionRows[0].status,
     recordingUrl: sessionRows[0].recordingUrl,
@@ -27,13 +27,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const { id } = await params;
   const sessionId = Number(id);
-  if (!sessionId) return NextResponse.json({ error: "Bad session" }, { status: 400 });
+  if (!Number.isSafeInteger(sessionId) || sessionId < 1) return NextResponse.json({ error: "Bad session" }, { status: 400 });
 
   let payload: { body?: string; kind?: string; authorName?: string };
   try {
     payload = await request.json();
+    if (!payload || typeof payload !== "object" || typeof payload.body !== "string") throw new Error("Invalid body");
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -41,25 +44,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const body = (payload.body ?? "").trim();
   if (body.length < 2) return NextResponse.json({ error: "Write a message first." }, { status: 422 });
 
-  let user = await getSessionUser();
-  if (!user) {
-    await ensureDemoAccounts().catch(() => undefined);
-    user = await getSessionUser();
-  }
-
-  const sessionRows = await db.select().from(liveSessions).where(eq(liveSessions.id, sessionId)).limit(1);
+  const sessionRows = await db.select().from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
   if (!sessionRows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (sessionRows[0].status === "cancelled") {
-    return NextResponse.json({ error: "This session was cancelled." }, { status: 409 });
+  if (!["scheduled", "live"].includes(sessionRows[0].status)) {
+    return NextResponse.json({ error: "This session is closed." }, { status: 409 });
   }
 
   const inserted = await db
     .insert(liveMessages)
     .values({
       liveSessionId: sessionId,
-      authorId: user?.profileId ?? null,
-      authorName: user?.fullName ?? ((payload.authorName ?? "").trim() || "Guest"),
-      authorRole: isStudent(user) ? "student" : isMentor(user) ? "mentor" : "host",
+      authorId: user.profileId,
+      authorName: user.fullName,
+      authorRole: sessionRows[0].hostId === user.profileId || canOverseeLearners(user) ? "host" : "student",
       kind: payload.kind === "question" ? "question" : "chat",
       body: body.slice(0, 1200),
     })

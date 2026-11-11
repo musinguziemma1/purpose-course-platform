@@ -9,6 +9,7 @@ import { accentClasses } from "@/components/site/principle-icon";
 import { renderRichText } from "@/lib/markdown";
 import { initials, cn } from "@/lib/utils";
 import { getArticleBySlug, publishDueArticles } from "@/db/queries";
+import { serializeStructuredData } from "@/lib/structured-data";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +52,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+            __html: serializeStructuredData({
             "@context": "https://schema.org",
             "@type": "BlogPosting",
             headline: article.title,

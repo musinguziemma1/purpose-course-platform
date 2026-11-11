@@ -2,6 +2,7 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { getSessionUser } from "@/lib/auth";
 import { threadReadable } from "@/db/community-access";
+import { cohortReadable, liveReadable } from "@/db/learning-access";
 import {
   articles,
   cohorts,
@@ -108,14 +109,14 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
       ? db
           .select({ id: cohorts.id, name: cohorts.name, description: cohorts.description, status: cohorts.status })
           .from(cohorts)
-          .where(or(ilike(cohorts.name, needle), ilike(cohorts.description, needle)))
+          .where(and(cohortReadable(viewer), or(ilike(cohorts.name, needle), ilike(cohorts.description, needle))))
           .limit(limit)
       : Promise.resolve([]),
     include("event")
       ? db
           .select({ id: liveSessions.id, title: liveSessions.title, description: liveSessions.description, type: liveSessions.type, startsAt: liveSessions.startsAt })
           .from(liveSessions)
-          .where(or(ilike(liveSessions.title, needle), ilike(liveSessions.description, needle)))
+          .where(and(liveReadable(viewer), or(ilike(liveSessions.title, needle), ilike(liveSessions.description, needle))))
           .orderBy(desc(liveSessions.startsAt))
           .limit(limit)
       : Promise.resolve([]),
@@ -204,11 +205,11 @@ export async function getSearchFacets() {
   const rows = await db.execute(sql`
     select 'article' as type, count(*)::int as value from articles where status = 'published'
     union all select 'course', count(*)::int from courses where status = 'published'
-    union all select 'lesson', count(*)::int from lessons where status = 'published'
+    union all select 'lesson', count(*)::int from lessons inner join course_modules on course_modules.id = lessons.module_id inner join courses on courses.id = course_modules.course_id where lessons.status = 'published' and courses.status = 'published'
     union all select 'resource', count(*)::int from resources
     union all select 'discussion', count(*)::int from discussion_threads where ${threadReadable(viewer)}
     union all select 'person', count(*)::int from profiles where exists (select 1 from articles where articles.author_id = profiles.id and articles.status = 'published')
-    union all select 'event', count(*)::int from live_sessions
+    union all select 'event', (select count(*)::int from live_sessions where ${liveReadable(viewer)}) + (select count(*)::int from cohorts where ${cohortReadable(viewer)})
   `);
   return (rows.rows as { type: SearchType; value: number }[]).map((row) => ({ ...row, value: Number(row.value) }));
 }

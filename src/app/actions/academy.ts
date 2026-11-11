@@ -21,6 +21,8 @@ import {
 import { canAuthorAcademy, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { syncCertificates } from "@/db/assessments";
 import { slugify } from "@/lib/utils";
+import { liveHost, liveReadable } from "@/db/learning-access";
+import { canOverseeLearners } from "@/db/learner-access";
 
 export type AcademyState = { ok?: boolean; error?: string; message?: string };
 
@@ -398,7 +400,7 @@ export async function saveLiveSession(_prev: AcademyState, formData: FormData): 
     meetingUrl: nullable(formData, "meetingUrl"),
     groupSize: Number(formData.get("groupSize") ?? 0) || null,
     courseId: courseIdRaw ? Number(courseIdRaw) : null,
-    hostId: isMentor(user) && !canAuthorAcademy(user) ? user.profileId : text(formData, "hostId") ? String(formData.get("hostId")) : user.profileId,
+    hostId: canOverseeLearners(user) && text(formData, "hostId") ? text(formData, "hostId") : user.profileId,
   });
 
   await log(user.profileId, "academy.live_created", `Scheduled “${title}” (${type.replace("_", " ")}).`);
@@ -414,10 +416,11 @@ export async function setLiveStatus(formData: FormData) {
   const status = text(formData, "status");
   if (!sessionId || !["scheduled", "live", "ended", "cancelled"].includes(status)) return;
 
-  await db
+  const updated = await db
     .update(liveSessions)
     .set({ status: status as "scheduled" | "live" | "ended" | "cancelled" })
-    .where(eq(liveSessions.id, sessionId));
+    .where(and(eq(liveSessions.id, sessionId), liveHost(user))).returning({ id: liveSessions.id });
+  if (!updated.length) return;
 
   if (status === "live") {
     await db.insert(liveMessages).values({
@@ -442,7 +445,8 @@ export async function saveRecording(_prev: AcademyState, formData: FormData): Pr
   const sessionId = Number(formData.get("sessionId"));
   const recordingUrl = nullable(formData, "recordingUrl");
   if (!sessionId || !recordingUrl) return { error: "Paste the recording link first." };
-  await db.update(liveSessions).set({ recordingUrl, status: "ended" }).where(eq(liveSessions.id, sessionId));
+  const updated = await db.update(liveSessions).set({ recordingUrl, status: "ended" }).where(and(eq(liveSessions.id, sessionId), liveHost(user))).returning({ id: liveSessions.id });
+  if (!updated.length) return { error: "Session not found or host access denied." };
   revalidatePath(`/learn/live/${sessionId}`);
   revalidatePath("/learn/live");
   return { ok: true, message: "Recording attached and the session closed." };
@@ -468,6 +472,9 @@ export async function toggleRsvp(formData: FormData) {
   const sessionId = Number(formData.get("sessionId"));
   if (!sessionId) return;
 
+  const [session] = await db.select({ id: liveSessions.id }).from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
+  if (!session) return;
+
   const existing = await db
     .select()
     .from(liveRsvps)
@@ -487,17 +494,20 @@ export async function toggleRsvp(formData: FormData) {
 
 export async function postLiveMessage(_prev: AcademyState, formData: FormData): Promise<AcademyState> {
   const user = await getSessionUser();
+  if (!user) return { error: "Sign in required." };
   const sessionId = Number(formData.get("sessionId"));
   const body = text(formData, "body");
   const kind = text(formData, "kind") === "question" ? "question" : "chat";
   if (!sessionId) return { error: "Missing session." };
   if (body.length < 2) return { error: "Write a message before sending." };
+  const [session] = await db.select().from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
+  if (!session || !["scheduled", "live"].includes(session.status)) return { error: "Session is unavailable or closed." };
 
   await db.insert(liveMessages).values({
     liveSessionId: sessionId,
-    authorId: user?.profileId ?? null,
-    authorName: user?.fullName ?? text(formData, "authorName") ?? "Guest",
-    authorRole: isStudent(user) ? "student" : isMentor(user) ? "mentor" : "host",
+    authorId: user.profileId,
+    authorName: user.fullName,
+    authorRole: session.hostId === user.profileId || canOverseeLearners(user) ? "host" : "student",
     kind,
     body: body.slice(0, 1200),
   });

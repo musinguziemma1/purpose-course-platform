@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { serializeStructuredData } from "@/lib/structured-data";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -60,7 +61,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: serializeStructuredData({
               "@context": "https://schema.org",
               "@type": "EducationalOrganization",
               name: "Purpose Course",

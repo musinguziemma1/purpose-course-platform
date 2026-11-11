@@ -12,6 +12,8 @@ import {
   liveSessions,
   profiles,
 } from "@/db/schema";
+import { getSessionUser } from "@/lib/auth";
+import { liveReadable } from "@/db/learning-access";
 
 export type LessonRow = typeof lessons.$inferSelect;
 export type ModuleRow = typeof courseModules.$inferSelect & { lessons: LessonRow[] };
@@ -214,7 +216,9 @@ export async function recordLessonView(profileId: string, lessonId: number) {
  * ------------------------------------------------------------------ */
 
 export async function getLiveSessions(options: { limit?: number; profileId?: string } = {}) {
-  const { limit = 20, profileId } = options;
+  const viewer = await getSessionUser();
+  const { limit = 20 } = options;
+  const profileId = viewer?.profileId;
   const rows = await db
     .select({
       session: liveSessions,
@@ -231,13 +235,14 @@ export async function getLiveSessions(options: { limit?: number; profileId?: str
     .from(liveSessions)
     .leftJoin(profiles, eq(liveSessions.hostId, profiles.id))
     .leftJoin(courses, eq(liveSessions.courseId, courses.id))
-    .where(sql`${liveSessions.status} <> 'cancelled'`)
+    .where(liveReadable(viewer))
     .orderBy(asc(liveSessions.startsAt))
     .limit(limit);
   return rows;
 }
 
 export async function getLiveSessionRoom(id: number) {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({
       session: liveSessions,
@@ -249,7 +254,7 @@ export async function getLiveSessionRoom(id: number) {
     .from(liveSessions)
     .leftJoin(profiles, eq(liveSessions.hostId, profiles.id))
     .leftJoin(courses, eq(liveSessions.courseId, courses.id))
-    .where(eq(liveSessions.id, id))
+    .where(and(eq(liveSessions.id, id), liveReadable(viewer)))
     .limit(1);
   const record = rows[0];
   if (!record) return null;

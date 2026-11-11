@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CalendarClock, Lock, Radio, Users, Video } from "lucide-react";
 import { VideoRoom } from "@/components/conference/video-room";
 import { LiveRoom } from "@/components/academy/live-room";
-import { getRoomByCode } from "@/db/conference";
+import { getRoomByCode, isRoomHost } from "@/db/conference";
 import { getLiveSessionRoom } from "@/db/courses";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
@@ -23,7 +23,7 @@ export default async function VideoRoomPage({ params }: Params) {
   const user = await getSessionUser();
   if (!user) redirect(`/login?next=/room/${code}`);
 
-  const record = await getRoomByCode(code);
+  const record = await getRoomByCode(code, user);
   if (!record) notFound();
 
   const feed = await getLiveSessionRoom(record.session.id);
@@ -69,7 +69,7 @@ export default async function VideoRoomPage({ params }: Params) {
           <VideoRoom
             roomCode={code}
             selfName={user.fullName}
-            isHostRole={user.roleSlug === "mentor" || user.roleSlug === "admin"}
+            isHostRole={isRoomHost(record.hostProfileId, user)}
             onLeaveHref={backHref}
           />
           <div className="rounded-xl border border-navy/10 bg-paper p-3.5 text-[11px] leading-relaxed text-stone-600">
@@ -84,7 +84,7 @@ export default async function VideoRoomPage({ params }: Params) {
             </p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-stone-500">
               <Lock className="h-3 w-3" /> Room code <span className="font-mono text-navy">{code}</span> · only signed-in
-              participants with the link can enter.
+              participants with session access can enter.
             </p>
           </div>
         </div>

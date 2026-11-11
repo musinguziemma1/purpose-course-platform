@@ -17,11 +17,11 @@ not establish launch readiness.
 - [x] Enforce administrative route permissions before data loading; align navigation and editorial/ownership actions with permissions.
 - [x] Keep members-only communities, removed discussions, and their search results private.
 - [x] Scope mentor reads and writes to assigned learners and respect assessment sharing consent.
-- [ ] Bind conference signals and controls to the authenticated participant and actual host.
+- [x] Bind conference signals and controls to the authenticated participant and actual host.
 - [ ] Enforce learner enrollment and publication checks on learning endpoints.
 - [x] Limit the first launch to one organization; disable additional-organization provisioning (user decision, 11 November 2026).
 - [x] Replace or disable seeded production credentials with a usable administrator recovery path.
-- [ ] Prevent stored script injection in structured metadata.
+- [x] Prevent stored script injection in structured metadata.
 
 ## 2. Publishing correctness
 
@@ -87,3 +87,20 @@ mentor HTML, shared results notify only the assigned mentor, a forged goal updat
 is rejected without changing the record, and revoked assignments immediately
 lose access. All 16 authorization tests, type checking, lint and the production
 build passed. Browser fixtures were removed afterward.
+
+Conference security: every room API operation binds the peer to its authenticated
+profile. Only the assigned host or programme oversight can control the room;
+signals require a recipient in the same room. Joins and seat grants serialize
+on the session row to enforce capacity. Course enrolment, publication and active
+cohort membership apply to video rooms, live feeds, recordings, RSVPs and event
+search. Paused enrolment blocks subsequent polling and room-page access. The
+client closes media connections after access denial and handles host mute/hand
+commands. Seven PostgreSQL tests cover peer impersonation, inbox isolation,
+host privileges, revocation and concurrent joins.
+
+Structured metadata uses escaped JSON serialization. A regression test and local
+Chrome verification confirmed that a stored `</script>` payload remains data
+without executing. Chrome/API checks also verified guest denial, forged peer
+rejection, authorized signalling and chat with server-controlled identity. All
+24 security tests, type checking, lint (21 existing warnings) and the production
+build passed. Test accounts, sessions and the article payload were removed.
