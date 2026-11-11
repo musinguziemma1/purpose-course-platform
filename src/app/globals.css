@@ -1,0 +1,415 @@
+@import "tailwindcss";
+
+@theme {
+  /* ---------- brand ---------- */
+  --color-ink: #0a1a30;
+  --color-navy: #122a4d;
+  --color-navy-700: #1b3a63;
+  --color-navy-300: #8fa6c2;
+  --color-cream: #f7f2e6;
+  --color-paper: #fffdf8;
+  --color-sand: #efe7d5;
+  --color-gold: #c9a227;
+  --color-gold-dark: #a5811a;
+  --color-gold-soft: #f2e4b8;
+  --color-source: #2f6b40;
+  --color-purpose: #b98a1f;
+  --color-potential: #5a3a8a;
+  --color-destiny: #155e63;
+
+  /* ---------- type ---------- */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Fraunces", "Iowan Old Style", Georgia, "Times New Roman", serif;
+
+  /* ---------- elevation ---------- */
+  --shadow-xs: 0 1px 2px rgba(10, 26, 48, 0.06);
+  --shadow-sm: 0 2px 6px -2px rgba(10, 26, 48, 0.12);
+  --shadow-card: 0 1px 0 rgba(10, 26, 48, 0.04), 0 8px 24px -18px rgba(10, 26, 48, 0.28);
+  --shadow-lift: 0 18px 44px -24px rgba(10, 26, 48, 0.28);
+  --shadow-editorial: 0 24px 60px -32px rgba(10, 26, 48, 0.35);
+  --shadow-pop: 0 18px 50px -12px rgba(10, 26, 48, 0.28), 0 4px 12px -4px rgba(10, 26, 48, 0.12);
+
+  /* ---------- radii ---------- */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+
+  /* ---------- motion ---------- */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(18, 42, 77, 0.22) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(18, 42, 77, 0.18);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(18, 42, 77, 0.34);
+    background-clip: content-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: #f2e4b8;
+    color: #122a4d;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* one consistent focus treatment for the whole product */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--color-gold);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Layout
+ * ------------------------------------------------------------------ */
+.shell {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .shell {
+    padding-inline: 2rem;
+  }
+}
+.shell-narrow {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+.shell-wide {
+  width: 100%;
+  max-width: 88rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 1024px) {
+  .shell-wide {
+    padding-inline: 1.75rem;
+  }
+}
+.section {
+  padding-block: clamp(3rem, 6vw, 5rem);
+}
+.section-tight {
+  padding-block: clamp(2rem, 4vw, 3rem);
+}
+.stack-sm > * + * {
+  margin-top: 0.75rem;
+}
+.stack > * + * {
+  margin-top: 1.25rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Type helpers
+ * ------------------------------------------------------------------ */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-gold-dark);
+}
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 1.75rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.7;
+}
+.display {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+}
+.headline {
+  font-family: var(--font-serif);
+  font-size: clamp(1.85rem, 3.6vw, 2.85rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--color-navy);
+}
+.muted {
+  color: color-mix(in srgb, var(--color-ink) 62%, transparent);
+}
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ------------------------------------------------------------------ *
+ * Surfaces
+ * ------------------------------------------------------------------ */
+.surface {
+  background: var(--color-paper);
+  border: 1px solid rgba(18, 42, 77, 0.1);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+.surface-flat {
+  background: var(--color-paper);
+  border: 1px solid rgba(18, 42, 77, 0.1);
+  border-radius: var(--radius-xl);
+}
+.surface-muted {
+  background: color-mix(in srgb, var(--color-cream) 55%, var(--color-paper));
+  border: 1px solid rgba(18, 42, 77, 0.08);
+  border-radius: var(--radius-xl);
+}
+.surface-dark {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: var(--radius-2xl);
+}
+.interactive {
+  transition: transform 0.35s var(--ease-out-soft), box-shadow 0.35s ease, border-color 0.3s ease, background-color 0.3s ease;
+}
+.interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lift);
+  border-color: rgba(201, 162, 39, 0.45);
+}
+.interactive:active {
+  transform: translateY(-1px);
+}
+.lift {
+  transition: transform 0.35s var(--ease-out-soft), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lift);
+}
+
+/* card used across every dashboard */
+.admin-card {
+  border: 1px solid rgba(18, 42, 77, 0.1);
+  background: var(--color-paper);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.admin-card:hover {
+  border-color: rgba(18, 42, 77, 0.16);
+}
+
+/* ------------------------------------------------------------------ *
+ * Chips, dots, meters
+ * ------------------------------------------------------------------ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(18, 42, 77, 0.12);
+  background: var(--color-paper);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-ink) 70%, transparent);
+  white-space: nowrap;
+}
+.chip-gold {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--color-gold-dark);
+}
+.chip-dark {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 253, 248, 0.82);
+}
+.chip-navy {
+  border-color: transparent;
+  background: var(--color-navy);
+  color: var(--color-paper);
+}
+.meter {
+  display: block;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-cream) 90%, var(--color-navy) 10%);
+  overflow: hidden;
+}
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--color-gold);
+  transition: width 0.6s var(--ease-out-soft);
+}
+.meter-navy > span {
+  background: var(--color-navy);
+}
+.meter-source > span {
+  background: var(--color-source);
+}
+
+/* ------------------------------------------------------------------ *
+ * Textures & decorative
+ * ------------------------------------------------------------------ */
+.paper-texture {
+  background-image: radial-gradient(rgba(18, 42, 77, 0.055) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.ink-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.rule-gold {
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-gold) 0%, rgba(201, 162, 39, 0.15) 70%, transparent 100%);
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * Motion
+ * ------------------------------------------------------------------ */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 38s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(47, 107, 64, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(47, 107, 64, 0);
+  }
+}
+.live-pulse {
+  animation: live-pulse 2.4s ease-out infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-cream) 75%, var(--color-paper));
+  border-radius: var(--radius-md);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ * Accessibility helpers
+ * ------------------------------------------------------------------ */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border-radius: 9999px;
+  background: var(--color-navy);
+  color: var(--color-paper);
+  padding: 0.6rem 1.1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: transform 0.2s ease;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+.sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* long-form article typography */
+.prose-editorial p {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+}
