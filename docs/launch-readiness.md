@@ -41,6 +41,8 @@ not establish launch readiness.
 ## 4. Production operations and experience
 
 - [ ] Resolve dependency vulnerabilities and validate upgrades.
+  - [x] Patch all critical/high/moderate findings; verify zero production dependency findings.
+  - [ ] Revisit the unpatched low-severity deepmerge advisory in development-only shadcn tooling.
 - [ ] Deliver invitations and operational email through Resend (selected by the user); configure a verified sender and API key.
   - [x] Implement expiring single-use invitations, account activation, durable delivery, signed callbacks and recovery controls.
   - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
@@ -190,3 +192,17 @@ after a verified snapshot of 87 tables/1,109 records. All resulting 88 applicati
 tables have RLS and no public API grants. The restricted backend role passed
 invitation/outbox/event CRUD checks in a rolled-back transaction. No test
 invitation or delivery was left in the hosted database.
+
+Dependency security: Next.js and its lint configuration are 16.4.6, PostCSS is
+8.5.32, and drizzle-kit is 0.31.11. Direct versions are pinned; the regenerated
+lockfile replaces vulnerable esbuild/minimatch branches. Node 24.x is selected
+for local/Vercel consistency. Production audit: zero findings. Full audit:
+three low-severity findings from one unpatched deepmerge advisory in development
+tooling; no moderate, high or critical findings remain. This limitation stays
+tracked rather than being suppressed or reported as fully resolved.
+
+All 63 security regressions, nine configuration/password/migration checks,
+lint (21 existing warnings), type checking, the production build and schema
+generation pass. Chrome reverified activation/sign-in, the complete learner
+assessment/certificate journey and editorial publishing/concurrency/timezone
+behavior under Next.js 16.4.6. See [dependency security](dependency-security.md).

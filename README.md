@@ -11,6 +11,7 @@ For the current database and owner-account setup, see [Supabase operation](docs/
 and [administrator access and recovery](docs/administrator-access.md).
 The verified assessment rules are documented in [assessment integrity](docs/assessment-integrity.md).
 For invitation activation, provider setup and delivery recovery, see [Resend email delivery](docs/email-delivery.md).
+The current dependency audit and remaining upstream limitation are recorded in [dependency security](docs/dependency-security.md).
 
 Purpose Course is built around five foundational principles:
 
