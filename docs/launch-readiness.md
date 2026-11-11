@@ -42,6 +42,8 @@ not establish launch readiness.
 
 - [ ] Resolve dependency vulnerabilities and validate upgrades.
 - [ ] Deliver invitations and operational email through Resend (selected by the user); configure a verified sender and API key.
+  - [x] Implement expiring single-use invitations, account activation, durable delivery, signed callbacks and recovery controls.
+  - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
 - [ ] Expose the staff contact inbox with appropriate access checks.
 - [ ] Correct analytics definitions and record real learning events.
 - [ ] Fix the identified mobile overflow, form labels, and missing public links.
@@ -163,3 +165,28 @@ journey, private question release, expiry, retries, snapshot review, valid publi
 verification/download and revoked download denial. Official hosted advisors were
 unavailable because the CLI has no management access token; direct SQL RLS/grant
 checks passed. See [assessment integrity](assessment-integrity.md).
+
+Invitations and email: 48-hour single-use activation links create credentials,
+profiles and organization membership atomically, without granting enrollment.
+Replacement/revocation invalidates prior links, and inviter permissions are
+rechecked at redemption. Protected provider requests preserve retry identity;
+the worker uses leases, backoff and a 23-hour retry cutoff. Signed, deduplicated
+callbacks establish delivery separately from provider acceptance. Fake manual
+dispatch controls were removed. Existing unverified dispatch claims are labeled
+for review rather than treated as real delivery.
+
+Twelve email/invitation regressions bring the suite to 63 passing tests. Chrome
+verified staff invitation, corrected password validation, activation, sign-in,
+revoked-link rejection and the absence of fake dispatch controls. Lint retains
+21 existing warnings with no errors; type checking, production build and three
+migration-history checks pass. Tests used local fixtures and fake provider
+responses; no email was sent. Resend settings are still missing: verified
+sender/API key, canonical application URL and webhook signing secret. Scheduler
+installation and an authorized real delivery remain launch prerequisites. See
+[email delivery and recovery](email-delivery.md).
+
+Migration `20261111201335_implement_resend_invitations.sql` was applied to Supabase
+after a verified snapshot of 87 tables/1,109 records. All resulting 88 application
+tables have RLS and no public API grants. The restricted backend role passed
+invitation/outbox/event CRUD checks in a rolled-back transaction. No test
+invitation or delivery was left in the hosted database.

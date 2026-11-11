@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { notificationOutbox, notificationPreferences, notifications } from "@/db/schema";
 
@@ -238,11 +238,4 @@ export async function savePreference(input: {
 
 export async function getOutbox(limit = 40) {
   return db.select().from(notificationOutbox).orderBy(notificationOutbox.createdAt).limit(limit);
-}
-
-export async function markOutboxSent(id: number) {
-  await db
-    .update(notificationOutbox)
-    .set({ status: "sent", sentAt: new Date() })
-    .where(and(eq(notificationOutbox.id, id), eq(notificationOutbox.status, "queued")));
 }

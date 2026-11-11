@@ -55,17 +55,21 @@ export function RoleForm({
   );
 }
 
-export function InviteForm({ roles }: { roles: { slug: string; name: string }[] }) {
-  const [state, formAction] = useActionState<PeopleState, FormData>(inviteAccount, {});
+export function InviteForm({ roles, configurationError }: { roles: { slug: string; name: string }[]; configurationError: string | null }) {
+  const [state, formAction, pending] = useActionState<PeopleState, FormData>(inviteAccount, {});
   return (
     <form action={formAction} className="space-y-3">
       <div>
-        <Label>Email address</Label>
-        <Input name="email" type="email" required placeholder="new.colleague@example.org" className="text-[12.5px]" />
+        <Label htmlFor="invite-name">Full name</Label>
+        <Input id="invite-name" name="fullName" required maxLength={160} autoComplete="name" disabled={pending} />
       </div>
       <div>
-        <Label>Workspace role</Label>
-        <Select name="roleSlug" defaultValue="student" className="text-[12.5px]">
+        <Label htmlFor="invite-email">Email address</Label>
+        <Input id="invite-email" name="email" type="email" required maxLength={255} autoComplete="email" disabled={pending} placeholder="new.colleague@example.org" className="text-[12.5px]" />
+      </div>
+      <div>
+        <Label htmlFor="invite-role">Workspace role</Label>
+        <Select id="invite-role" name="roleSlug" defaultValue="student" disabled={pending} className="text-[12.5px]">
           {roles.map((role) => (
             <option key={role.slug} value={role.slug}>
               {role.name}
@@ -74,12 +78,12 @@ export function InviteForm({ roles }: { roles: { slug: string; name: string }[] 
         </Select>
       </div>
       <Note state={state} />
-      <Button type="submit" size="sm" className="w-full">
-        <MailPlus className="h-3.5 w-3.5" /> Queue invitation
+      {configurationError ? <p role="status" className="text-xs text-amber-800">{configurationError}</p> : null}
+      <Button type="submit" size="sm" className="w-full" disabled={pending || !!configurationError}>
+        <MailPlus className="h-3.5 w-3.5" /> {pending ? "Queuing..." : "Queue invitation"}
       </Button>
       <p className="text-[10.5px] leading-relaxed text-stone-500">
-        Invitations are logged and sent to the administrator notification centre. Demo credentials remain available on
-        the sign-in page.
+        Resend delivers a password setup link that expires in 48 hours. Queuing a new invitation replaces any pending link for that address.
       </p>
     </form>
   );

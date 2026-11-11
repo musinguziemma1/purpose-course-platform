@@ -4,7 +4,10 @@ import Link from "next/link";
 import { ArrowUpRight, KeyRound, Mail, UserRound } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { profiles, roles, users } from "@/db/schema";
+import { accountInvitations, profiles, roles, users } from "@/db/schema";
+import { canAssignRole } from "@/lib/admin-access";
+import { emailConfigurationError } from "@/lib/email";
+import { revokeAccountInvitation } from "@/app/actions/people";
 import { canManagePeople, getSessionUser, homePathForRole } from "@/lib/auth";
 import { ROLE_CATALOG } from "@/lib/roles";
 import { getOrganizations } from "@/db/learning";
@@ -42,7 +45,8 @@ export default async function AdminPeoplePage() {
     db.select().from(roles).orderBy(asc(roles.level)),
   ]);
 
-  const roleOptions = roleRows.map((role) => ({ slug: role.slug, name: role.name }));
+  const roleOptions = roleRows.filter((role) => canAssignRole(user, "guest", role.slug)).map((role) => ({ slug: role.slug, name: role.name }));
+  const invitations = await db.select().from(accountInvitations).orderBy(asc(accountInvitations.createdAt)).limit(50);
 
   return (
     <div className="space-y-6">
@@ -112,7 +116,7 @@ export default async function AdminPeoplePage() {
                     profileId={member.profileId}
                     currentRole={member.roleSlug}
                     roles={roleOptions}
-                    disabled={member.profileId === user.profileId}
+                    disabled={member.profileId === user.profileId || !canAssignRole(user, member.roleSlug, member.roleSlug)}
                   />
                   <Link
                     href={homePathForRole(member.roleSlug)}
@@ -132,8 +136,22 @@ export default async function AdminPeoplePage() {
               <Mail className="h-3.5 w-3.5 text-gold-dark" /> Invite a colleague
             </p>
             <div className="mt-3">
-              <InviteForm roles={roleOptions} />
+              <InviteForm roles={roleOptions.filter((role) => role.slug !== "guest")} configurationError={emailConfigurationError()} />
             </div>
+          </div>
+
+          <div className="admin-card p-5">
+            <h2 className="text-sm font-semibold text-navy">Recent invitations</h2>
+            <ul className="mt-3 space-y-3">
+              {invitations.map((invitation) => {
+                const status = invitation.acceptedAt ? "Accepted" : invitation.revokedAt ? "Revoked" : invitation.expiresAt < new Date() ? "Expired" : "Pending";
+                const role = roleRows.find((role) => role.id === invitation.roleId);
+                return <li key={invitation.id} className="break-words border-b border-navy/10 pb-3 text-xs"><p className="font-medium">{invitation.email}</p><p className="text-stone-600">{role?.name} · {status} · expires {formatDate(invitation.expiresAt)}</p>
+                  {status === "Pending" && role && canAssignRole(user, "guest", role.slug) ? <form action={revokeAccountInvitation}><input type="hidden" name="invitationId" value={invitation.id} /><button type="submit" className="mt-1 font-semibold text-rose-700 underline">Revoke invitation</button></form> : null}
+                </li>;
+              })}
+              {!invitations.length ? <li className="text-xs text-stone-600">No invitations yet.</li> : null}
+            </ul>
           </div>
 
           <div className="admin-card p-5">

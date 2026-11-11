@@ -21,6 +21,7 @@
     "test:database": "node --test scripts/database-config.test.mjs",
     "test:security": "node --import tsx --test tests/*.test.mjs",
     "admin:manage": "node scripts/manage-admin.mjs",
+    "email:prepare": "node scripts/prepare-email.mjs",
     "test:passwords": "node --test scripts/password-security.test.mjs"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "pg": "8.20.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "resend": "6.38.0",
     "shadcn": "^4.23.0",
     "tailwind-merge": "^3.7.0",
     "tsx": "^4.23.15",

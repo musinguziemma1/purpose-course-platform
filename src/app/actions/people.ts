@@ -6,6 +6,8 @@ import { db } from "@/db";
 import { activityLogs, authSessions, enrollments, notifications, profiles, roles } from "@/db/schema";
 import { canManagePeople, getSessionUser } from "@/lib/auth";
 import { canAssignRole } from "@/lib/admin-access";
+import { createInvitation, revokeInvitation } from "@/db/invitations";
+import { emailConfigurationError } from "@/lib/email";
 
 export type PeopleState = { ok?: boolean; error?: string; message?: string };
 
@@ -75,25 +77,18 @@ export async function inviteAccount(_prev: PeopleState, formData: FormData): Pro
   const user = await getSessionUser();
   if (!user || !canManagePeople(user)) return { error: "Administrator access required." };
 
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const roleSlug = String(formData.get("roleSlug") ?? "student");
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Enter a valid email address." };
-
-  await db.insert(notifications).values({
-    recipientId: user.profileId,
-    type: "system",
-    title: "Invitation queued",
-    body: `An invitation for ${email} (${roleSlug}) is ready to send. Sign-in credentials are provisioned by the administrator.`,
-    href: "/admin/people",
-  });
-
-  await db.insert(activityLogs).values({
-    actorId: user.profileId,
-    action: "people.invite_queued",
-    entityType: "profile",
-    description: `Queued a ${roleSlug} invitation for ${email}.`,
-  });
-
+  const configurationError = emailConfigurationError();
+  if (configurationError) return { error: configurationError };
+  const result = await createInvitation({ email: String(formData.get("email") ?? ""), fullName: String(formData.get("fullName") ?? ""), roleSlug: String(formData.get("roleSlug") ?? "student") }, user);
   revalidatePath("/admin/people");
-  return { ok: true, message: `Invitation for ${email} queued. The demo workspaces already include one account per role.` };
+  revalidatePath("/admin/notifications");
+  return result;
+}
+
+export async function revokeAccountInvitation(formData: FormData) {
+  const user = await getSessionUser();
+  if (!user || !canManagePeople(user)) return;
+  await revokeInvitation(String(formData.get("invitationId") ?? ""), user);
+  revalidatePath("/admin/people");
+  revalidatePath("/admin/notifications");
 }

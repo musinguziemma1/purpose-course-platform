@@ -10,6 +10,7 @@ Implementation and launch verification are tracked in [the launch readiness chec
 For the current database and owner-account setup, see [Supabase operation](docs/supabase-database.md)
 and [administrator access and recovery](docs/administrator-access.md).
 The verified assessment rules are documented in [assessment integrity](docs/assessment-integrity.md).
+For invitation activation, provider setup and delivery recovery, see [Resend email delivery](docs/email-delivery.md).
 
 Purpose Course is built around five foundational principles:
 

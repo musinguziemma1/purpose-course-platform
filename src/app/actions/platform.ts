@@ -19,7 +19,6 @@ import {
   liveSessions,
   mentorAssignments,
   mentoringNotes,
-  notificationOutbox,
   orgMemberships,
   organizations,
   profiles,
@@ -485,16 +484,6 @@ export async function updateNotificationPreference(formData: FormData) {
     push: formData.get("push") === "on",
   });
   revalidatePath("/learn/notifications");
-  revalidatePath("/admin/notifications");
-}
-
-export async function markOutboxDelivered(formData: FormData) {
-  const user = await guard("notifications.manage");
-  if (!user) return;
-  const id = Number(formData.get("outboxId"));
-  if (!id) return;
-  await db.update(notificationOutbox).set({ status: "sent", sentAt: new Date() }).where(eq(notificationOutbox.id, id));
-  await log(user.profileId, "notifications.dispatched", `Marked outbox #${id} as sent.`);
   revalidatePath("/admin/notifications");
 }
 

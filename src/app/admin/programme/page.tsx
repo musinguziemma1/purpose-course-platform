@@ -9,7 +9,7 @@ import { getCohorts, getInstrumentResultsOverview, getOpenReports, getOrganizati
 import { canManagePeople, getSessionUser } from "@/lib/auth";
 import { PERMISSION_LIST, ROLE_DEFINITIONS, can } from "@/lib/rbac";
 import { CohortForm, OrgForm } from "@/components/platform/forms";
-import { addCohortMember, markOutboxDelivered, moderateThread, resolveReport, setCohortStatus } from "@/app/actions/platform";
+import { addCohortMember, moderateThread, resolveReport, setCohortStatus } from "@/app/actions/platform";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getAttendanceForSession } from "@/db/learning";
 
@@ -248,12 +248,7 @@ export default async function AdminProgrammePage() {
                     </span>
                   </div>
                   <p className="text-[10px] text-stone-500">{row.recipient} · {row.outbox.templateKey}</p>
-                  {row.outbox.status === "queued" ? (
-                    <form action={markOutboxDelivered} className="mt-0.5">
-                      <input type="hidden" name="outboxId" value={row.outbox.id} />
-                      <button type="submit" className="text-[10px] font-semibold text-gold-dark hover:underline">Mark dispatched</button>
-                    </form>
-                  ) : null}
+                  <p className="text-[10px] text-stone-500">{row.outbox.status}</p>
                 </li>
               ))}
               {outbox.length === 0 ? <li className="px-4 py-4 text-[12px] text-stone-500">Outbox is empty.</li> : null}

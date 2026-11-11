@@ -1469,11 +1469,31 @@ export const notificationPreferences = pgTable(
   (table) => [uniqueIndex("notification_preferences_unique_idx").on(table.profileId, table.category)],
 );
 
+export const accountInvitations = pgTable("account_invitations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull(),
+  fullName: varchar("full_name", { length: 160 }).notNull(),
+  roleId: integer("role_id").notNull().references(() => roles.id),
+  organizationId: integer("organization_id").notNull().references(() => organizations.id),
+  invitedById: uuid("invited_by_id").references(() => profiles.id, { onDelete: "set null" }),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("account_invitations_pending_email_idx").on(table.email).where(sql`${table.acceptedAt} is null and ${table.revokedAt} is null`),
+  index("account_invitations_role_idx").on(table.roleId),
+  index("account_invitations_org_idx").on(table.organizationId),
+  index("account_invitations_inviter_idx").on(table.invitedById),
+]);
+
 export const notificationOutbox = pgTable("notification_outbox", {
   id: serial("id").primaryKey(),
   profileId: uuid("profile_id")
-    .notNull()
     .references(() => profiles.id, { onDelete: "cascade" }),
+  invitationId: uuid("invitation_id").references(() => accountInvitations.id, { onDelete: "cascade" }),
+  recipientEmail: varchar("recipient_email", { length: 255 }),
   channel: varchar("channel", { length: 24 }).notNull().default("email"),
   templateKey: varchar("template_key", { length: 64 }).notNull(),
   subject: varchar("subject", { length: 240 }).notNull(),
@@ -1483,8 +1503,19 @@ export const notificationOutbox = pgTable("notification_outbox", {
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull().defaultNow(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   error: text("error"),
+  attempts: integer("attempts").notNull().default(0),
+  firstAttemptAt: timestamp("first_attempt_at", { withTimezone: true }),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  leaseToken: uuid("lease_token"),
+  providerId: varchar("provider_id", { length: 96 }).unique(),
+  requestCiphertext: text("request_ciphertext"),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("notification_outbox_claim_idx").on(table.status, table.scheduledAt).where(sql`${table.channel} = 'email'`),
+  index("notification_outbox_profile_idx").on(table.profileId),
+  uniqueIndex("notification_outbox_invitation_idx").on(table.invitationId),
+]);
 
 export type Instrument = typeof instruments.$inferSelect;
 export type InstrumentDimension = typeof instrumentDimensions.$inferSelect;
@@ -1603,8 +1634,14 @@ export const emailEvents = pgTable("email_events", {
   event: varchar("event", { length: 40 }).notNull().default("queued"),
   provider: varchar("provider", { length: 48 }).notNull().default("internal"),
   detail: text("detail"),
+  providerEventId: varchar("provider_event_id", { length: 160 }).unique(),
+  providerMessageId: varchar("provider_message_id", { length: 96 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("email_events_outbox_idx").on(table.outboxId),
+  index("email_events_profile_idx").on(table.profileId),
+  index("email_events_message_idx").on(table.providerMessageId),
+]);
 
 export const messages = pgTable(
   "messages",
