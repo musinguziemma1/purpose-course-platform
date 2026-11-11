@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react";
 import { saveArticle, type ActionState } from "@/app/actions/publishing";
@@ -47,11 +47,18 @@ export function ArticleForm({
   canReview: boolean;
   currentUserId: string;
 }) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(saveArticle, {});
+  const [version, setVersion] = useState(() => article ? new Date(article.updatedAt).toISOString() : "");
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(async (previous, form) => {
+    const result = await saveArticle(previous, form);
+    if (result.ok && result.updatedAt) setVersion(result.updatedAt);
+    return result;
+  }, {});
 
   return (
     <form action={formAction} className="space-y-5">
+      <fieldset disabled={pending} className="min-w-0 space-y-5">
       {article ? <input type="hidden" name="id" value={article.id} /> : null}
+      <input type="hidden" name="expectedVersion" value={version} />
 
       <div className="rounded-xl border border-navy/10 bg-paper p-5">
         <div className="grid gap-4">
@@ -213,6 +220,7 @@ export function ArticleForm({
           </button>
         </div>
       </div>
+      </fieldset>
     </form>
   );
 }

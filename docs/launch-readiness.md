@@ -25,10 +25,10 @@ not establish launch readiness.
 
 ## 2. Publishing correctness
 
-- [ ] Map workflow commands to valid review event values.
-- [ ] Make state changes, revision history, audit events, and notifications atomic.
-- [ ] Enforce permitted transitions and concurrent update protection.
-- [ ] Verify scheduling, publishing, revision requests, and author ownership.
+- [x] Map workflow commands to valid review event values.
+- [x] Make state changes, revision history, audit events, and notifications atomic.
+- [x] Enforce permitted transitions and concurrent update protection.
+- [x] Verify scheduling, publishing, revision requests, and author ownership.
 
 ## 3. Learning and assessment correctness
 
@@ -122,3 +122,20 @@ valid completion unlocks the next lesson, paused/draft content loses access,
 and draft assessments return 404. All 31 security tests, type checking, lint
 and the production build passed. Assessment timing/attempt limits and certificate
 correctness remain in phase 3; they are not established by these access checks.
+
+Publishing: a shared command map supplies valid states and database review-event
+values. Article saves and workflow changes lock the article, verify permissions
+and the version displayed to the editor, then commit content, revisions, tags,
+history, audit and applicable notifications together. Authors cannot change
+submitted/reviewed content without a revision request; editing approved or
+scheduled content clears approval and scheduling. Scheduled publication uses
+the same atomic path with skipped locks to prevent duplicate events.
+
+Seven publishing regression tests cover all commands, withdrawn permissions,
+invalid schedules, late-failure rollback, simultaneous edits and simultaneous
+scheduled publishers. Chrome verification covered save, submit, review,
+revision, resubmission, approval, scheduling and public publication. A stale tab
+could not overwrite a newer draft. A 10:30 Africa/Kampala schedule was stored as
+07:30 UTC. All 38 regression tests, type checking, lint and the production build
+passed. Scheduling currently runs on public/article visits and the staff action;
+a periodic production scheduler is part of the deployment configuration work.

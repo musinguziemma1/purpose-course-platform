@@ -30,51 +30,14 @@ import type { ArticleStatusValue } from "@/lib/utils";
 import { getSessionUser } from "@/lib/auth";
 import { groupReadable, threadReadable } from "@/db/community-access";
 import { can } from "@/lib/rbac";
+import { publishScheduledArticles } from "@/db/publishing";
 
 /* ------------------------------------------------------------------ *
  * Publishing automation — promotes scheduled articles when due
  * ------------------------------------------------------------------ */
 
 export async function publishDueArticles() {
-  const due = await db
-    .select({ id: articles.id, title: articles.title, authorId: articles.authorId })
-    .from(articles)
-    .where(
-      and(eq(articles.status, "scheduled"), lte(articles.scheduledFor, new Date())),
-    );
-
-  for (const article of due) {
-    await db
-      .update(articles)
-      .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
-      .where(eq(articles.id, article.id));
-    await db.insert(articleReviews).values({
-      articleId: article.id,
-      action: "published",
-      fromStatus: "scheduled",
-      toStatus: "published",
-      comment: "Published automatically at the scheduled time.",
-    });
-    await db.insert(activityLogs).values({
-      action: "article.published.scheduled",
-      entityType: "article",
-      entityId: article.id,
-      description: `Scheduled article “${article.title}” went live automatically.`,
-    });
-    await db.insert(notifications).values({
-      recipientId: article.authorId,
-      type: "publish",
-      title: "Your article is live",
-      body: `“${article.title}” was published on schedule.`,
-      href: `/blog/${(await getArticleSlug(article.id)) ?? ""}`,
-    });
-  }
-  return due.length;
-}
-
-async function getArticleSlug(id: string) {
-  const rows = await db.select({ slug: articles.slug }).from(articles).where(eq(articles.id, id)).limit(1);
-  return rows[0]?.slug;
+  return publishScheduledArticles();
 }
 
 /* ------------------------------------------------------------------ *

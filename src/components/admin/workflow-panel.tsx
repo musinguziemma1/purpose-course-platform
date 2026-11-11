@@ -1,24 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { transitionArticle, type ActionState } from "@/app/actions/publishing";
 import { Button } from "@/components/ui/button";
 import { Label, Textarea } from "@/components/ui/field";
 import { STATUS_META, WORKFLOW_STEPS, type ArticleStatusValue, cn } from "@/lib/utils";
-
-type TransitionAction =
-  | "submit"
-  | "start_review"
-  | "request_revision"
-  | "approve"
-  | "reject"
-  | "schedule"
-  | "publish"
-  | "archive"
-  | "restore"
-  | "feature";
+import { validArticleTransition, type TransitionAction } from "@/lib/article-workflow";
 
 const AUTHOR_ACTIONS: { action: TransitionAction; label: string; variant: "default" | "gold" | "outline" | "danger" | "subtle" }[] = [
   { action: "submit", label: "Submit for review", variant: "default" },
@@ -34,19 +23,6 @@ const EDITOR_ACTIONS: { action: TransitionAction; label: string; variant: "defau
   { action: "archive", label: "Archive", variant: "outline" },
   { action: "restore", label: "Restore to draft", variant: "outline" },
 ];
-
-const VALID: Record<TransitionAction, ArticleStatusValue[]> = {
-  submit: ["draft", "revision_requested"],
-  start_review: ["submitted", "approved", "revision_requested"],
-  request_revision: ["submitted", "in_review"],
-  approve: ["in_review", "submitted"],
-  reject: ["submitted", "in_review", "revision_requested"],
-  schedule: ["approved"],
-  publish: ["approved", "scheduled"],
-  archive: ["published", "scheduled", "approved"],
-  restore: ["archived", "rejected"],
-  feature: ["published", "approved", "scheduled"],
-};
 
 function ActionButton({
   action,
@@ -71,22 +47,35 @@ export function WorkflowPanel({
   status,
   isOwner,
   canReview,
+  canPublish,
   scheduledFor,
+  updatedAt,
 }: {
   articleId: string;
   status: string;
   isOwner: boolean;
   canReview: boolean;
+  canPublish: boolean;
   scheduledFor: Date | string | null;
+  updatedAt: Date | string;
 }) {
-  const [state, formAction] = useActionState<ActionState, FormData>(transitionArticle, {});
-  const [defaultScheduledFor] = useState(() => new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 16));
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(async (previous, form) => {
+    const date = String(form.get("scheduledFor") ?? "");
+    if (date && Number.isFinite(new Date(date).getTime())) form.set("scheduledFor", new Date(date).toISOString());
+    return transitionArticle(previous, form);
+  }, {});
+  const scheduleInput = useRef<HTMLInputElement>(null);
+  // A datetime-local input represents the browser's time zone, not the server's.
+  useEffect(() => {
+    const date = scheduledFor ? new Date(scheduledFor) : new Date(Date.now() + 2 * 86400000);
+    if (scheduleInput.current) scheduleInput.current.value = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }, [scheduledFor]);
   const statusValue = status as ArticleStatusValue;
 
   const actions = [
-    ...(isOwner ? AUTHOR_ACTIONS : []),
+    ...(isOwner || canReview ? AUTHOR_ACTIONS : []),
     ...(canReview ? EDITOR_ACTIONS : []),
-  ].filter((item) => VALID[item.action as TransitionAction].includes(statusValue));
+  ].filter((item) => validArticleTransition(statusValue, item.action) && (!["publish", "schedule"].includes(item.action) || canPublish));
 
   const stepIndex = WORKFLOW_STEPS.indexOf(statusValue);
 
@@ -128,8 +117,11 @@ export function WorkflowPanel({
 
       <form action={formAction} className="rounded-xl border border-navy/10 bg-paper p-4">
         <input type="hidden" name="articleId" value={articleId} />
-        <Label hint="optional">Review note</Label>
+        <input type="hidden" name="expectedVersion" value={new Date(updatedAt).toISOString()} />
+        <fieldset disabled={pending} className="min-w-0">
+        <Label htmlFor="article-review-note" hint="optional">Review note</Label>
         <Textarea
+          id="article-review-note"
           name="comment"
           rows={3}
           placeholder="Feedback, rejection reason or revision notes visible in the history."
@@ -137,15 +129,13 @@ export function WorkflowPanel({
         />
         {canReview ? (
           <div className="mt-3">
-            <Label hint="editor">Schedule date</Label>
+            <Label htmlFor="article-schedule-date" hint="your local time">Schedule date</Label>
             <input
+              id="article-schedule-date"
               type="datetime-local"
               name="scheduledFor"
-              defaultValue={
-                scheduledFor
-                  ? new Date(scheduledFor).toISOString().slice(0, 16)
-                  : defaultScheduledFor
-              }
+              ref={scheduleInput}
+              defaultValue=""
               className="h-10 w-full rounded-lg border border-navy/15 bg-white px-3 text-[12.5px] outline-none focus:border-gold focus:ring-2 focus:ring-gold/25"
             />
           </div>
@@ -162,7 +152,7 @@ export function WorkflowPanel({
             </p>
           )}
         </div>
-
+        </fieldset>
         {state.ok ? (
           <p className="mt-3 flex items-start gap-1.5 rounded-md border border-source/30 bg-source/5 px-2.5 py-2 text-[11.5px] text-source">
             <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {state.message}

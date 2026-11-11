@@ -6,7 +6,7 @@ import { ArticleForm } from "@/components/admin/article-form";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { WorkflowPanel } from "@/components/admin/workflow-panel";
 import { getArticleForAdmin } from "@/db/queries";
-import { canReviewArticles, getSessionUser } from "@/lib/auth";
+import { canPublishArticles, canReviewArticles, getSessionUser } from "@/lib/auth";
 import { formatDateTime, relativeTime, STATUS_META, type ArticleStatusValue } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -135,6 +135,8 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
             status={article.status}
             isOwner={isOwner}
             canReview={canReview}
+            canPublish={canPublishArticles(user)}
+            updatedAt={article.updatedAt}
             scheduledFor={article.scheduledFor}
           />
           <div className="mt-4 rounded-xl border border-navy/10 bg-cream/50 p-4 text-[11px] leading-relaxed text-stone-600">
