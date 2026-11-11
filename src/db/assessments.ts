@@ -4,6 +4,7 @@ import {
   assessmentAnswers,
   assessmentAttempts,
   assessmentQuestions,
+  assessmentSessions,
   assessments,
   certificates,
   courseGroups,
@@ -18,7 +19,8 @@ import {
   roles,
 } from "@/db/schema";
 import { getAcademyTree } from "@/db/courses";
-import { getSessionUser, type SessionUser } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
+import { synchronizeCertificates } from "@/db/certificate-awards";
 import { assessmentReadable } from "@/db/learning-access";
 import { groupReviewable, learnerReadable } from "@/db/learner-access";
 
@@ -44,6 +46,7 @@ export type AssessmentCard = {
   questionCount: number;
   bestScore: number | null;
   attemptsUsed: number;
+  hasActiveSession: boolean;
   passed: boolean;
   lastSubmittedAt: Date | null;
 };
@@ -59,10 +62,11 @@ export async function getAssessmentsForStudent(profileId: string): Promise<Asses
       courseSlug: courses.slug,
       moduleTitle: courseModules.title,
       questionCount: sql<number>`(select count(*) from ${assessmentQuestions} where ${assessmentQuestions.assessmentId} = ${assessments.id})::int`,
-      bestScore: sql<number | null>`(select max(${assessmentAttempts.score}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId})`,
-      attemptsUsed: sql<number>`(select count(*) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId})::int`,
-      passed: sql<boolean>`(select bool_or(${assessmentAttempts.passed}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId})`,
-      lastSubmittedAt: sql<Date | null>`(select max(${assessmentAttempts.submittedAt}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId})`,
+      bestScore: sql<number | null>`(select max(${assessmentAttempts.score}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId} and ${assessmentAttempts.status} = 'submitted')`,
+      attemptsUsed: sql<number>`(select count(*) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId} and ${assessmentAttempts.status} = 'submitted')::int + (select count(*) from ${assessmentSessions} where ${assessmentSessions.assessmentId} = ${assessments.id} and ${assessmentSessions.profileId} = ${profileId} and ${assessmentSessions.status} in ('in_progress', 'expired'))::int`,
+      hasActiveSession: sql<boolean>`exists (select 1 from ${assessmentSessions} where ${assessmentSessions.assessmentId} = ${assessments.id} and ${assessmentSessions.profileId} = ${profileId} and ${assessmentSessions.status} = 'in_progress' and ${assessmentSessions.expiresAt} > now())`,
+      passed: sql<boolean>`(select bool_or(${assessmentAttempts.passed}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId} and ${assessmentAttempts.status} = 'submitted')`,
+      lastSubmittedAt: sql<Date | null>`(select max(${assessmentAttempts.submittedAt}) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${assessmentAttempts.profileId} = ${profileId} and ${assessmentAttempts.status} = 'submitted')`,
     })
     .from(assessments)
     .leftJoin(courseLevels, eq(assessments.levelId, courseLevels.id))
@@ -89,6 +93,7 @@ export async function getAssessmentsForStudent(profileId: string): Promise<Asses
     questionCount: Number(row.questionCount ?? 0),
     bestScore: row.bestScore === null ? null : Number(row.bestScore),
     attemptsUsed: Number(row.attemptsUsed ?? 0),
+    hasActiveSession: row.hasActiveSession,
     passed: Boolean(row.passed),
     lastSubmittedAt: row.lastSubmittedAt ? new Date(row.lastSubmittedAt) : null,
   }));
@@ -114,24 +119,22 @@ export async function getAssessmentForTaking(assessmentId: number, profileId: st
   const record = rows[0];
   if (!record) return null;
 
-  const [questions, attempts] = await Promise.all([
+  const [questions, attempts, sessions] = await Promise.all([
     db
       .select({
-        id: assessmentQuestions.id,
-        prompt: assessmentQuestions.prompt,
-        options: assessmentQuestions.options,
+        value: sql<number>`count(*)::int`,
       })
       .from(assessmentQuestions)
-      .where(eq(assessmentQuestions.assessmentId, assessmentId))
-      .orderBy(asc(assessmentQuestions.sortOrder)),
+      .where(eq(assessmentQuestions.assessmentId, assessmentId)),
     db
       .select()
       .from(assessmentAttempts)
-      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), eq(assessmentAttempts.profileId, profileId)))
+      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), eq(assessmentAttempts.profileId, profileId), eq(assessmentAttempts.status, "submitted")))
       .orderBy(desc(assessmentAttempts.submittedAt)),
+    db.select({ status: assessmentSessions.status, expiresAt: assessmentSessions.expiresAt }).from(assessmentSessions).where(and(eq(assessmentSessions.assessmentId, assessmentId), eq(assessmentSessions.profileId, profileId), inArray(assessmentSessions.status, ["in_progress", "expired"]))),
   ]);
 
-  return { ...record, questions, attempts };
+  return { ...record, questionCount: questions[0]?.value ?? 0, attempts, attemptsUsed: attempts.length + sessions.length, canResume: sessions.some((session) => session.status === "in_progress" && session.expiresAt.getTime() > Date.now()) };
 }
 
 export async function getAttemptReview(attemptId: number, profileId: string) {
@@ -152,6 +155,12 @@ export async function getAttemptReview(attemptId: number, profileId: string) {
     .limit(1);
   const record = rows[0];
   if (!record || record.attempt.profileId !== profileId) return null;
+
+  const [session] = await db.select({ questions: assessmentSessions.questions, selections: assessmentSessions.selections }).from(assessmentSessions).where(and(eq(assessmentSessions.attemptId, attemptId), eq(assessmentSessions.profileId, profileId))).limit(1);
+  if (session) {
+    const selections = new Map(session.selections.map((answer) => [answer.questionId, answer.selectedIndex]));
+    return { ...record, answers: session.questions.map((question) => ({ questionId: question.id, prompt: question.prompt, options: question.options, correctIndex: question.correctIndex, explanation: question.explanation, selectedIndex: selections.get(question.id) ?? null, isCorrect: selections.get(question.id) === question.correctIndex })) };
+  }
 
   const answers = await db
     .select({
@@ -175,193 +184,13 @@ export async function getAttemptReview(attemptId: number, profileId: string) {
  * Grading + certificate issue
  * ------------------------------------------------------------------ */
 
-export async function gradeAssessment(input: {
-  assessmentId: number;
-  profileId: string;
-  selections: { questionId: number; selectedIndex: number }[];
-}, viewer: SessionUser) {
-  if (viewer.profileId !== input.profileId) return null;
-  const [assessmentRows, questions] = await Promise.all([
-    db.select().from(assessments).where(and(eq(assessments.id, input.assessmentId), assessmentReadable(viewer))).limit(1),
-    db
-      .select()
-      .from(assessmentQuestions)
-      .where(eq(assessmentQuestions.assessmentId, input.assessmentId))
-      .orderBy(asc(assessmentQuestions.sortOrder)),
-  ]);
-  const assessment = assessmentRows[0];
-  if (!assessment || questions.length === 0) return null;
-
-  const selected = new Map(input.selections.map((item) => [item.questionId, item.selectedIndex]));
-  const graded = questions.map((question) => {
-    const selectedIndex = selected.get(question.id) ?? -1;
-    return { question, selectedIndex, isCorrect: selectedIndex === question.correctIndex };
-  });
-  const correctCount = graded.filter((item) => item.isCorrect).length;
-  const score = Math.round((correctCount / questions.length) * 100);
-
-  const levelRows = assessment.levelId
-    ? await db.select().from(courseLevels).where(eq(courseLevels.id, assessment.levelId)).limit(1)
-    : [];
-  const passMark = Math.max(assessment.passMark, levelRows[0]?.passMark ?? 0);
-  const passed = score >= passMark;
-
-  const [attempt] = await db
-    .insert(assessmentAttempts)
-    .values({
-      assessmentId: assessment.id,
-      profileId: input.profileId,
-      score,
-      passed,
-      correctCount,
-      totalCount: questions.length,
-      passMark,
-    })
-    .returning();
-
-  await db.insert(assessmentAnswers).values(
-    graded.map((item) => ({
-      attemptId: attempt.id,
-      questionId: item.question.id,
-      selectedIndex: item.selectedIndex,
-      isCorrect: item.isCorrect,
-    })),
-  );
-
-  const certificate = passed ? await issueCertificateForAssessment(input.profileId, assessment.id) : null;
-
-  return { attempt, assessment, graded, score, passed, passMark, certificate };
-}
-
-export async function issueCertificateForAssessment(profileId: string, assessmentId: number) {
-  const rows = await db.select().from(assessments).where(eq(assessments.id, assessmentId)).limit(1);
-  const assessment = rows[0];
-  if (!assessment) return null;
-
-  if (assessment.kind === "level" && assessment.levelId) {
-    const levelRows = await db.select().from(courseLevels).where(eq(courseLevels.id, assessment.levelId)).limit(1);
-    const level = levelRows[0];
-    const best = await bestScore(profileId, assessmentId);
-    return issueCertificate({
-      profileId,
-      kind: "level",
-      levelId: assessment.levelId,
-      title: `${level?.name ?? "Purpose Course"} Level — Completed`,
-      levelName: level?.name ?? null,
-      score: best,
-      hours: (level?.weeks ?? 5) * 3,
-    });
-  }
-
-  if (assessment.courseId) {
-    const courseRows = await db.select().from(courses).where(eq(courses.id, assessment.courseId)).limit(1);
-    const course = courseRows[0];
-    if (!course) return null;
-    const levelRows = await db.select().from(courseLevels).where(eq(courseLevels.id, course.levelId)).limit(1);
-    const best = await bestScore(profileId, assessmentId);
-    return issueCertificate({
-      profileId,
-      kind: "course",
-      courseId: course.id,
-      levelId: course.levelId,
-      title: course.title,
-      levelName: levelRows[0]?.name ?? null,
-      score: best,
-      hours: course.estimatedHours,
-    });
-  }
-  return null;
-}
-
-async function bestScore(profileId: string, assessmentId: number) {
-  const rows = await db
-    .select({ value: sql<number | null>`max(${assessmentAttempts.score})` })
-    .from(assessmentAttempts)
-    .where(and(eq(assessmentAttempts.assessmentId, assessmentId), eq(assessmentAttempts.profileId, profileId)));
-  const value = rows[0]?.value;
-  return value === null || value === undefined ? null : Number(value);
-}
-
-export async function issueCertificate(input: {
-  profileId: string;
-  kind: "course" | "level";
-  courseId?: number;
-  levelId?: number;
-  title: string;
-  levelName: string | null;
-  score: number | null;
-  hours: number | null;
-}) {
-  const [existing] = await db
-    .select()
-    .from(certificates)
-    .where(
-      and(
-        eq(certificates.profileId, input.profileId),
-        input.kind === "course" && input.courseId
-          ? eq(certificates.courseId, input.courseId)
-          : input.kind === "level" && input.levelId
-            ? eq(certificates.levelId, input.levelId)
-            : isNull(certificates.courseId),
-      ),
-    )
-    .limit(1);
-  if (existing) return existing;
-
-  const code = `PC-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}-${Math.random()
-    .toString(36)
-    .slice(2, 6)
-    .toUpperCase()}`;
-
-  const [created] = await db
-    .insert(certificates)
-    .values({
-      code,
-      profileId: input.profileId,
-      kind: input.kind,
-      courseId: input.courseId ?? null,
-      levelId: input.levelId ?? null,
-      title: input.title,
-      levelName: input.levelName,
-      score: input.score,
-      hours: input.hours,
-    })
-    .onConflictDoNothing()
-    .returning();
-
-  if (created) return created;
-  const [again] = await db.select().from(certificates).where(eq(certificates.profileId, input.profileId)).limit(1);
-  return again ?? null;
-}
-
-/** Called whenever a lesson or assessment is completed: issues any earned certificates. */
 export async function syncCertificates(profileId: string) {
-  const tree = await getAcademyTree();
-  const completedRows = await db
-    .select({ lessonId: lessonProgress.lessonId })
-    .from(lessonProgress)
-    .where(and(eq(lessonProgress.profileId, profileId), eq(lessonProgress.status, "completed")));
-  const completedIds = new Set(completedRows.map((row) => row.lessonId));
+  return (await synchronizeCertificates(profileId)).newlyIssued;
+}
 
-  const issued: string[] = [];
-  for (const course of tree) {
-    const courseLessons = course.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.status === "published");
-    if (courseLessons.length === 0) continue;
-    const allDone = courseLessons.every((lesson) => completedIds.has(lesson.id));
-    if (!allDone) continue;
-    const certificate = await issueCertificate({
-      profileId,
-      kind: "course",
-      courseId: course.id,
-      levelId: course.levelId,
-      title: course.title,
-      levelName: course.levelName,
-      score: null,
-      hours: course.estimatedHours,
-    });
-    if (certificate) issued.push(certificate.code);
-  }
-  return issued;
+export async function issueCertificate(input: { profileId: string; kind: "course" | "level"; courseId?: number; levelId?: number; title: string; levelName: string | null; score: number | null; hours: number | null }) {
+  const result = await synchronizeCertificates(input.profileId);
+  return result.awards.find((award) => award.kind === input.kind && (input.kind === "course" ? award.courseId === input.courseId : award.levelId === input.levelId)) ?? null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -389,7 +218,7 @@ export async function getCertificateByCode(code: string) {
     })
     .from(certificates)
     .innerJoin(profiles, eq(certificates.profileId, profiles.id))
-    .where(eq(certificates.code, code.toUpperCase()))
+    .where(and(eq(certificates.code, code.toUpperCase()), isNull(certificates.revokedAt)))
     .limit(1);
   return rows[0] ?? null;
 }

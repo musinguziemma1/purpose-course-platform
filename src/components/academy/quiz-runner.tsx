@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Award, CheckCircle2, ChevronLeft, ChevronRight, Loader2, RotateCcw, Send, XCircle } from "lucide-react";
@@ -22,17 +22,28 @@ export function QuizRunner({
   assessmentId,
   title,
   passMark,
-  questions,
-  attemptsUsed,
+  questionCount,
+  timeLimitMinutes,
+  attemptsUsed: initialAttemptsUsed,
+  canResume,
   maxAttempts,
 }: {
   assessmentId: number;
   title: string;
   passMark: number;
-  questions: Question[];
+  questionCount: number;
+  timeLimitMinutes: number;
   attemptsUsed: number;
   maxAttempts: number;
+  canResume: boolean;
 }) {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [sessionId, setSessionId] = useState("");
+  const [attemptsUsed, setAttemptsUsed] = useState(initialAttemptsUsed);
+  const [expiresAt, setExpiresAt] = useState(0);
+  const [serverOffset, setServerOffset] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [effectivePassMark, setEffectivePassMark] = useState(passMark);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [index, setIndex] = useState(0);
   const [pending, setPending] = useState(false);
@@ -42,6 +53,26 @@ export function QuizRunner({
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
   const current = questions[index];
   const attemptsLeft = Math.max(0, maxAttempts - attemptsUsed);
+
+  useEffect(() => {
+    if (!sessionId || result) return;
+    const timer = setInterval(() => setRemainingSeconds(Math.max(0, Math.ceil((expiresAt - Date.now() - serverOffset) / 1000))), 1000);
+    return () => clearInterval(timer);
+  }, [sessionId, result, expiresAt, serverOffset]);
+
+  async function start() {
+    setPending(true); setError("");
+    try {
+      const response = await fetch(`/api/assessments/${assessmentId}/start`, { method: "POST" });
+      const data = await response.json() as { error?: string; sessionId: string; questions: Question[]; expiresAt: string; serverTime: string; attemptsUsed: number; passMark: number };
+      if (!response.ok) { setError(data.error ?? "Could not start the assessment."); return; }
+      setQuestions(data.questions); setSessionId(data.sessionId); setAttemptsUsed(data.attemptsUsed);
+      setEffectivePassMark(data.passMark);
+      setExpiresAt(Date.parse(data.expiresAt)); setServerOffset(Date.parse(data.serverTime) - Date.now());
+      setRemainingSeconds(Math.max(0, Math.ceil((Date.parse(data.expiresAt) - Date.parse(data.serverTime)) / 1000)));
+    } catch { setError("Could not reach the server. Try again."); }
+    finally { setPending(false); }
+  }
 
   async function submit() {
     if (answeredCount < questions.length) {
@@ -55,6 +86,7 @@ export function QuizRunner({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           selections: Object.entries(answers).map(([questionId, selectedIndex]) => ({
             questionId: Number(questionId),
             selectedIndex,
@@ -118,11 +150,13 @@ export function QuizRunner({
               >
                 <Award className="h-3.5 w-3.5" /> View certificates
               </Link>
-            ) : (
+            ) : attemptsLeft > 0 ? (
               <button
                 type="button"
                 onClick={() => {
                   setResult(null);
+                  setSessionId("");
+                  setQuestions([]);
                   setAnswers({});
                   setIndex(0);
                 }}
@@ -130,16 +164,26 @@ export function QuizRunner({
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Retake now
               </button>
-            )}
+            ) : null}
           </div>
         </div>
         <p className="text-center text-[11px] text-stone-500">
           {result.certificateCode
             ? `Certificate ${result.certificateCode} issued automatically for verified completion.`
-            : `Attempts used: ${attemptsUsed + 1} of ${maxAttempts}.`}
+            : `Attempts used: ${attemptsUsed} of ${maxAttempts}.`}
         </p>
       </motion.div>
     );
+  }
+
+  if (!sessionId) {
+    return <div className="admin-card space-y-3 p-6">
+      <p className="text-[13px] text-stone-700">Complete the relevant lessons before starting. You have {timeLimitMinutes} minutes to answer {questionCount} questions. Starting or resuming uses the server timer; leaving the page does not pause it. Expired sessions count as attempts.</p>
+      <button type="button" onClick={start} disabled={pending || attemptsLeft === 0 && !canResume} className="rounded-full bg-navy px-5 py-2.5 text-[12px] font-semibold text-paper disabled:opacity-50">
+        {pending ? "Starting…" : canResume ? "Resume assessment" : "Start assessment"}
+      </button>
+      {error ? <p role="alert" className="text-[12px] text-rose-700">{error}</p> : null}
+    </div>;
   }
 
   if (!current) {
@@ -155,9 +199,10 @@ export function QuizRunner({
               Question {index + 1} of {questions.length}
             </p>
             <p className="text-[11px] text-stone-500">
-              {title} · pass mark {passMark}% · {attemptsLeft} attempt{attemptsLeft === 1 ? "" : "s"} left
+              {title} · pass mark {effectivePassMark}% · {attemptsLeft} further attempt{attemptsLeft === 1 ? "" : "s"}
             </p>
           </div>
+          <span role="timer" aria-label="Time remaining" className="text-[12px] font-semibold text-navy">{Math.floor(remainingSeconds / 60)}:{String(remainingSeconds % 60).padStart(2, "0")} left</span>
           <span className="rounded-full bg-cream px-2.5 py-1 text-[10.5px] font-semibold text-stone-600">
             {answeredCount}/{questions.length} answered
           </span>
@@ -213,13 +258,14 @@ export function QuizRunner({
           <button
             type="button"
             onClick={submit}
-            disabled={pending}
+            disabled={pending || remainingSeconds <= 0}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-gold px-5 text-[12px] font-semibold text-ink transition-colors hover:bg-gold-dark hover:text-paper disabled:opacity-60"
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {pending ? "Grading…" : "Submit for instant grading"}
           </button>
         </div>
+        {remainingSeconds <= 0 ? <p role="alert" className="mt-3 text-[12px] text-rose-700">Time has expired. This attempt is used. Return to the assessment list to start another available attempt.</p> : null}
       </div>
 
       <div className="flex flex-wrap gap-1.5">

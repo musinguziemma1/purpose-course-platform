@@ -10,18 +10,17 @@ import {
   assessments,
   courseGroups,
   courseLevels,
+  courseModules,
   courses,
   groupMembers,
   groupSubmissions,
-  mentorAssignments,
   notifications,
   profiles,
-  roles,
-  users,
 } from "@/db/schema";
 import { canManageAssessments, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { canCoachLearner, groupReviewable } from "@/db/learner-access";
-import { gradeAssessment, issueCertificate, syncCertificates } from "@/db/assessments";
+import { issueCertificate } from "@/db/assessments";
+import { completeAssessment } from "@/db/assessment-taking";
 
 export type AssessmentState = { ok?: boolean; error?: string; message?: string };
 
@@ -51,63 +50,16 @@ function refreshPaths() {
  * ------------------------------------------------------------------ */
 
 export async function submitAssessmentAttempt(input: {
-  assessmentId: number;
-  selections: { questionId: number; selectedIndex: number }[];
+  assessmentId: number; sessionId: string; selections: { questionId: number; selectedIndex: number }[];
 }) {
   const user = await getSessionUser();
-  if (!user || !isStudent(user)) {
-    return { error: "Sign in with a student account to submit an assessment." } as const;
-  }
-
-  const result = await gradeAssessment({
-    assessmentId: input.assessmentId,
-    profileId: user.profileId,
-    selections: input.selections,
-  }, user);
-  if (!result) return { error: "That assessment is not available." } as const;
-
-  const certificates = await syncCertificates(user.profileId);
-
-  if (!result.passed) {
-    const mentors = await db
-      .select({ id: mentorAssignments.mentorId })
-      .from(mentorAssignments)
-      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
-      .innerJoin(users, eq(profiles.userId, users.id))
-      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
-    if (mentors.length) {
-      await db.insert(notifications).values(
-        mentors.map((mentor) => ({
-          recipientId: mentor.id,
-          type: "review" as const,
-          title: "Student below the pass mark",
-          body: `${user.fullName} scored ${result.score}% on “${result.assessment.title}” (pass mark ${result.passMark}%).`,
-          href: "/mentor/assessments",
-        })),
-      );
-    }
-  }
-
-  await log(
-    user.profileId,
-    "assessment.submitted",
-    `Scored ${result.score}% (${result.attempt.correctCount}/${result.attempt.totalCount}) on “${result.assessment.title}”.`,
-    String(result.attempt.id),
-  );
-
+  if (!user || !isStudent(user)) return { error: "Sign in with a student account to submit an assessment." } as const;
+  const result = await completeAssessment(input, user).catch(() => ({ error: "Your attempt could not be saved. No result was committed; retry with the same session." } as const));
+  if ("error" in result) return { error: result.error ?? "The assessment could not be submitted." } as const;
   refreshPaths();
-
-  return {
-    ok: true as const,
-    attemptId: result.attempt.id,
-    score: result.score,
-    passed: result.passed,
-    passMark: result.passMark,
-    correctCount: result.attempt.correctCount,
-    totalCount: result.attempt.totalCount,
-    certificateCode: result.certificate?.code ?? null,
-    newlyIssued: certificates,
-  };
+  return { ok: true as const, attemptId: result.attempt.id, score: result.attempt.score, passed: result.attempt.passed,
+    passMark: result.attempt.passMark, correctCount: result.attempt.correctCount, totalCount: result.attempt.totalCount,
+    certificateCode: result.certificate?.code ?? null, newlyIssued: result.newlyIssued };
 }
 
 /* ------------------------------------------------------------------ *
@@ -120,13 +72,25 @@ export async function createAssessment(_prev: AssessmentState, formData: FormDat
 
   const kind = String(formData.get("kind") ?? "session");
   const title = String(formData.get("title") ?? "").trim();
-  const levelId = Number(formData.get("levelId") ?? 0) || null;
+  let levelId = Number(formData.get("levelId") ?? 0) || null;
   const courseId = Number(formData.get("courseId") ?? 0) || null;
   const moduleId = Number(formData.get("moduleId") ?? 0) || null;
   const passMark = Number(formData.get("passMark") ?? 80) || 80;
+  const timeLimitMinutes = Number(formData.get("timeLimitMinutes") ?? 15);
+  const maxAttempts = Number(formData.get("maxAttempts") ?? 3);
 
   if (title.length < 4) return { error: "Give the assessment a title." };
   if (!levelId && !courseId) return { error: "Choose a level or a course." };
+  if (!["session", "level"].includes(kind) || !Number.isInteger(passMark) || passMark < 50 || passMark > 100 || !Number.isInteger(timeLimitMinutes) || timeLimitMinutes < 1 || timeLimitMinutes > 240 || !Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 20) return { error: "Choose valid assessment settings (1–240 minutes and 1–20 attempts)." };
+  if (courseId) {
+    const [course] = await db.select({ levelId: courses.levelId }).from(courses).where(eq(courses.id, courseId)).limit(1);
+    if (!course || levelId && levelId !== course.levelId) return { error: "The course must belong to the selected level." };
+    levelId = course.levelId;
+  }
+  if (moduleId) {
+    const [module] = await db.select({ courseId: courseModules.courseId }).from(courseModules).where(eq(courseModules.id, moduleId)).limit(1);
+    if (!module || module.courseId !== courseId) return { error: "The module must belong to the selected course." };
+  }
 
   const [orderRow] = await db
     .select({ value: max(assessments.sortOrder) })
@@ -143,8 +107,8 @@ export async function createAssessment(_prev: AssessmentState, formData: FormDat
       courseId,
       moduleId: kind === "level" ? null : moduleId,
       passMark: Math.min(100, Math.max(50, passMark)),
-      timeLimitMinutes: Number(formData.get("timeLimitMinutes") ?? 15) || 15,
-      maxAttempts: Number(formData.get("maxAttempts") ?? 3) || 3,
+      timeLimitMinutes,
+      maxAttempts,
       status: "published",
       sortOrder: Number(orderRow?.value ?? 0) + 1,
     })
@@ -169,7 +133,7 @@ export async function addQuestion(_prev: AssessmentState, formData: FormData): P
   if (!assessmentId) return { error: "Missing assessment." };
   if (prompt.length < 10) return { error: "Write the question in full." };
   if (options.length < 2) return { error: "Provide at least two answer options." };
-  if (correctIndex < 0 || correctIndex >= options.length) return { error: "Choose which option is correct." };
+  if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex >= options.length) return { error: "Choose which option is correct." };
 
   const [orderRow] = await db
     .select({ value: max(assessmentQuestions.sortOrder) })
@@ -206,7 +170,7 @@ export async function updatePassMark(formData: FormData) {
   if (!user || !canManageAssessments(user)) return;
   const levelId = Number(formData.get("levelId"));
   const passMark = Math.min(100, Math.max(50, Number(formData.get("passMark") ?? 80)));
-  if (!levelId) return;
+  if (!levelId || !Number.isInteger(passMark)) return;
   await db.update(courseLevels).set({ passMark }).where(eq(courseLevels.id, levelId));
   await db.update(assessments).set({ passMark }).where(and(eq(assessments.levelId, levelId), eq(assessments.kind, "level")));
   await log(user.profileId, "assessment.pass_mark", `Set level #${levelId} pass mark to ${passMark}%.`);
@@ -368,6 +332,7 @@ export async function issueCertificateForCourse(_prev: AssessmentState, formData
   const profileId = String(formData.get("profileId") ?? "");
   const courseId = Number(formData.get("courseId") ?? 0);
   if (!profileId || !courseId) return { error: "Choose a student and course." };
+  if (!(await canCoachLearner(profileId, user))) return { error: "Learner oversight or assignment is required." };
 
   const courseRows = await db
     .select({ course: courses, levelName: courseLevels.name })

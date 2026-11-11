@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -13,7 +14,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 /* ------------------------------------------------------------------ *
  * Enums
@@ -883,6 +884,31 @@ export const assessmentAnswers = pgTable("assessment_answers", {
   isCorrect: boolean("is_correct").notNull().default(false),
 });
 
+export type AssessmentQuestionSnapshot = { id: number; prompt: string; options: string[]; correctIndex: number; explanation: string | null };
+
+export const assessmentSessions = pgTable("assessment_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  assessmentId: integer("assessment_id").notNull().references(() => assessments.id, { onDelete: "cascade" }),
+  profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  status: varchar("status", { length: 16 }).$type<"in_progress" | "submitted" | "expired">().notNull().default("in_progress"),
+  questions: jsonb("questions").$type<AssessmentQuestionSnapshot[]>().notNull(),
+  passMark: integer("pass_mark").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attemptId: integer("attempt_id").unique().references(() => assessmentAttempts.id, { onDelete: "cascade" }),
+  selections: jsonb("selections").$type<{ questionId: number; selectedIndex: number }[]>().notNull().default([]),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+}, (table) => [
+  index("assessment_sessions_profile_idx").on(table.profileId, table.assessmentId),
+  index("assessment_sessions_assessment_idx").on(table.assessmentId),
+  uniqueIndex("assessment_sessions_active_idx").on(table.profileId, table.assessmentId).where(sql`${table.status} = 'in_progress'`),
+  check("assessment_sessions_status_check", sql`${table.status} in ('in_progress', 'submitted', 'expired')`),
+  check("assessment_sessions_questions_check", sql`jsonb_typeof(${table.questions}) = 'array' and jsonb_array_length(${table.questions}) > 0`),
+  check("assessment_sessions_pass_mark_check", sql`${table.passMark} between 0 and 100`),
+  check("assessment_sessions_deadline", sql`${table.expiresAt} > ${table.startedAt}`),
+  check("assessment_sessions_submitted", sql`${table.status} <> 'submitted' or (${table.attemptId} is not null and ${table.submittedAt} is not null)`),
+]);
+
 /* ------------------------------------------------------------------ *
  * Group work — collaborative assignments
  * ------------------------------------------------------------------ */
@@ -968,8 +994,8 @@ export const certificates = pgTable(
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
   },
   (table) => [
-    uniqueIndex("certificates_course_unique_idx").on(table.profileId, table.courseId),
-    uniqueIndex("certificates_level_unique_idx").on(table.profileId, table.levelId),
+      uniqueIndex("certificates_course_unique_idx").on(table.profileId, table.courseId).where(sql`${table.kind} = 'course'`),
+      uniqueIndex("certificates_level_unique_idx").on(table.profileId, table.levelId).where(sql`${table.kind} = 'level'`),
   ],
 );
 
@@ -1144,7 +1170,7 @@ export const instrumentSessions = pgTable(
       .references(() => profiles.id, { onDelete: "cascade" }),
     instrumentVersion: varchar("instrument_version", { length: 16 }).notNull(),
     consentGiven: boolean("consent_given").notNull().default(false),
-    sharedWithMentor: boolean("shared_with_mentor").notNull().default(true),
+      sharedWithMentor: boolean("shared_with_mentor").notNull().default(false),
     status: varchar("status", { length: 24 }).notNull().default("in_progress"),
     startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
     completedAt: timestamp("completed_at", { withTimezone: true }),

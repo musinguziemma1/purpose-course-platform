@@ -8,7 +8,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const assessmentId = Number(id);
   if (!Number.isSafeInteger(assessmentId) || assessmentId < 1) return NextResponse.json({ error: "Invalid assessment." }, { status: 400 });
 
-  let payload: { selections?: { questionId: number; selectedIndex: number }[] };
+  let payload: { sessionId?: string; selections?: { questionId: number; selectedIndex: number }[] };
   try {
     payload = await request.json();
     if (!payload || typeof payload !== "object") throw new Error("Invalid body");
@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Answer at least one question before submitting." }, { status: 422 });
   }
 
-  const result = await submitAssessmentAttempt({ assessmentId, selections });
+  const result = await submitAssessmentAttempt({ assessmentId, sessionId: typeof payload.sessionId === "string" ? payload.sessionId : "", selections });
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 422 });
   }

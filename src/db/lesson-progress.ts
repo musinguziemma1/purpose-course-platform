@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { activityLogs, courseModules, courses, lessonProgress, lessons, profiles } from "@/db/schema";
+import { activityLogs, courseModules, courses, learningEvents, lessonProgress, lessons, profiles } from "@/db/schema";
+import { awardEarnedCertificates } from "@/db/certificate-awards";
 import { lessonAccessible } from "@/db/learning-access";
 import type { SessionUser } from "@/lib/auth";
 
@@ -9,7 +10,7 @@ export async function changeLessonCompletion(lessonId: number, viewer: SessionUs
   return db.transaction(async (tx) => {
     // Serialize updates from multiple tabs, including two requests for a new progress row.
     await tx.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, viewer.profileId)).for("update");
-    const [record] = await tx.select({ lesson: lessons, courseSlug: courses.slug }).from(lessons)
+    const [record] = await tx.select({ lesson: lessons, courseSlug: courses.slug, courseId: courses.id }).from(lessons)
       .innerJoin(courseModules, eq(lessons.moduleId, courseModules.id)).innerJoin(courses, eq(courseModules.courseId, courses.id))
       .where(and(eq(lessons.id, lessonId), lessonAccessible(viewer, { write: true }))).limit(1);
     if (!record) return null;
@@ -18,6 +19,8 @@ export async function changeLessonCompletion(lessonId: number, viewer: SessionUs
     const values = { status: completed ? "completed" as const : "in_progress" as const, completedAt: completed ? new Date() : null, updatedAt: new Date() };
     await tx.insert(lessonProgress).values({ profileId: viewer.profileId, lessonId, ...values }).onConflictDoUpdate({ target: [lessonProgress.profileId, lessonProgress.lessonId], set: values });
     await tx.insert(activityLogs).values({ actorId: viewer.profileId, action: completed ? "academy.lesson_completed" : "academy.lesson_reopened", entityType: "lesson", entityId: String(lessonId), description: `${completed ? "Completed" : "Reopened"} lesson “${record.lesson.title}”.` });
+    await tx.insert(learningEvents).values({ profileId: viewer.profileId, eventType: completed ? "lesson_completed" : "lesson_reopened", lessonId, courseId: record.courseId });
+    if (completed) await awardEarnedCertificates(tx, viewer.profileId);
     return { courseSlug: record.courseSlug, completed };
   });
 }

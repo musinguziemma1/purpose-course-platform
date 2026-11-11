@@ -9,6 +9,7 @@ The platform combines **structured digital learning, assessments, personal devel
 Implementation and launch verification are tracked in [the launch readiness checklist](docs/launch-readiness.md).
 For the current database and owner-account setup, see [Supabase operation](docs/supabase-database.md)
 and [administrator access and recovery](docs/administrator-access.md).
+The verified assessment rules are documented in [assessment integrity](docs/assessment-integrity.md).
 
 Purpose Course is built around five foundational principles:
 

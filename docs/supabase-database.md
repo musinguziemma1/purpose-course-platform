@@ -107,6 +107,27 @@ backend grants, and no public API privileges. Do not use `supabase db reset`
 or a demo seed against the hosted project. Drizzle schema changes alone do
 not update the hosted database.
 
+For incremental cloud changes after the verified initial import, use:
+
+```powershell
+npm run db:migrate:supabase -- plan
+npm run db:migrate:supabase -- apply
+```
+
+The runner reads the ignored administrator configuration, verifies TLS and the
+existing migration contents, refuses unknown/modified/out-of-order history, and
+backs up all application rows with column, constraint, index and sequence metadata
+before applying changes. A database lock serializes migration runners. SQL and
+history commit together; missing RLS or public API table grants roll them back.
+Backups and checksums stay in ignored `.local/backups`; the `.target-schema.ts`
+companion is the intended application schema. These snapshots are not a replacement
+for hosted backups/PITR or a tested full restore procedure.
+
+`npm run test:migrations` verifies history checks. Never edit a migration after
+it is applied. Local development continues to use a separate local database;
+test migrations there before running the cloud command. The original initial
+import command is a cutover utility, not an incremental schema deployment tool.
+
 For a local-only rollback, stop Next.js and rename `.env.local` to an ignored
 backup name, then start again with `.env`. This selects the preserved local
 database. It does **not** copy subsequent cloud writes back to local. Plan

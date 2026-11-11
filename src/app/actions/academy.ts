@@ -17,7 +17,6 @@ import {
   profiles,
 } from "@/db/schema";
 import { canAuthorAcademy, getSessionUser, isMentor, isStudent } from "@/lib/auth";
-import { syncCertificates } from "@/db/assessments";
 import { slugify } from "@/lib/utils";
 import { liveHost, liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
@@ -524,7 +523,6 @@ export async function toggleLessonCompletion(formData: FormData) {
   const result = await changeLessonCompletion(lessonId, user);
   if (!result) return;
   const courseSlug = result.courseSlug;
-  if (result.completed) await syncCertificates(user.profileId).catch(() => []);
 
   revalidatePath("/learn/certificates");
   revalidatePath("/learn");

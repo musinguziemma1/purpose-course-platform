@@ -12,7 +12,7 @@ not establish launch readiness.
 - [x] Disable remote/production demo identities and account auto-provisioning; reject inactive sessions.
 - [x] Fix email-only newsletter submissions and verify the browser-to-database flow.
 
-## 1. Access control and learner privacy — in progress
+## 1. Access control and learner privacy
 
 - [x] Enforce administrative route permissions before data loading; align navigation and editorial/ownership actions with permissions.
 - [x] Keep members-only communities, removed discussions, and their search results private.
@@ -32,10 +32,10 @@ not establish launch readiness.
 
 ## 3. Learning and assessment correctness
 
-- [ ] Enforce assessment publication, prerequisites, timing, and attempt limits on the server.
-- [ ] Make grading and result persistence atomic and safe under concurrent submissions.
-- [ ] Issue course/level certificates only for the intended completed scope.
-- [ ] Resolve certificate uniqueness and verify the complete learner journey.
+- [x] Enforce assessment publication, prerequisites, timing, and attempt limits on the server.
+- [x] Make grading and result persistence atomic and safe under concurrent submissions.
+- [x] Issue course/level certificates only for the intended completed scope.
+- [x] Resolve certificate uniqueness and verify the complete learner journey.
 - [ ] Reconcile programme structure, question banks, and missing resource files.
 
 ## 4. Production operations and experience
@@ -139,3 +139,27 @@ could not overwrite a newer draft. A 10:30 Africa/Kampala schedule was stored as
 07:30 UTC. All 38 regression tests, type checking, lint and the production build
 passed. Scheduling currently runs on public/article visits and the staff action;
 a periodic production scheduler is part of the deployment configuration work.
+
+Assessment integrity: explicit starts reserve a timed session using the database
+clock. Questions and answer keys are snapshotted privately; only prompts/options
+are released to the learner. Expiry consumes an attempt. Starts and submissions
+serialize per learner; repeats return the existing result. Grading, answers,
+session state, audit/learning events, assigned-mentor notices and earned awards
+commit together. Lesson completion also commits earned awards atomically.
+Reviews use stored question snapshots. Instrument sessions, responses and results
+now commit together, including rollback after a forced late persistence failure.
+
+Migration `20261111193018_secure_assessment_sessions.sql` was applied to Supabase
+after local tests and a verified backup of 86 tables/1,109 rows. The resulting
+87 tables have RLS and no public API table grants. Restricted `purpose_app` CRUD
+passed in a rolled-back transaction. Separate partial unique indexes support
+multiple courses in one level and a distinct level award. Sharing defaults to
+private. The one disabled demo account's certificate was preserved and revoked.
+
+Nine assessment and four instrument regressions bring the suite to 51 passing
+tests; three migration-history checks also pass. Type checking, lint and the
+production build pass. Chrome verified the complete lesson/quiz/course/exam/level
+journey, private question release, expiry, retries, snapshot review, valid public
+verification/download and revoked download denial. Official hosted advisors were
+unavailable because the CLI has no management access token; direct SQL RLS/grant
+checks passed. See [assessment integrity](assessment-integrity.md).

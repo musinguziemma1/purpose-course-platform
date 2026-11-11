@@ -17,11 +17,11 @@ export default async function TakeAssessmentPage({ params }: Params) {
   const record = await getAssessmentForTaking(Number(id), user.profileId);
   if (!record) notFound();
 
-  const { assessment, questions, attempts, levelName, courseTitle, moduleTitle } = record;
+  const { assessment, questionCount, attempts, levelName, courseTitle, moduleTitle } = record;
   const bestScore = attempts.length ? Math.max(...attempts.map((attempt) => attempt.score)) : null;
   const passed = attempts.some((attempt) => attempt.passed);
-  const attemptsLeft = Math.max(0, assessment.maxAttempts - attempts.length);
-  const blocked = attemptsLeft === 0 && !passed;
+  const attemptsLeft = Math.max(0, assessment.maxAttempts - record.attemptsUsed);
+  const blocked = attemptsLeft === 0 && !record.canResume;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -36,7 +36,7 @@ export default async function TakeAssessmentPage({ params }: Params) {
             </p>
             <h1 className="mt-1 font-serif text-2xl text-navy">{assessment.title}</h1>
             <p className="text-[12px] text-stone-600">
-              {courseTitle ?? moduleTitle ?? "Purpose Course"} · {questions.length} questions · pass mark {assessment.passMark}%
+              {courseTitle ?? moduleTitle ?? "Purpose Course"} · {questionCount} questions · pass mark {assessment.passMark}%
             </p>
           </div>
           <div className="rounded-xl border border-navy/10 bg-paper px-4 py-2 text-center">
@@ -63,8 +63,7 @@ export default async function TakeAssessmentPage({ params }: Params) {
           <Lock className="mx-auto h-7 w-7 text-stone-300" />
           <p className="mt-2 font-serif text-lg text-navy">Attempts used — mentor review next</p>
           <p className="mx-auto mt-1 max-w-md text-[12.5px] text-stone-600">
-            You have used all {assessment.maxAttempts} attempts without reaching {assessment.passMark}%. Your mentor has
-            been notified and will walk through the gaps with you before the assessment reopens.
+            You have used all {assessment.maxAttempts} attempts. Review your history below and contact your mentor if you need support.
           </p>
           <Link href="/learn/mentor" className="mt-3 inline-flex text-[12px] font-semibold text-gold-dark hover:underline">
             Message my mentor →
@@ -75,8 +74,10 @@ export default async function TakeAssessmentPage({ params }: Params) {
           assessmentId={assessment.id}
           title={assessment.title}
           passMark={assessment.passMark}
-          questions={questions.map((question) => ({ id: question.id, prompt: question.prompt, options: question.options }))}
-          attemptsUsed={attempts.length}
+          questionCount={questionCount}
+          timeLimitMinutes={assessment.timeLimitMinutes}
+          attemptsUsed={record.attemptsUsed}
+          canResume={record.canResume}
           maxAttempts={assessment.maxAttempts}
         />
       )}

@@ -97,7 +97,7 @@ test("assessment access requires published, consistent course scope and enrolmen
 
 after(async () => {
   if (client) {
-    if (userId) { await client.query("delete from activity_logs where actor_id=$1", [viewer.profileId]); await client.query("delete from enrollments where profile_id=$1", [viewer.profileId]); await client.query("delete from users where id=$1", [userId]); }
+    if (userId) { await client.query("delete from activity_logs where actor_id=$1", [viewer.profileId]); await client.query("delete from learning_events where profile_id=$1", [viewer.profileId]); await client.query("delete from enrollments where profile_id=$1", [viewer.profileId]); await client.query("delete from users where id=$1", [userId]); }
     if (courseId) await client.query("delete from courses where id=$1", [courseId]);
     await client.end();
   }

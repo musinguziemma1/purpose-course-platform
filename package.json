@@ -16,6 +16,8 @@
     "typecheck": "tsc --noEmit",
     "db:check:supabase": "node scripts/supabase-db.mjs check",
     "db:verify:supabase": "node scripts/supabase-db.mjs verify",
+    "db:migrate:supabase": "node scripts/migrate-supabase.mjs",
+    "test:migrations": "node --test scripts/migrate-supabase.test.mjs",
     "test:database": "node --test scripts/database-config.test.mjs",
     "test:security": "node --import tsx --test tests/*.test.mjs",
     "admin:manage": "node scripts/manage-admin.mjs",

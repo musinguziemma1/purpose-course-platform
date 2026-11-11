@@ -35,8 +35,7 @@ export default async function StudentAssessmentsPage() {
         <div>
           <h1 className="font-serif text-2xl text-navy">Assessments</h1>
           <p className="text-[12.5px] text-stone-600">
-            Five questions after every session, twenty after every level. Graded the moment you submit, with your
-            percentage recorded against your learning profile.
+            Complete the relevant lessons before starting a timed assessment. Your results are graded and recorded when you submit.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -61,7 +60,7 @@ export default async function StudentAssessmentsPage() {
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
           {sessionQuizzes.map((quiz) => {
-            const locked = quiz.attemptsUsed >= quiz.maxAttempts && !quiz.passed;
+            const locked = quiz.attemptsUsed >= quiz.maxAttempts && !quiz.hasActiveSession;
             return (
               <div key={quiz.id} className="admin-card flex flex-col p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -128,13 +127,13 @@ export default async function StudentAssessmentsPage() {
         <div className="grid gap-3 lg:grid-cols-3">
           {levelExams.map((exam) => {
             const progress = levelProgress(exam.levelId);
-            const unlocked = !progress || progress.percent === 100;
+            const unlocked = Boolean(progress && progress.percent === 100) && sessionQuizzes.filter((quiz) => quiz.levelId === exam.levelId).every((quiz) => quiz.passed) && (exam.attemptsUsed < exam.maxAttempts || exam.hasActiveSession);
             return (
               <div key={exam.id} className="admin-card flex flex-col p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-dark">{exam.levelName} level</p>
                   <span className="rounded-full bg-navy px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-paper">
-                    20 questions
+                    {exam.questionCount} questions
                   </span>
                 </div>
                 <p className="mt-1.5 font-serif text-[16px] leading-snug text-navy">{exam.title}</p>
