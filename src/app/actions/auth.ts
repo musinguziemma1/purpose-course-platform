@@ -7,6 +7,7 @@ import { profiles, roles } from "@/db/schema";
 import { authenticate, createSession, destroySession, getSessionUser } from "@/lib/auth";
 import { ensureDemoAccounts } from "@/db/accounts";
 import { DEMO_ACCOUNTS, homePathForRole } from "@/lib/roles";
+import { isDemoEnabled } from "@/lib/demo";
 
 export type LoginState = { error?: string };
 
@@ -31,7 +32,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   await ensureDemoAccounts().catch(() => undefined);
   const userId = await authenticate(email, password);
   if (!userId) {
-    return { error: "Those credentials do not match an active account. Use one of the demo accounts below." };
+    return { error: "Those credentials do not match an active account." };
   }
 
   await createSession(userId);
@@ -40,6 +41,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
 /** One-click access to each workspace. Used by the demo panels on /login. */
 export async function demoLoginAction(formData: FormData) {
+  if (!isDemoEnabled()) redirect("/login?error=demo-unavailable");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const account = DEMO_ACCOUNTS.find((item) => item.email === email);
   if (!account) redirect("/login?error=unknown-account");

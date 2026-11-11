@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { authSessions, profiles, roles, users } from "@/db/schema";
 import { ROLE_LEVEL, homePathForRole } from "@/lib/roles";
 import { can } from "@/lib/rbac";
+import { isDemoEnabled } from "@/lib/demo";
 
 export const SESSION_COOKIE = "pc_session";
 const SESSION_DAYS = 14;
@@ -97,7 +98,7 @@ async function findByRoleSlug(roleSlug: string): Promise<SessionUser | null> {
     .from(profiles)
     .innerJoin(users, eq(profiles.userId, users.id))
     .innerJoin(roles, eq(profiles.roleId, roles.id))
-    .where(eq(roles.slug, roleSlug))
+    .where(and(eq(roles.slug, roleSlug), eq(users.isActive, true)))
     .orderBy(profiles.createdAt)
     .limit(1);
   const row = rows[0];
@@ -121,13 +122,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         .innerJoin(users, eq(authSessions.userId, users.id))
         .innerJoin(profiles, eq(profiles.userId, users.id))
         .innerJoin(roles, eq(profiles.roleId, roles.id))
-        .where(and(eq(authSessions.token, token), gt(authSessions.expiresAt, new Date())))
+        .where(and(eq(authSessions.token, token), gt(authSessions.expiresAt, new Date()), eq(users.isActive, true)))
         .limit(1);
       if (rows[0]) return rows[0];
     } catch {
-      /* fall through to review mode */
+      return null;
     }
   }
+
+  if (!isDemoEnabled()) return null;
 
   try {
     const headerBag = await headers();

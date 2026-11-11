@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authenticate, createSession } from "@/lib/auth";
 import { ensureDemoAccounts } from "@/db/accounts";
 import { DEMO_ACCOUNTS, homePathForRole } from "@/lib/roles";
+import { isDemoEnabled } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
  * if the database has been freshly provisioned.
  */
 export async function GET(request: Request) {
+  if (!isDemoEnabled()) return new NextResponse(null, { status: 404 });
   const url = new URL(request.url);
   const role = url.searchParams.get("role") ?? "";
   const account = DEMO_ACCOUNTS.find((item) => item.role === role) ?? DEMO_ACCOUNTS[0];

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isDemoEnabled } from "@/lib/demo";
 
 /**
  * Review mode.
@@ -14,6 +15,8 @@ import { NextResponse, type NextRequest } from "next/server";
  */
 export function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
+  headers.delete("x-purpose-demo-workspace");
+  headers.delete("x-purpose-demo-role");
   const pathname = request.nextUrl.pathname;
   let workspace = pathname.split("/")[1] ?? "";
 
@@ -45,7 +48,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  if (!["admin", "mentor", "learn"].includes(workspace) || process.env.PURPOSE_DEMO_OPEN === "false") {
+  if (!["admin", "mentor", "learn"].includes(workspace) || !isDemoEnabled()) {
     return NextResponse.next({ request: { headers } });
   }
 

@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../../scripts/load-env.mjs";
 import { randomBytes, scryptSync } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { db } from "./index";
@@ -121,6 +121,10 @@ const IMG = {
 };
 
 async function main() {
+  const databaseUrl = new URL(process.env.DATABASE_URL ?? "");
+  if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1"].includes(databaseUrl.hostname) || databaseUrl.port !== "54329") {
+    throw new Error("Demo seeding is restricted to the project-local database on port 54329.");
+  }
   console.log("Resetting Purpose Course data…");
   await db.execute(sql`
     truncate table

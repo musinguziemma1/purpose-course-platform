@@ -1,191 +1,957 @@
-# Purpose Course — publishing platform & learning community
+# Purpose Course
 
-The first release of the Purpose Course digital platform: a professional public website and blog with a
-multi-author editorial workflow, structured course content, newsletter capture, downloadable resources, and the
-first real-time community features.
+### Discover Your Identity. Understand Your Purpose. Unlock Your Potential. Build Your Destiny.
 
-Built with **Next.js 16 (App Router)**, **PostgreSQL + Drizzle ORM**, **Tailwind CSS v4**, shadcn-style UI primitives,
-**Framer Motion** and **lucide-react**. (The brief mentioned Convex; this sandbox runs PostgreSQL, so the data layer is
-Drizzle. The schema and server-action mutations are structured so they can be ported to Convex functions without
-changing the UI contracts.)
+Purpose Course is an **enterprise-grade digital education and personal development platform** designed to help individuals discover who they are, understand why they are here, develop their potential, build a meaningful vision for the future, and translate that understanding into measurable action and impact.
 
-## What is implemented
+The platform combines **structured digital learning, assessments, personal development journeys, mentorship, community, collaboration, analytics, and intelligent learning experiences** within a scalable digital ecosystem.
 
-### Public site
-- `/` — editorial homepage with a **three-slide auto-rotating hero** (programme → assessment engine → live community),
-  five purpose principles, programme rail, featured journal, live community preview, testimonials, resources,
-  roadmap and newsletter. The carousel auto-advances every 7s, pauses on hover/focus, supports arrow keys,
-  dots, prev/next and play/pause, and respects `prefers-reduced-motion`.
-- `/course` — the full programme from the database: 3 levels, 15 sessions, outcomes, formats, cohort interest form.
-- `/blog` — search, principle categories, tag filters, pagination, newsletter capture.
-- `/blog/[slug]` — rendered article, reading progress, author card, share links, tags, related reading, JSON-LD.
-- `/resources` — resource library with download routes that count and log downloads.
-- `/community` — real-time discussion board (polling), new threads and replies, group list, round-table rules.
-- `/about` — page content from the database, team/roles, contact details.
-- `/contact` — seeded page content plus a working enquiry form that writes to the faculty inbox (`messages`) and the
-  audit log, with a notification to the programme desk.
-- `/search` — unified search across articles, courses, lessons, resources, discussions, people and events.
-- `/community/[slug]` and `/community/thread/[id]` — purpose communities with threads, replies, reactions, reports
-  and moderation, plus deep-linkable discussion pages.
-- `/sitemap.xml`, `/robots.txt`, per-page metadata, OpenGraph and structured data.
+Purpose Course is built around five foundational principles:
 
-### Academy: assessments, group work & certificates
-- **Auto-graded assessments** — 5 five-choice questions after every session (seeded for all 9 modules) and 20 questions after every level (3 exams, 108 questions total). Submission is graded instantly; the percentage, pass/fail, per-question review and explanation appear immediately, and the attempt is stored against the learner.
-- **Configurable pass marks** — 80% default; per level in the database (Foundation 80, Intermediate 80, Advanced 85) and editable from `/admin/academy/assessments`. Level exams stay locked until the level's lessons are complete.
-- **Mentor & admin insight** — `/mentor/assessments` shows a cohort performance matrix (lesson %, average/best/last score, trend, pass counts, group score, certificates) with an automatic follow-up queue for anyone below the pass mark, a failed attempt notification, or a falling trend; `/admin/academy/assessments` shows question banks, averages, pass rates and recent results.
-- **Group work** — mentors form groups (`/mentor/groups`), students submit one shared deliverable (`/learn/groups`), mentors score it out of 100 with informative feedback that every member receives.
-- **Certificates** — issued automatically when verified completion is reached (all lessons complete, or the level exam passed). Each carries a unique code, a downloadable 1600×1130 gold-foil SVG certificate (`/api/certificates/[code]/download`) and a public register page at `/verify/[code]`.
+> **Identity → Source → Purpose → Potential → Destiny**
 
-### Design system (UX/UI)
-- **Tokens** — brand palette, 6-step elevation scale (`xs → pop`), 6 radii, soft easing curve, tabular numerals
-  for all metrics. Compiled into one global stylesheet.
-- **Primitives** (`src/components/ui`) — `Button` (9 variants, 6 sizes, loading state), `Badge` (9 tones, optional dot),
-  `Card`/`CardHeader`/`CardFooter`, `Stat` tiles, `Progress` (accessible `role="progressbar"`), `EmptyState`,
-  `PageHeader`, `Skeleton`, `Input`/`Select`/`Textarea`/`Field`/`CheckboxRow` with hover, focus-ring and error states.
-- **Consistent surfaces** — `.surface`, `.admin-card`, `.interactive` (lift + gold border on hover), `.chip`, `.meter`,
-  `.skeleton`, `.paper-texture`, so all 40+ screens share one visual language.
-- **Navigation** — a global **⌘K command palette** (live search across articles, lessons, people, events) in the public
-  header and every workspace, sidebar items with `aria-current` and a gold inset indicator, mobile nav rails.
-- **Accessibility** — a skip link, one unified gold focus ring on every interactive element, `aria-label`s on icon
-  buttons, live regions for carousel state, `role="progressbar"` meters, and full `prefers-reduced-motion` support.
-- **Rhythm** — section spacing normalised via `.section`, balanced headings (`text-wrap: balance`), reading measure
-  and typography tuned for long-form articles.
+These principles form the foundation of the platform's curriculum, learning experience, assessments, personal development tools, and learner journey.
 
-### Live video conferencing (real WebRTC, no third-party service)
-- **Own signalling layer** in Postgres — `conference_participants` (presence, mute/camera/hand state, seat mode) and `conference_signals` (single-delivery offer/answer/ICE envelopes). `POST /api/conference/[code]` handles `join`, `poll`, `signal`, `host` and `leave`; each poll consumes its signal inbox transactionally, so no message is delivered twice.
-- **Direct peer-to-peer media** — `RTCPeerConnection` mesh with deterministic initiator selection (lexicographic peer-id comparison) to prevent offer glare, ICE-candidate queuing until remote description is set, automatic ICE restart on failure, `max-bundle` and `rtcpMux` for a light SDP.
-- **Scales beyond the mesh** — the first `CONFERENCE_MAX_SEATS` (default 8) participants get interactive seats; later joiners automatically enter **audience mode** and receive the host's stage stream, so a large class can join without multiplying uplink. Hosts can grant a seat, remove a participant, mute everyone and lower hands from inside the room.
-- **In-call controls** — mic/camera toggles with echo cancellation and noise suppression, screen share via `replaceTrack` (no renegotiation), raise hand, live attendance count, mesh-seat counter and signalling latency readout, plus a one-click copy of the invite link.
-- **Room page** `/room/[code]` embeds the stage beside the existing live feed (chat/questions) and the session agenda, so teaching and the backchannel sit in one screen. Session rooms are created automatically when a live session is viewed or scheduled.
-- **TURN (optional)** — set `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` for restrictive networks; Google STUN is used by default. `CONFERENCE_MAX_SEATS` tunes the interactive capacity.
+---
 
-### Enterprise data architecture (11 modules, 86 tables)
-`Identity` (users, profiles, roles, permissions, role_permissions, organizations, org_memberships) · `Content`
-(articles, pages, media_assets, resources, categories, tags) · `Learning` (course_levels, courses, course_sessions,
-course_modules, lessons, learning_activities, live_sessions) · `Learners` (enrollments, learning_progress,
-lesson_progress, learner_goals, reflections, achievements, learner_achievements, certificates) · `Assessments`
-(assessments, questions, attempts, answers, instruments, dimensions, items, responses, results, scoring_rules) ·
-`Mentorship` (mentor_assignments, coaching_sessions, mentoring_notes, learner_flags, assignment_submissions,
-group_submissions) · `Community` (communities, members, threads, posts, comments, reactions, reports) ·
-`Communication` (notifications, preferences, outbox, email_events, messages) · `Analytics` (events, learning_events,
-engagement, reports) · `Audit` (activity_logs, security_events, data_changes). Live map at `/admin/architecture`.
+## Platform Vision
 
-### Learning analytics (`/admin/analytics`)
-- **Platform level** — registered users, active learners (30d), lesson and course completion, certificates,
-  assessment pass rate, principle coverage across the curriculum.
-- **Programme level** — cohort performance and capacity, assessment improvement (last 7 days vs prior), goal
-  achievement rate, mentor engagement, mentoring notes, dropout by course, engagement trend chart, retention.
-- **Individual level** — per-principle progress bars (Identity → Destiny), lesson completion, assessment trajectory
-  (first/last/improvement), goal progress, achievements, group-work score and automatic follow-up reasons.
-  The same panel is shown to learners on `/learn`.
+Purpose Course is designed to move beyond traditional online courses.
 
-### Unified search
-`/search` and `GET /api/search?q=&type=` search **articles, courses, lessons, resources, discussions, people and
-events** in one query, with type facets, grouped results and snippets. A search icon sits in the site header.
+The platform provides a structured journey from **self-discovery to personal development and purposeful action**.
 
-### Completed platform sections
-- `/learn/notifications` — in-app inbox, direct messages, achievement wallet and delivery preferences.
-- `/admin/notifications` — template registry, outbox dispatch and email lifecycle events.
-- `/mentor/attendance` — session register with attendance marking and history.
-- `/learn/goals` — goals, mentor notes, attendance and notification preferences.
-- Lesson pages now render the **learning activities** attached to each lesson (previously seeded but unused).
-- `/admin/analytics` includes the **M&E report catalogue** (platform, programme, individual definitions).
-- `/mentor/mentees` and `/admin/cohorts` are aliases that redirect to the consolidated pages.
-
-### Editorial dashboard (`/admin`, staff only)
-- Overview: pipeline counts, review queue, recent activity, publish-due action.
-- Articles: status filters, search, editorial table.
-- Article editor: body markdown subset, category, tags, cover image, SEO fields, revisions, review timeline.
-- Workflow panel: **draft → submitted → in review → approved → scheduled → published**, plus revision requests,
-  rejection with comments, archiving, restore and featuring — each transition records an `article_reviews` row, an
-  `activity_logs` entry and a notification for the author.
-- Review queue, audience & students, community moderation (pin / lock / remove), activity log, site settings.
-
-### Five workspaces, one identity system
-Open `/login` and use **one-click sign in** (or `/api/demo-login?role=mentor` directly). The demo sign-in
-self-heals the accounts if the database was freshly provisioned.
-
-| Account | Role | Workspace | What is inside |
-| --- | --- | --- | --- |
-| admin@purposecourse.org | Administrator | `/admin` | publishing control, review queue, people & roles, audience, community moderation, activity log, site settings, academy oversight, links into the mentor and student workspaces |
-| editor@purposecourse.org | Editor | `/admin` | review/approval queue, scheduling and publishing, assignments to authors, community moderation |
-| author@purposecourse.org | Author | `/admin` | own drafts, revision history, submit for review, editorial feedback |
-| mentor@purposecourse.org | Mentor | `/mentor` | confirm/decline coaching requests, record session notes, schedule follow-ups, review assignment submissions, mentee progress, shared reflections |
-| student@purposecourse.org | Student | `/learn` | 15-session programme with completion tracking, progress ring, assignment submissions and mentor feedback, reflection journal with visibility controls, coaching requests and history |
-
-All accounts use the password `Purpose2026!` for the manual sign-in form.
-
-Credentials live in `users` (scrypt hashes); public identity lives in `profiles`; permissions are attached to `roles`.
-Sessions are server-side rows with an http-only cookie (SameSite=None + Partitioned in production so the preview
-works inside an embedded frame).
-
-## Database modules
-`roles`, `users`, `profiles`, `auth_sessions` · `categories`, `tags`, `articles`, `article_tags`,
-`article_revisions`, `article_reviews` · `pages`, `site_settings`, `navigation`, `media_assets`, `resources`,
-`resource_downloads` · `course_levels`, `course_sessions`, `enrollments`, `learning_progress`, `testimonials` ·
-`coaching_sessions`, `reflections`, `assignments`, `assignment_submissions` ·
-`discussion_groups`, `discussion_threads`, `discussion_posts` · `subscribers`, `notifications`, `activity_logs`.
-
-Enrolments link to both an email (waitlist) and a `profile_id` once a student account exists, so a learner can move
-from interest list to portal without duplicating identity.
-
-Foreign keys use consistent UUID profile/article identities. Course content is fully data-driven — no session copy is
-hardcoded in pages.
-
-## Commands
-
-### Run locally
-
-Install Node.js and run these commands from the project folder:
-
-```bash
-npm install
-npm run setup:local
-npm run dev
+```text
+                         PURPOSE COURSE
+                              │
+                              ▼
+                         DISCOVER SELF
+                              │
+                              ▼
+                           LEARN
+                              │
+                              ▼
+                         REFLECT
+                              │
+                              ▼
+                         DEVELOP
+                              │
+                              ▼
+                           APPLY
+                              │
+                              ▼
+                           CONNECT
+                              │
+                              ▼
+                          TAKE ACTION
+                              │
+                              ▼
+                           CREATE
+                            IMPACT
 ```
 
-Open http://localhost:3000. In Windows PowerShell, use `npm.cmd` instead of
-`npm` if your execution policy blocks `npm.ps1`.
+The goal is not simply to measure whether a learner completed a course.
 
-`setup:local` creates `.env` from `.env.example`, starts portable PostgreSQL on
-`127.0.0.1:54329`, applies the schema, and seeds a new database with demo content.
-It skips the seed when profiles already exist. PostgreSQL binaries are installed
-through the [embedded-postgres package](https://github.com/leinelissen/embedded-postgres);
-Docker and a system PostgreSQL installation are not required.
+The platform is designed to help answer a deeper question:
 
-Database files persist in `.local/postgres`. Development and production startup
-automatically start this database when needed. Use `npm run db:stop` to stop it.
-The website binds to `127.0.0.1` for local use.
+> **How has the learner developed, and how is that development translating into purposeful action and impact?**
 
-```bash
-npm run typecheck
-npm run lint
-npm run build
-npm start
+---
+
+# The Five Principles
+
+Purpose Course is structured around five interconnected dimensions of human development.
+
+| Principle | Core Question | Development Focus |
+|---|---|---|
+| **Identity** | Who Am I? | Identity, values, strengths and self-understanding |
+| **Source** | Where Am I From? | Foundations, experiences, influences and worldview |
+| **Purpose** | Why Am I Here? | Purpose discovery, meaning and contribution |
+| **Potential** | What Can I Do? | Skills, capabilities, talents and growth |
+| **Destiny** | Where Am I Going? | Vision, direction, goals and impact |
+
+Together, these principles form the **Purpose Development Framework** that underpins the learner experience.
+
+---
+
+# Core Platform Capabilities
+
+## 1. Digital Learning
+
+Purpose Course provides structured learning experiences through:
+
+- Courses
+- Learning paths
+- Modules
+- Lessons
+- Videos
+- Readings
+- Interactive activities
+- Reflection exercises
+- Assignments
+- Assessments
+- Quizzes
+- Progress tracking
+- Certificates
+
+Learning experiences can support both **self-paced** and **cohort-based** education.
+
+---
+
+## 2. Purpose Journey
+
+Every learner can progress through a personalized **Purpose Journey**.
+
+The journey connects learning, reflection, assessment, goals and personal development.
+
+```text
+Identity
+   ↓
+Source
+   ↓
+Purpose
+   ↓
+Potential
+   ↓
+Destiny
+   ↓
+Vision
+   ↓
+Goals
+   ↓
+Action
+   ↓
+Impact
 ```
 
-Schema commands and the application both use `DATABASE_URL` from `.env`.
-`npm run db:push` applies schema changes; `npm run db:seed` **resets application
-data** and restores the demo dataset. Do not run the seed against a database
-whose contents you want to preserve. `setup:local` only provisions the local
-database on port 54329.
+The learner's journey becomes an evolving record of their development rather than a simple list of completed courses.
 
-The original source archive omitted its image files. Replacement stock photos
-are included in `public/images`, using the existing filenames so seeded content
-works without resetting the database. These are representative photos, not
-photographs of actual Purpose Course participants or faculty. See
-[image sources](public/images/README.md) for credits and replacement details.
+---
 
-### Original development commands
-```bash
-npx drizzle-kit push      # apply schema
-npx tsx src/db/seed.ts    # reset + seed demo content (15 articles, 15 sessions, community, subscribers)
-npm run dev               # local development
-npm run build && npm start
+# 3. Purpose Profile
+
+The platform enables learners to develop a comprehensive **Purpose Profile** containing:
+
+- Personal identity
+- Core values
+- Strengths
+- Interests
+- Skills
+- Experiences
+- Areas for development
+- Purpose statement
+- Vision
+- Goals
+- Career direction
+- Development objectives
+- Impact aspirations
+
+The Purpose Profile evolves as the learner progresses through the platform.
+
+---
+
+# 4. Assessments and Development Measurement
+
+Purpose Course includes a flexible assessment framework capable of supporting:
+
+- Purpose discovery assessments
+- Identity assessments
+- Values assessments
+- Strengths assessments
+- Skills assessments
+- Vision assessments
+- Goal-setting assessments
+- Reflection instruments
+- Learning assessments
+- Development assessments
+
+The assessment engine supports:
+
+```text
+Assessment
+    ↓
+Questions
+    ↓
+Responses
+    ↓
+Scoring
+    ↓
+Domains
+    ↓
+Results
+    ↓
+Recommendations
+    ↓
+Development Actions
 ```
 
-## Roadmap encoded in the architecture
-1. **Publishing** (this release) — audience, authority, editorial rigour.
-2. **Academy** — enrolments, lesson completion, quizzes, certificates (tables and waitlist already present).
-3. **Learning community** — live classes, mentorships, collaborative work, analytics; real-time discussions and
-   in-app notifications are already live as the first slice.
+Assessments are version-controlled and designed with transparency, appropriate interpretation and responsible data practices.
+
+---
+
+# 5. Learner Dashboard
+
+Learners receive a centralized dashboard showing their development journey.
+
+### Dashboard capabilities
+
+- Current courses
+- Learning progress
+- Purpose Journey progress
+- Assessments
+- Goals
+- Assignments
+- Reflections
+- Achievements
+- Certificates
+- Mentor interactions
+- Community activity
+- Notifications
+- Recommended learning
+
+Example:
+
+```text
+MY PURPOSE JOURNEY
+
+Identity        ██████████ 100%
+Source          ████████░░  80%
+Purpose         ██████░░░░  60%
+Potential       ████░░░░░░  40%
+Destiny         ██░░░░░░░░  20%
+
+Overall Development
+███████░░░ 68%
+```
+
+---
+
+# 6. Mentorship and Coaching
+
+Purpose Course supports structured mentorship and coaching relationships.
+
+Mentors can:
+
+- View assigned learners
+- Monitor progress
+- Review assignments
+- Provide feedback
+- Set development goals
+- Schedule mentoring sessions
+- Record appropriate mentoring notes
+- Track learner development
+- Identify learners requiring follow-up
+
+The platform separates learner, mentor and administrative permissions to protect user data.
+
+---
+
+# 7. Cohort-Based Learning
+
+Organizations and instructors can create structured cohorts.
+
+A cohort can include:
+
+- Learners
+- Facilitators
+- Mentors
+- Start and end dates
+- Learning schedules
+- Assignments
+- Discussions
+- Live sessions
+- Progress monitoring
+- Cohort analytics
+- Certificates
+
+This enables Purpose Course to support schools, institutions, organizations and leadership programs.
+
+---
+
+# 8. Community and Collaboration
+
+Purpose Course provides spaces where learners can learn collaboratively.
+
+Community capabilities include:
+
+- Discussion groups
+- Cohorts
+- Posts
+- Comments
+- Replies
+- Reactions
+- Questions
+- Peer interaction
+- Mentor participation
+- Moderation
+- Reporting
+- Notifications
+
+The community layer is designed to complement structured learning rather than replace it.
+
+---
+
+# 9. Content Management System
+
+The enterprise CMS enables authorized staff to manage the entire public and educational content ecosystem.
+
+### Content types
+
+- Articles
+- Pages
+- Courses
+- Lessons
+- Resources
+- Events
+- Announcements
+- Testimonials
+- Media
+- Authors
+- Categories
+- Tags
+
+### Editorial workflow
+
+```text
+DRAFT
+  ↓
+SUBMITTED
+  ↓
+IN REVIEW
+  ↓
+REVISION REQUIRED
+  ↓
+APPROVED
+  ↓
+SCHEDULED
+  ↓
+PUBLISHED
+```
+
+The CMS supports:
+
+- Drafts
+- Autosave
+- Revision history
+- Preview
+- Scheduled publishing
+- Editorial review
+- Approval workflows
+- SEO metadata
+- Media management
+- Content versioning
+- Audit trails
+
+Nontechnical staff can manage platform content without requiring developers to modify source code.
+
+---
+
+# 10. Enterprise Administration
+
+Purpose Course provides centralized administrative management for:
+
+- Users
+- Organizations
+- Roles
+- Permissions
+- Courses
+- Content
+- Assessments
+- Mentors
+- Cohorts
+- Communities
+- Certificates
+- Notifications
+- Analytics
+- System configuration
+- Audit logs
+
+---
+
+# 11. Role-Based Access Control
+
+The platform uses granular role and permission management.
+
+Typical roles include:
+
+```text
+Super Administrator
+       │
+Platform Administrator
+       │
+Program Manager
+       │
+ ┌─────┼──────────┐
+ │     │          │
+Editor Instructor Mentor
+ │     │          │
+ └─────┼──────────┘
+       │
+   Moderator
+       │
+     Learner
+       │
+     Guest
+```
+
+Permissions can be defined around specific capabilities rather than relying solely on broad administrator flags.
+
+Examples:
+
+```text
+course.create
+course.edit
+course.publish
+
+article.create
+article.review
+article.publish
+
+learner.view
+learner.manage
+
+mentor.assign
+
+assessment.create
+assessment.publish
+
+community.moderate
+
+analytics.view
+```
+
+Authorization is enforced at the application and database layers.
+
+---
+
+# 12. Multi-Organization Support
+
+Purpose Course is designed to support organizations operating independently within the platform.
+
+Potential organizational users include:
+
+- Schools
+- Universities
+- NGOs
+- Churches
+- Youth organizations
+- Companies
+- Leadership programs
+- Training institutions
+- Community organizations
+
+Each organization can manage its own:
+
+- Administrators
+- Facilitators
+- Mentors
+- Learners
+- Courses
+- Cohorts
+- Learning activities
+- Reports
+
+while platform administrators maintain global governance.
+
+---
+
+# 13. Learning Analytics
+
+Purpose Course provides analytics at multiple levels.
+
+### Platform analytics
+
+- Registered users
+- Active learners
+- Enrollment
+- Completion
+- Retention
+- Engagement
+- Course performance
+
+### Program analytics
+
+- Cohort performance
+- Assessment results
+- Goal achievement
+- Mentor engagement
+- Learner retention
+- Completion rates
+- Learner satisfaction
+
+### Individual analytics
+
+- Learning progress
+- Assessment development
+- Goal progress
+- Engagement
+- Course completion
+- Development journey
+
+The platform is designed to measure not only **activity**, but also **development and outcomes**.
+
+---
+
+# 14. Intelligent Learning
+
+Purpose Course can incorporate responsible AI capabilities to enhance learning.
+
+Potential capabilities include:
+
+- AI learning assistant
+- Lesson explanations
+- Reflection prompts
+- Personalized learning recommendations
+- Resource discovery
+- Goal planning assistance
+- Learning summaries
+- Mentor preparation
+- Content discovery
+
+AI is treated as an **assistive layer**, not the authoritative source of educational content.
+
+The platform maintains human oversight and approved curriculum as the primary source of truth.
+
+---
+
+# 15. Notifications and Communication
+
+The platform supports event-driven communication.
+
+Notifications may include:
+
+- New lessons
+- Assignment deadlines
+- Assessment completion
+- Mentor feedback
+- Discussion replies
+- Upcoming sessions
+- Goal reviews
+- Course announcements
+- Certificates
+- Administrative notifications
+
+Notification channels can include:
+
+- In-app notifications
+- Email
+- Push notifications
+- Future messaging integrations
+
+---
+
+# 16. Certificates and Credentials
+
+Learners can receive verifiable digital certificates upon meeting defined completion requirements.
+
+Certificates can include:
+
+- Learner name
+- Program
+- Course
+- Completion date
+- Credential ID
+- Issuing organization
+- Verification URL
+
+Example:
+
+```text
+PURPOSE COURSE
+
+Certificate of Completion
+
+This certifies that
+
+JOHN DOE
+
+successfully completed
+
+PURPOSE DISCOVERY PROGRAM
+
+Credential ID:
+PC-2026-000421
+
+Verify Credential
+```
+
+---
+
+# Enterprise Architecture
+
+Purpose Course is designed using modular domain architecture.
+
+```text
+src/
+├── app/
+│
+├── features/
+│   ├── auth/
+│   ├── organizations/
+│   ├── content/
+│   ├── courses/
+│   ├── learning/
+│   ├── assessments/
+│   ├── mentorship/
+│   ├── community/
+│   ├── notifications/
+│   ├── certificates/
+│   └── analytics/
+│
+├── components/
+├── services/
+├── lib/
+└── types/
+```
+
+Major platform domains include:
+
+```text
+IDENTITY
+├── Users
+├── Profiles
+├── Roles
+├── Permissions
+└── Organizations
+
+CONTENT
+├── Articles
+├── Pages
+├── Courses
+├── Lessons
+├── Resources
+└── Media
+
+LEARNING
+├── Enrollments
+├── Progress
+├── Activities
+├── Goals
+└── Reflections
+
+ASSESSMENTS
+├── Assessments
+├── Questions
+├── Responses
+├── Scoring
+└── Results
+
+MENTORSHIP
+├── Mentors
+├── Assignments
+├── Sessions
+├── Feedback
+└── Development Notes
+
+COMMUNITY
+├── Groups
+├── Discussions
+├── Comments
+└── Moderation
+
+COMMUNICATION
+├── Notifications
+├── Messages
+└── Communication Events
+
+ANALYTICS
+├── Events
+├── Learning Events
+├── Engagement
+└── Reports
+
+GOVERNANCE
+├── Audit Logs
+├── Security Events
+├── Data Policies
+└── System Configuration
+```
+
+---
+
+# Security and Privacy
+
+Security is a foundational platform requirement.
+
+Purpose Course implements enterprise security principles including:
+
+- Role-based access control
+- Database-level authorization
+- Row Level Security
+- Secure authentication
+- Input validation
+- Protected administrative routes
+- Secure file handling
+- Secret management
+- Audit logging
+- Least-privilege access
+- Data minimization
+- Secure API design
+- Dependency security
+- Environment separation
+
+Sensitive credentials and service-role keys are never exposed to client-side applications.
+
+---
+
+# Audit and Governance
+
+Important administrative and security actions are auditable.
+
+Examples include:
+
+- Authentication events
+- Permission changes
+- User management
+- Content publishing
+- Course changes
+- Assessment changes
+- Data exports
+- Administrative operations
+- Security events
+
+Auditability provides accountability and supports enterprise governance.
+
+---
+
+# Developer Experience
+
+Purpose Course follows modern software engineering practices.
+
+### Development principles
+
+- Type-safe development
+- Modular architecture
+- Reusable components
+- Database migrations
+- Automated testing
+- Code review
+- CI/CD
+- Environment separation
+- Secure configuration
+- Documentation-driven development
+
+The platform is designed to support continuous evolution without compromising existing functionality.
+
+---
+
+# Technology Stack
+
+### Frontend
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Framer Motion
+
+### Backend
+
+- Next.js server-side architecture
+- Supabase
+- PostgreSQL
+- Supabase Authentication
+- Supabase Storage
+- Row Level Security
+
+### Content
+
+- Tiptap
+- Structured content models
+- Media management
+- SEO metadata
+
+### Quality
+
+- TypeScript
+- ESLint
+- Automated testing
+- Security testing
+- Accessibility testing
+- Performance monitoring
+
+### Infrastructure
+
+The platform is designed to remain portable across compatible cloud infrastructure while minimizing unnecessary vendor lock-in.
+
+---
+
+# Design Philosophy
+
+Purpose Course follows a premium educational and editorial design language.
+
+The experience emphasizes:
+
+- Strong typography
+- Meaningful imagery
+- Generous whitespace
+- Clear information hierarchy
+- Accessible interfaces
+- Purposeful animation
+- Responsive design
+- Calm visual communication
+- Consistent interaction patterns
+
+### Brand palette
+
+| Color | Hex |
+|---|---|
+| Deep Navy | `#071F46` |
+| Secondary Navy | `#102C58` |
+| Gold | `#C9A34A` |
+| Warm Ivory | `#F8F6F0` |
+| White | `#FFFFFF` |
+| Muted Grey | `#697386` |
+
+The design intentionally avoids excessive gradients, unnecessary visual effects and generic AI-generated interface patterns.
+
+---
+
+# Scalability
+
+Purpose Course is designed to evolve from a single educational platform into a multi-organization digital education ecosystem.
+
+The architecture supports future expansion into:
+
+- Institutional learning
+- Enterprise training
+- Leadership development
+- Youth development
+- Mentorship programs
+- Cohort-based education
+- Professional development
+- Digital credentials
+- Learning APIs
+- External integrations
+- Mobile applications
+- AI-assisted learning
+
+---
+
+# Platform Development Roadmap
+
+```text
+PHASE 1
+Digital Publishing
+        ↓
+PHASE 2
+Online Academy
+        ↓
+PHASE 3
+Community & Mentorship
+        ↓
+PHASE 4
+Personalized Learning
+        ↓
+PHASE 5
+Enterprise Education Platform
+```
+
+### Phase 1 — Publishing
+
+- Public website
+- Blog
+- CMS
+- Course information
+- Resources
+- SEO
+- Newsletter
+
+### Phase 2 — Academy
+
+- Learner accounts
+- Courses
+- Lessons
+- Assessments
+- Progress
+- Certificates
+
+### Phase 3 — Community
+
+- Cohorts
+- Groups
+- Discussions
+- Mentorship
+- Notifications
+- Live learning
+
+### Phase 4 — Intelligent Learning
+
+- Purpose Profile
+- Development analytics
+- Personalized recommendations
+- AI learning assistant
+- Goal intelligence
+
+### Phase 5 — Enterprise
+
+- Multi-organization architecture
+- Advanced RBAC
+- Institutional analytics
+- Enterprise reporting
+- SSO
+- API ecosystem
+- Advanced governance
+- Enterprise integrations
+
+---
+
+# Core Philosophy
+
+Purpose Course is built on a simple belief:
+
+> **Education should not only transfer knowledge. It should help people understand who they are, discover what they are capable of, define where they are going, and develop the capacity to create meaningful impact.**
+
+The platform therefore connects:
+
+**Learning → Reflection → Development → Action → Impact**
+
+---
+
+# Project Status
+
+**Platform:** Enterprise-Grade Digital Education Platform
+
+**Architecture:** Modular and scalable
+
+**Primary Experience:** Digital learning, personal development and purposeful growth
+
+**Target Users:** Learners, mentors, instructors, educators, organizations and institutions
+
+**Primary Domains:** Education, personal development, mentorship, community and learning analytics
+
+---
+
+# Contributing
+
+Contributions should follow the project's engineering, security, accessibility and architectural standards.
+
+Before submitting significant changes:
+
+1. Review the project architecture.
+2. Understand the relevant domain.
+3. Create an appropriate feature branch.
+4. Implement the change.
+5. Add or update tests.
+6. Run linting and type checks.
+7. Review security implications.
+8. Update relevant documentation.
+9. Submit a pull request.
+
+All significant architectural decisions should be documented.
+
+---
+
+# License
+
+Copyright © Purpose Course.
+
+All rights reserved unless otherwise specified by the project's license agreement.
+
+---
+
+## Purpose Course
+
+**Identity. Source. Purpose. Potential. Destiny.**
+
+**Discover yourself. Develop your potential. Define your direction. Create your impact.**

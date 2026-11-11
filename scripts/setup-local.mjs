@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import dotenv from "dotenv";
+import nextEnv from "@next/env";
 import pg from "pg";
 
 async function main() {
@@ -9,10 +9,10 @@ async function main() {
     copyFileSync(".env.example", ".env");
     console.log("Created .env from the local development defaults.");
   }
-  dotenv.config({ quiet: true });
+  nextEnv.loadEnvConfig(process.cwd(), true);
   const databaseUrl = new URL(process.env.DATABASE_URL ?? "");
   if (!["127.0.0.1", "localhost"].includes(databaseUrl.hostname) || databaseUrl.port !== "54329") {
-    throw new Error("setup:local only provisions the project database on port 54329. Use db:push explicitly for another database.");
+    throw new Error("setup:local only provisions the project database on port 54329. Remove the Supabase .env.local override to use local development.");
   }
 
   const runNode = (file, args = []) => execFileSync(process.execPath, [resolve(file), ...args], {

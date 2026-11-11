@@ -2,6 +2,8 @@ node_modules/
 .next/
 out/
 .local/
+.aider-desk/
+supabase/.temp/
 .env*
 !.env.example
 *.tsbuildinfo

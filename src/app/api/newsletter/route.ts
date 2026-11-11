@@ -20,13 +20,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    await db
-      .insert(subscribers)
-      .values({ email, fullName, principle, source })
-      .onConflictDoUpdate({
+    const insert = db.insert(subscribers).values({ email, fullName, principle, source });
+    if (fullName || principle) {
+      await insert.onConflictDoUpdate({
         target: subscribers.email,
         set: { fullName: fullName ?? undefined, principle: principle ?? undefined },
       });
+    } else {
+      await insert.onConflictDoNothing({ target: subscribers.email });
+    }
   } catch {
     return NextResponse.json({ ok: false, error: "Could not save your subscription." }, { status: 500 });
   }

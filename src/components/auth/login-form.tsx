@@ -13,7 +13,7 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div>
-        <Label htmlFor="email">Staff email</Label>
+        <Label htmlFor="email">Email address</Label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           <Input
@@ -22,9 +22,8 @@ export function LoginForm() {
             type="email"
             required
             autoComplete="email"
-            placeholder="admin@purposecourse.org"
+            placeholder="you@example.com"
             className="pl-10"
-            defaultValue="admin@purposecourse.org"
           />
         </div>
       </div>
@@ -40,7 +39,6 @@ export function LoginForm() {
             autoComplete="current-password"
             placeholder="••••••••••"
             className="pl-10"
-            defaultValue="Purpose2026!"
           />
         </div>
       </div>

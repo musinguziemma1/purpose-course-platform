@@ -1,4 +1,5 @@
-import "dotenv/config";
+import "./load-env.mjs";
+import { databaseConfig } from "./database-config.mjs";
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -15,7 +16,7 @@ const isManagedLocal = ["127.0.0.1", "localhost"].includes(databaseUrl.hostname)
 const action = process.argv[2] ?? "start";
 
 async function canConnect(url) {
-  const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 1500 });
+  const client = new pg.Client({ ...databaseConfig({ ...process.env, DATABASE_URL: url }), connectionTimeoutMillis: 5000 });
   try {
     await client.connect();
     await client.query("select 1");

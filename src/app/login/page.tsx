@@ -18,6 +18,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { ensureDemoAccounts } from "@/db/accounts";
 import { DEMO_ACCOUNTS, ROLE_CATALOG } from "@/lib/roles";
+import { isDemoEnabled } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export default async function LoginPage({
 
   await ensureDemoAccounts().catch(() => undefined);
   const params = await searchParams;
+  const demoEnabled = isDemoEnabled();
 
   return (
     <div className="grid min-h-screen lg:grid-cols-[0.95fr_1.15fr]">
@@ -122,7 +124,7 @@ export default async function LoginPage({
             <ArrowLeft className="h-3.5 w-3.5" /> Back to the website
           </Link>
 
-          <div className="mt-5 rounded-2xl border border-gold/40 bg-gradient-to-br from-cream to-paper p-5">
+          {demoEnabled ? <div className="mt-5 rounded-2xl border border-gold/40 bg-gradient-to-br from-cream to-paper p-5">
             <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-dark">
               <Sparkles className="h-3.5 w-3.5" /> Open for review
             </p>
@@ -150,13 +152,13 @@ export default async function LoginPage({
                 </Link>
               ))}
             </div>
-          </div>
+          </div> : null}
 
-          <h2 className="mt-7 font-serif text-3xl text-navy">Choose a workspace to enter</h2>
-          <p className="mt-1.5 text-sm text-stone-600">
+          <h2 className="mt-7 font-serif text-3xl text-navy">{demoEnabled ? "Choose a workspace to enter" : "Sign in to your workspace"}</h2>
+          {demoEnabled ? <p className="mt-1.5 text-sm text-stone-600">
             One click signs you in with a prepared demo account — no password needed. All five accounts are live in this
             environment.
-          </p>
+          </p> : null}
 
           {params.error ? (
             <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -169,7 +171,7 @@ export default async function LoginPage({
             </p>
           ) : null}
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {demoEnabled ? <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {ROLE_CATALOG.map((role) => {
               const account = DEMO_ACCOUNTS.find((item) => item.role === role.slug);
               if (!account) return null;
@@ -217,21 +219,21 @@ export default async function LoginPage({
                 <ClipboardCheck className="h-3 w-3" /> every action is logged
               </p>
             </div>
-          </div>
+          </div> : null}
 
           <div className="mt-7 rounded-2xl border border-navy/10 bg-paper p-5 shadow-lift">
             <div className="flex items-center gap-2">
               <KeyRound className="h-4 w-4 text-gold-dark" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy">Or sign in manually</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-navy">Sign in with your account</p>
             </div>
             <div className="mt-3">
               <LoginForm />
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-stone-500">
+            {demoEnabled ? <p className="mt-3 text-[11px] leading-relaxed text-stone-500">
               All demo accounts use the password <code className="rounded bg-cream px-1 py-0.5 text-navy">Purpose2026!</code>.
               Credentials are stored as scrypt hashes in the <code className="rounded bg-cream px-1 py-0.5 text-navy">users</code>{" "}
               table, separate from public profiles.
-            </p>
+            </p> : null}
           </div>
         </div>
       </div>

@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { DEMO_ACCOUNTS, ROLE_CATALOG } from "@/lib/roles";
+import { isDemoEnabled } from "@/lib/demo";
 
 /**
  * Makes the demo workspaces resilient: if the database is freshly provisioned
@@ -24,6 +25,7 @@ import { DEMO_ACCOUNTS, ROLE_CATALOG } from "@/lib/roles";
 let ensuring: Promise<void> | null = null;
 
 export function ensureDemoAccounts(): Promise<void> {
+  if (!isDemoEnabled()) return Promise.resolve();
   if (!ensuring) {
     ensuring = runEnsure().catch((error) => {
       ensuring = null;
