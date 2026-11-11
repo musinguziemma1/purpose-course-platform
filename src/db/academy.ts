@@ -33,7 +33,7 @@ export async function getStudentWorkspace(profileId: string) {
     })
     .from(enrollments)
     .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
-    .where(and(eq(enrollments.profileId, profileId), learnerReadable(enrollments.profileId, viewer)))
+    .where(and(eq(enrollments.profileId, profileId), inArray(enrollments.status, ["enrolled", "completed"]), learnerReadable(enrollments.profileId, viewer)))
     .orderBy(desc(enrollments.createdAt))
     .limit(1);
 
@@ -62,7 +62,7 @@ export async function getStudentWorkspace(profileId: string) {
         assignmentSubmissions,
         and(eq(assignmentSubmissions.assignmentId, assignments.id), eq(assignmentSubmissions.profileId, profileId)),
       )
-      .where(level ? eq(assignments.levelId, level.id) : sql`true`)
+      .where(level ? eq(assignments.levelId, level.id) : sql`false`)
       .orderBy(asc(assignments.sortOrder)),
     db
       .select()

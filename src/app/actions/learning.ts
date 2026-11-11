@@ -1,23 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   activityLogs,
   assignmentSubmissions,
   assignments,
   coachingSessions,
+  courseSessions,
   enrollments,
   learningProgress,
   mentorAssignments,
   notifications,
   profiles,
   reflections,
-  roles,
   users,
 } from "@/db/schema";
 import { getSessionUser, isStudent } from "@/lib/auth";
+import { levelEnrolled } from "@/db/learning-access";
 
 export type LearningState = { ok?: boolean; error?: string; message?: string };
 
@@ -28,7 +29,7 @@ async function requireStudent() {
 }
 
 async function myEnrollment(profileId: string) {
-  const rows = await db.select().from(enrollments).where(eq(enrollments.profileId, profileId)).limit(1);
+  const rows = await db.select().from(enrollments).where(and(eq(enrollments.profileId, profileId), inArray(enrollments.status, ["enrolled", "completed"]))).limit(1);
   return rows[0] ?? null;
 }
 
@@ -38,7 +39,10 @@ export async function toggleSessionComplete(formData: FormData) {
   const sessionId = Number(formData.get("sessionId"));
   if (!sessionId) return;
 
-  const enrollment = await myEnrollment(user.profileId);
+  const [record] = await db.select({ enrollment: enrollments }).from(enrollments)
+    .innerJoin(courseSessions, eq(courseSessions.levelId, enrollments.levelId))
+    .where(and(eq(courseSessions.id, sessionId), eq(enrollments.profileId, user.profileId), eq(enrollments.status, "enrolled"))).limit(1);
+  const enrollment = record?.enrollment;
   if (!enrollment) return;
 
   const existing = await db
@@ -85,10 +89,17 @@ export async function saveReflection(_prev: LearningState, formData: FormData): 
   const visibility = String(formData.get("visibility") ?? "mentor") as "private" | "mentor" | "cohort";
   const sessionIdRaw = String(formData.get("sessionId") ?? "");
 
+  if (!["private", "mentor", "cohort"].includes(visibility)) return { error: "Choose a valid sharing option." };
+
   if (prompt.length < 4) return { error: "Give the reflection a short title or prompt." };
   if (body.length < 40) return { error: "Write at least a couple of sentences so the reflection is useful later." };
 
   const enrollment = await myEnrollment(user.profileId);
+  if (sessionIdRaw) {
+    const [session] = await db.select({ id: courseSessions.id }).from(courseSessions)
+      .where(and(eq(courseSessions.id, Number(sessionIdRaw)), levelEnrolled(courseSessions.levelId, user))).limit(1);
+    if (!session) return { error: "That session is outside your enrolled level." };
+  }
 
   await db.insert(reflections).values({
     authorProfileId: user.profileId,
@@ -103,15 +114,16 @@ export async function saveReflection(_prev: LearningState, formData: FormData): 
     actorId: user.profileId,
     action: "learning.reflection_saved",
     entityType: "reflection",
-    description: `Saved a reflection: “${prompt.slice(0, 80)}”.`,
+    description: "Saved a personal reflection.",
   });
 
   if (visibility !== "private") {
     const mentors = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"));
+      .select({ id: mentorAssignments.mentorId })
+      .from(mentorAssignments)
+      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
     if (mentors.length) {
       await db.insert(notifications).values(
         mentors.map((mentor) => ({
@@ -142,7 +154,7 @@ export async function submitAssignment(_prev: LearningState, formData: FormData)
   if (!assignmentId) return { error: "Missing assignment." };
   if (body.length < 30) return { error: "Add a little more detail before saving (at least 30 characters)." };
 
-  const assignmentRows = await db.select().from(assignments).where(eq(assignments.id, assignmentId)).limit(1);
+  const assignmentRows = await db.select().from(assignments).where(and(eq(assignments.id, assignmentId), levelEnrolled(assignments.levelId, user))).limit(1);
   const assignment = assignmentRows[0];
   if (!assignment) return { error: "That assignment is no longer available." };
 
@@ -178,10 +190,11 @@ export async function submitAssignment(_prev: LearningState, formData: FormData)
 
   if (!asDraft) {
     const mentors = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"));
+      .select({ id: mentorAssignments.mentorId })
+      .from(mentorAssignments)
+      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
     if (mentors.length) {
       await db.insert(notifications).values(
         mentors.map((mentor) => ({

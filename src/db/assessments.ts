@@ -18,7 +18,8 @@ import {
   roles,
 } from "@/db/schema";
 import { getAcademyTree } from "@/db/courses";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, type SessionUser } from "@/lib/auth";
+import { assessmentReadable } from "@/db/learning-access";
 import { groupReviewable, learnerReadable } from "@/db/learner-access";
 
 /* ------------------------------------------------------------------ *
@@ -48,6 +49,8 @@ export type AssessmentCard = {
 };
 
 export async function getAssessmentsForStudent(profileId: string): Promise<AssessmentCard[]> {
+  const viewer = await getSessionUser();
+  if (!viewer || viewer.profileId !== profileId) return [];
   const rows = await db
     .select({
       assessment: assessments,
@@ -65,7 +68,7 @@ export async function getAssessmentsForStudent(profileId: string): Promise<Asses
     .leftJoin(courseLevels, eq(assessments.levelId, courseLevels.id))
     .leftJoin(courses, eq(assessments.courseId, courses.id))
     .leftJoin(courseModules, eq(assessments.moduleId, courseModules.id))
-    .where(eq(assessments.status, "published"))
+    .where(assessmentReadable(viewer))
     .orderBy(asc(courseLevels.sortOrder), asc(assessments.kind), asc(assessments.sortOrder));
 
   return rows.map((row) => ({
@@ -92,6 +95,8 @@ export async function getAssessmentsForStudent(profileId: string): Promise<Asses
 }
 
 export async function getAssessmentForTaking(assessmentId: number, profileId: string) {
+  const viewer = await getSessionUser();
+  if (!viewer || viewer.profileId !== profileId) return null;
   const rows = await db
     .select({
       assessment: assessments,
@@ -104,7 +109,7 @@ export async function getAssessmentForTaking(assessmentId: number, profileId: st
     .leftJoin(courseLevels, eq(assessments.levelId, courseLevels.id))
     .leftJoin(courses, eq(assessments.courseId, courses.id))
     .leftJoin(courseModules, eq(assessments.moduleId, courseModules.id))
-    .where(eq(assessments.id, assessmentId))
+    .where(and(eq(assessments.id, assessmentId), assessmentReadable(viewer)))
     .limit(1);
   const record = rows[0];
   if (!record) return null;
@@ -130,6 +135,8 @@ export async function getAssessmentForTaking(assessmentId: number, profileId: st
 }
 
 export async function getAttemptReview(attemptId: number, profileId: string) {
+  const viewer = await getSessionUser();
+  if (!viewer || viewer.profileId !== profileId) return null;
   const rows = await db
     .select({
       attempt: assessmentAttempts,
@@ -172,9 +179,10 @@ export async function gradeAssessment(input: {
   assessmentId: number;
   profileId: string;
   selections: { questionId: number; selectedIndex: number }[];
-}) {
+}, viewer: SessionUser) {
+  if (viewer.profileId !== input.profileId) return null;
   const [assessmentRows, questions] = await Promise.all([
-    db.select().from(assessments).where(eq(assessments.id, input.assessmentId)).limit(1),
+    db.select().from(assessments).where(and(eq(assessments.id, input.assessmentId), assessmentReadable(viewer))).limit(1),
     db
       .select()
       .from(assessmentQuestions)

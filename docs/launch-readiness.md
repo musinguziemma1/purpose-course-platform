@@ -18,7 +18,7 @@ not establish launch readiness.
 - [x] Keep members-only communities, removed discussions, and their search results private.
 - [x] Scope mentor reads and writes to assigned learners and respect assessment sharing consent.
 - [x] Bind conference signals and controls to the authenticated participant and actual host.
-- [ ] Enforce learner enrollment and publication checks on learning endpoints.
+- [x] Enforce learner enrollment and publication checks on learning endpoints.
 - [x] Limit the first launch to one organization; disable additional-organization provisioning (user decision, 11 November 2026).
 - [x] Replace or disable seeded production credentials with a usable administrator recovery path.
 - [x] Prevent stored script injection in structured metadata.
@@ -104,3 +104,21 @@ without executing. Chrome/API checks also verified guest denial, forged peer
 rejection, authorized signalling and chat with server-controlled identity. All
 24 security tests, type checking, lint (21 existing warnings) and the production
 build passed. Test accounts, sessions and the article payload were removed.
+
+Learning access: completion writes verify active/completed level enrolment,
+published course and lesson, and all earlier published lessons in the stable
+course order. Concurrent writes serialize per learner and commit the progress
+record with its audit event. Preview lessons remain readable without enrolment
+but cannot award progress. Self-service admission requests stay on the waitlist
+and cannot reactivate paused records or overwrite another level. Assignment
+submission, legacy session completion and assessment questions also enforce
+enrolment; cohort reads require active membership or programme oversight.
+Reflection, assignment and failed-assessment notifications go only to active
+assigned mentors. Private reflection titles are excluded from activity logs.
+
+Seven additional PostgreSQL checks cover lesson and assessment access. Local
+Chrome confirmed a forged completion identifier produces no progress row,
+valid completion unlocks the next lesson, paused/draft content loses access,
+and draft assessments return 404. All 31 security tests, type checking, lint
+and the production build passed. Assessment timing/attempt limits and certificate
+correctness remain in phase 3; they are not established by these access checks.

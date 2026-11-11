@@ -13,7 +13,8 @@ import {
   profiles,
 } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
-import { liveReadable } from "@/db/learning-access";
+import { lessonAccessible, liveReadable } from "@/db/learning-access";
+import { can } from "@/lib/rbac";
 
 export type LessonRow = typeof lessons.$inferSelect;
 export type ModuleRow = typeof courseModules.$inferSelect & { lessons: LessonRow[] };
@@ -31,11 +32,11 @@ export type FlatLesson = LessonRow & { moduleId: number; moduleTitle: string; mo
 export function flattenCourse(course: CourseRow): FlatLesson[] {
   const flat: FlatLesson[] = [];
   [...course.modules]
-    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
     .forEach((module) => {
       [...module.lessons]
         .filter((lesson) => lesson.status === "published")
-        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
         .forEach((lesson) => {
           flat.push({
             ...lesson,
@@ -122,14 +123,16 @@ export function buildProgression(course: CourseRow, completedIds: Set<number>): 
 }
 
 export async function getStudentAcademy(profileId: string) {
+  const viewer = await getSessionUser();
+  if (viewer?.profileId !== profileId || !can(viewer, "learning.access")) throw new Error("Learner access required.");
   const [tree, progressRows, enrollmentRows] = await Promise.all([
     getAcademyTree(),
     db.select().from(lessonProgress).where(eq(lessonProgress.profileId, profileId)),
     db
       .select({ levelId: enrollments.levelId, cohort: enrollments.cohort, status: enrollments.status })
       .from(enrollments)
-      .where(eq(enrollments.profileId, profileId))
-      .limit(1),
+      .where(and(eq(enrollments.profileId, profileId), inArray(enrollments.status, ["enrolled", "completed"])))
+      .orderBy(desc(enrollments.createdAt)),
   ]);
 
   const statusById = new Map(progressRows.map((row) => [row.lessonId, row.status]));
@@ -137,14 +140,16 @@ export async function getStudentAcademy(profileId: string) {
   const inProgressIds = new Set(progressRows.filter((row) => row.status === "in_progress").map((row) => row.lessonId));
 
   const coursesWithProgression = tree.map((course) => {
+    const enrolled = enrollmentRows.some((enrollment) => enrollment.levelId === course.levelId);
     const progression = buildProgression(course, completedIds).map((lesson, index, all) => {
       const previous = all[index - 1];
       return {
         ...lesson,
+        unlocked: lesson.unlocked && (enrolled || lesson.isPreview),
         completion: (statusById.get(lesson.id) ??
           (completedIds.has(lesson.id) ? "completed" : "not_started")) as LessonCompletion,
         isNext:
-          lesson.unlocked &&
+          enrolled && lesson.unlocked &&
           !completedIds.has(lesson.id) &&
           (!previous || completedIds.has(previous.id)),
       };
@@ -157,6 +162,7 @@ export async function getStudentAcademy(profileId: string) {
       null;
     return {
       ...course,
+      enrolled,
       progression,
       total,
       completed,
@@ -167,8 +173,8 @@ export async function getStudentAcademy(profileId: string) {
 
   return {
     courses: coursesWithProgression,
-    totalLessons: coursesWithProgression.reduce((sum, course) => sum + course.total, 0),
-    completedLessons: coursesWithProgression.reduce((sum, course) => sum + course.completed, 0),
+    totalLessons: coursesWithProgression.filter((course) => course.enrolled).reduce((sum, course) => sum + course.total, 0),
+    completedLessons: coursesWithProgression.filter((course) => course.enrolled).reduce((sum, course) => sum + course.completed, 0),
     inProgressCount: inProgressIds.size,
     enrollment: enrollmentRows[0] ?? null,
   };
@@ -182,12 +188,10 @@ export async function getCourseForStudent(profileId: string, slug: string) {
 }
 
 export async function getLessonContext(profileId: string, courseSlug: string, lessonId: number) {
-  const course = (await getAcademyTree()).find((item) => item.slug === courseSlug);
+  const course = (await getStudentAcademy(profileId)).courses.find((item) => item.slug === courseSlug);
   if (!course) return null;
 
-  const progressRows = await db.select().from(lessonProgress).where(eq(lessonProgress.profileId, profileId));
-  const completedIds = new Set(progressRows.filter((row) => row.status === "completed").map((row) => row.lessonId));
-  const progression = buildProgression(course, completedIds);
+  const progression = course.progression;
   const index = progression.findIndex((lesson) => lesson.id === lessonId);
   if (index === -1) return null;
 
@@ -198,10 +202,16 @@ export async function getLessonContext(profileId: string, courseSlug: string, le
 
   const previous = index > 0 ? progression[index - 1] : null;
   const next = index < progression.length - 1 ? progression[index + 1] : null;
-  return { course, progression, current, locked: false as const, index, previous, next };
+  return { course, progression, current, locked: false as const, index, previous, next, canComplete: course.enrolled };
 }
 
 export async function recordLessonView(profileId: string, lessonId: number) {
+  const viewer = await getSessionUser();
+  if (!viewer || viewer.profileId !== profileId) return;
+  const [allowed] = await db.select({ id: lessons.id }).from(lessons)
+    .innerJoin(courseModules, eq(lessons.moduleId, courseModules.id)).innerJoin(courses, eq(courseModules.courseId, courses.id))
+    .where(and(eq(lessons.id, lessonId), lessonAccessible(viewer, { write: true }))).limit(1);
+  if (!allowed) return;
   await db
     .insert(lessonProgress)
     .values({ profileId, lessonId, status: "in_progress", updatedAt: new Date() })

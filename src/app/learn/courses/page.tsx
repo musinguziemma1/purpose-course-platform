@@ -19,7 +19,7 @@ export default async function StudentCoursesPage() {
     db.select().from(courseLevels).orderBy(courseLevels.sortOrder),
   ]);
 
-  const levelId = academy.enrollment?.levelId ?? levels[0]?.id ?? null;
+  const levelId = academy.enrollment?.levelId ?? null;
 
   return (
     <div className="space-y-6">
@@ -86,7 +86,7 @@ export default async function StudentCoursesPage() {
       <div className="grid gap-5 lg:grid-cols-2">
         {academy.courses.map((course) => {
           const next = course.nextLesson;
-          const locked = course.total > 0 && course.completed === 0 && !course.modules.some((module) => module.lessons.some((lesson) => lesson.isPreview));
+          const locked = !course.enrolled && !course.progression.some((lesson) => lesson.unlocked);
           return (
             <div key={course.id} className="interactive flex flex-col overflow-hidden rounded-xl border border-navy/10 bg-paper shadow-xs">
               {course.coverImageUrl ? (

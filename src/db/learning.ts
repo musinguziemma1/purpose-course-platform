@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { getSessionUser } from "@/lib/auth";
+import { cohortReadable, liveReadable } from "@/db/learning-access";
 import { communityReadable, threadReadable } from "@/db/community-access";
 import { canOverseeLearners, instrumentReadable, learnerReadable, liveManageable } from "@/db/learner-access";
 import {
@@ -260,6 +261,7 @@ export async function getCommunityStats() {
  * ------------------------------------------------------------------ */
 
 export async function getCohorts() {
+  const viewer = await getSessionUser();
   return db
     .select({
       cohort: cohorts,
@@ -272,10 +274,12 @@ export async function getCohorts() {
     .from(cohorts)
     .leftJoin(courseLevels, eq(cohorts.levelId, courseLevels.id))
     .leftJoin(courses, eq(cohorts.courseId, courses.id))
+      .where(cohortReadable(viewer))
     .orderBy(desc(cohorts.startsAt));
 }
 
 export async function getCohort(slug: string) {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({
       cohort: cohorts,
@@ -286,7 +290,7 @@ export async function getCohort(slug: string) {
     .from(cohorts)
     .leftJoin(courseLevels, eq(cohorts.levelId, courseLevels.id))
     .leftJoin(courses, eq(cohorts.courseId, courses.id))
-    .where(eq(cohorts.slug, slug))
+    .where(and(eq(cohorts.slug, slug), cohortReadable(viewer)))
     .limit(1);
   const record = rows[0];
   if (!record) return null;
@@ -301,7 +305,7 @@ export async function getCohort(slug: string) {
       })
       .from(cohortMembers)
       .innerJoin(profiles, eq(cohortMembers.profileId, profiles.id))
-      .where(eq(cohortMembers.cohortId, record.cohort.id))
+      .where(and(eq(cohortMembers.cohortId, record.cohort.id), eq(cohortMembers.status, "active")))
       .orderBy(asc(cohortMembers.role), asc(profiles.fullName)),
     db
       .select()
@@ -311,7 +315,7 @@ export async function getCohort(slug: string) {
     db
       .select()
       .from(liveSessions)
-      .where(eq(liveSessions.cohortId, record.cohort.id))
+      .where(and(eq(liveSessions.cohortId, record.cohort.id), liveReadable(viewer)))
       .orderBy(asc(liveSessions.startsAt)),
   ]);
 
@@ -319,11 +323,12 @@ export async function getCohort(slug: string) {
 }
 
 export async function getCohortForProfile(profileId: string) {
+  const viewer = await getSessionUser();
   const rows = await db
     .select({ slug: cohorts.slug, name: cohorts.name, role: cohortMembers.role, status: cohortMembers.status })
     .from(cohortMembers)
     .innerJoin(cohorts, eq(cohortMembers.cohortId, cohorts.id))
-    .where(eq(cohortMembers.profileId, profileId))
+    .where(and(eq(cohortMembers.profileId, profileId), eq(cohortMembers.status, "active"), learnerReadable(cohortMembers.profileId, viewer), cohortReadable(viewer)))
     .orderBy(desc(cohorts.startsAt))
     .limit(1);
   if (!rows[0]) return null;
@@ -331,10 +336,11 @@ export async function getCohortForProfile(profileId: string) {
 }
 
 export async function getUpcomingCohortSessions(cohortId: number) {
+  const viewer = await getSessionUser();
   return db
     .select()
     .from(liveSessions)
-    .where(and(eq(liveSessions.cohortId, cohortId), gte(liveSessions.startsAt, new Date())))
+    .where(and(eq(liveSessions.cohortId, cohortId), gte(liveSessions.startsAt, new Date()), liveReadable(viewer)))
     .orderBy(asc(liveSessions.startsAt))
     .limit(8);
 }

@@ -153,7 +153,7 @@ export default async function LessonPage({ params }: Params) {
                 </Link>
               ) : null}
             </div>
-            <form action={toggleLessonCompletion}>
+            {context.canComplete ? <form action={toggleLessonCompletion}>
               <input type="hidden" name="lessonId" value={current.id} />
               <input type="hidden" name="courseSlug" value={course.slug} />
               <button
@@ -166,7 +166,7 @@ export default async function LessonPage({ params }: Params) {
                 <CheckCircle2 className="h-4 w-4" />
                 {completed ? "Completed — mark as in progress" : "Mark lesson complete"}
               </button>
-            </form>
+            </form> : <p className="text-[12px] text-stone-600">Enroll in this level to record progress.</p>}
           </div>
         </article>
 

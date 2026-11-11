@@ -13,9 +13,11 @@ import {
   courses,
   groupMembers,
   groupSubmissions,
+  mentorAssignments,
   notifications,
   profiles,
   roles,
+  users,
 } from "@/db/schema";
 import { canManageAssessments, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { canCoachLearner, groupReviewable } from "@/db/learner-access";
@@ -61,17 +63,18 @@ export async function submitAssessmentAttempt(input: {
     assessmentId: input.assessmentId,
     profileId: user.profileId,
     selections: input.selections,
-  });
+  }, user);
   if (!result) return { error: "That assessment is not available." } as const;
 
   const certificates = await syncCertificates(user.profileId);
 
   if (!result.passed) {
     const mentors = await db
-      .select({ id: profiles.id })
-      .from(profiles)
-      .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(eq(roles.slug, "mentor"));
+      .select({ id: mentorAssignments.mentorId })
+      .from(mentorAssignments)
+      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
     if (mentors.length) {
       await db.insert(notifications).values(
         mentors.map((mentor) => ({

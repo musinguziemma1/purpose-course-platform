@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { assignments, coachingSessions, liveSessions } from "@/db/schema";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { WorkspaceShell, type WorkspaceNavItem } from "@/components/workspace/workspace-shell";
+import { levelEnrolled, liveReadable } from "@/db/learning-access";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function LearnLayout({ children }: { children: ReactNode })
   if (user.roleSlug !== "student") redirect(homePathForRole(user.roleSlug));
 
   const [openAssignments, openSessions, upcomingLive] = await Promise.all([
-    db.select({ value: count() }).from(assignments),
+    db.select({ value: count() }).from(assignments).where(levelEnrolled(assignments.levelId, user)),
     db
       .select({ value: count() })
       .from(coachingSessions)
@@ -27,7 +28,7 @@ export default async function LearnLayout({ children }: { children: ReactNode })
     db
       .select({ value: count() })
       .from(liveSessions)
-      .where(gte(liveSessions.startsAt, new Date())),
+      .where(and(gte(liveSessions.startsAt, new Date()), liveReadable(user))),
   ]);
 
   const nav: WorkspaceNavItem[] = [

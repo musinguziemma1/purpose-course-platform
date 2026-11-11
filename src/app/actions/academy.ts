@@ -10,19 +10,18 @@ import {
   courseModules,
   courses,
   enrollments,
-  lessonProgress,
   lessons,
   liveMessages,
   liveRsvps,
   liveSessions,
   profiles,
-  roles,
 } from "@/db/schema";
 import { canAuthorAcademy, getSessionUser, isMentor, isStudent } from "@/lib/auth";
 import { syncCertificates } from "@/db/assessments";
 import { slugify } from "@/lib/utils";
 import { liveHost, liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
+import { changeLessonCompletion } from "@/db/lesson-progress";
 
 export type AcademyState = { ok?: boolean; error?: string; message?: string };
 
@@ -521,42 +520,11 @@ export async function toggleLessonCompletion(formData: FormData) {
   const user = await getSessionUser();
   if (!user) return;
   const lessonId = Number(formData.get("lessonId"));
-  const courseSlug = text(formData, "courseSlug");
   if (!lessonId) return;
-
-  const existing = await db
-    .select()
-    .from(lessonProgress)
-    .where(and(eq(lessonProgress.profileId, user.profileId), eq(lessonProgress.lessonId, lessonId)))
-    .limit(1);
-
-  const wasComplete = existing[0]?.status === "completed";
-
-  if (existing[0]) {
-    await db
-      .update(lessonProgress)
-      .set({
-        status: wasComplete ? "in_progress" : "completed",
-        completedAt: wasComplete ? null : new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(lessonProgress.id, existing[0].id));
-  } else {
-    await db.insert(lessonProgress).values({
-      profileId: user.profileId,
-      lessonId,
-      status: "completed",
-      completedAt: new Date(),
-    });
-  }
-
-  const issued = await syncCertificates(user.profileId).catch(() => []);
-
-  await log(
-    user.profileId,
-    wasComplete ? "academy.lesson_reopened" : "academy.lesson_completed",
-    `${wasComplete ? "Reopened" : "Completed"} lesson #${lessonId}${issued.length ? ` · certificate ${issued[0]}` : ""}.`,
-  );
+  const result = await changeLessonCompletion(lessonId, user);
+  if (!result) return;
+  const courseSlug = result.courseSlug;
+  if (result.completed) await syncCertificates(user.profileId).catch(() => []);
 
   revalidatePath("/learn/certificates");
   revalidatePath("/learn");
@@ -569,23 +537,13 @@ export async function enrollInCourse(formData: FormData) {
   const user = await getSessionUser();
   if (!user || !isStudent(user)) return;
   const levelId = Number(formData.get("levelId"));
-  if (!levelId) return;
-
-  const existing = await db.select().from(enrollments).where(eq(enrollments.profileId, user.profileId)).limit(1);
-  if (existing[0]) {
-    await db.update(enrollments).set({ levelId, status: "enrolled" }).where(eq(enrollments.id, existing[0].id));
-  } else {
-    await db.insert(enrollments).values({
-      profileId: user.profileId,
-      email: `${user.slug}@purposecourse.org`,
-      fullName: user.fullName,
-      levelId,
-      cohort: "Cohort 04 · 2026",
-      status: "enrolled",
-    });
-  }
-
-  await log(user.profileId, "academy.level_enrolled", `Enrolled in level #${levelId}.`);
+  if (!Number.isSafeInteger(levelId) || levelId < 1) return;
+  const [available] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.levelId, levelId), eq(courses.status, "published"))).limit(1);
+  if (!available) return;
+  // Self-service requests join the waitlist. They cannot reactivate a paused
+  // enrolment, overwrite another level, or approve their own admission.
+  const inserted = await db.insert(enrollments).values({ profileId: user.profileId, email: user.email, fullName: user.fullName, levelId, status: "waitlist" }).onConflictDoNothing().returning({ id: enrollments.id });
+  if (inserted.length) await log(user.profileId, "academy.enrollment_requested", `Requested admission to level #${levelId}.`);
   revalidatePath("/learn");
   revalidatePath("/learn/courses");
 }
