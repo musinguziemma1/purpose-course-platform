@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { getDiscussionGroups, getThreadsWithPosts } from "@/db/queries";
 import { getCommunities } from "@/db/learning";
 import { getSessionUser } from "@/lib/auth";
+import { can } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -99,8 +100,8 @@ export default async function CommunityPage() {
 
       <section className="py-12 lg:py-16">
         <div className="shell grid gap-8 lg:grid-cols-[1.5fr_0.8fr] lg:items-start">
-          <Reveal>
-            <CommunityBoard initialThreads={initialThreads} memberName={user?.fullName ?? null} />
+          <Reveal className="min-w-0">
+            <CommunityBoard initialThreads={initialThreads} memberName={user?.fullName ?? null} canPost={can(user, "community.post")} />
             {initialThreads.length > 0 ? (
               <div className="mt-3 rounded-2xl border border-navy/10 bg-paper p-4">
                 <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Open discussion pages</p>
@@ -122,15 +123,15 @@ export default async function CommunityPage() {
                 <>
                   {" "}
                   <Link href="/login" className="font-medium text-navy underline decoration-gold decoration-2 underline-offset-2">
-                    Staff can sign in
+                    Sign in
                   </Link>{" "}
-                  to post with their profile.
+                  to post with your profile.
                 </>
               ) : null}
             </p>
           </Reveal>
 
-          <Reveal delay={0.1} className="space-y-5">
+          <Reveal delay={0.1} className="min-w-0 space-y-5">
             <div className="rounded-2xl border border-navy/10 bg-paper p-5">
               <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Purpose communities</p>
               <ul className="mt-3 space-y-2">

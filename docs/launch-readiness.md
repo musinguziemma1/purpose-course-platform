@@ -50,7 +50,7 @@ not establish launch readiness.
   - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
 - [x] Expose the staff contact inbox with appropriate access checks.
 - [x] Correct analytics definitions and report actual recorded learning events.
-- [ ] Fix the identified mobile overflow, form labels, and missing public links.
+- [x] Fix the identified mobile overflow, form labels, and missing public links.
 - [ ] Document deployment, backup/restore, monitoring, and required external account settings.
 - [ ] Disable the three owner-requested password-protected demo logins after dashboard review and before public launch.
 
@@ -59,6 +59,19 @@ from this workspace will be recorded explicitly; they will not be marked done
 based on placeholder configuration.
 
 ## Verification log
+
+Interface review: the community board wraps long discussion titles, prompts
+and replies at 320, 390, 768 and 1,280 pixels without horizontal page overflow.
+Anonymous readers see sign-in links, while authorized members can create a
+discussion and reply using their server-bound profile. The shared field helper
+associates labels, hints and errors with unique input identifiers; separate
+learner, mentor, group, attendance, recording and editorial forms now use the
+same association or labelled fieldsets. Chrome checked public enrolment and
+learner, mentor and administrative forms for label targets and duplicate IDs.
+The footer Privacy link opens a factual data-use notice, and the sitemap lists
+Privacy and Contact while omitting the noindex sign-in page. Production build
+and lint passed with 21 pre-existing warnings and no errors. Browser fixtures
+used the local database and were removed; no email was sent.
 
 Community privacy: shared SQL authorization covers community pages, discussion
 pages, feeds, search results/facets, membership, replies, reactions, and reports.

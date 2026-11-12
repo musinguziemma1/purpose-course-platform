@@ -119,7 +119,7 @@ export function SiteFooter() {
           <p>© {new Date().getFullYear()} Purpose Course & The School of Purpose and Leadership. All rights reserved.</p>
           <p className="flex items-center gap-4">
             <Link href="/blog" className="hover:text-gold">Journal</Link>
-            <Link href="/about" className="hover:text-gold">Privacy</Link>
+            <Link href="/privacy" className="hover:text-gold">Privacy</Link>
             <span>Built for the next generation of purposeful leaders.</span>
           </p>
         </div>

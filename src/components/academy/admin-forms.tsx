@@ -14,7 +14,7 @@ import {
   updateModule,
   type AcademyState,
 } from "@/app/actions/academy";
-import { Field, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 
 function Note({ state }: { state: AcademyState }) {
@@ -432,8 +432,9 @@ export function RecordingForm({ sessionId }: { sessionId: number }) {
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="sessionId" value={sessionId} />
-      <Label>Recording link</Label>
-      <Input name="recordingUrl" placeholder="https://…" className="text-[12px]" />
+      <Field label="Recording link">
+        <Input name="recordingUrl" placeholder="https://…" className="text-[12px]" />
+      </Field>
       <Note state={state} />
       <Button type="submit" size="sm" className="w-full">
         <Check className="h-3.5 w-3.5" /> Attach & close session

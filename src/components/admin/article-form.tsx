@@ -77,10 +77,11 @@ export function ArticleForm({
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
         <div className="rounded-xl border border-navy/10 bg-paper p-5">
           <div className="mb-2 flex items-center justify-between">
-            <Label hint="markdown-ish">Body</Label>
+            <Label htmlFor="article-body" hint="markdown-ish">Body</Label>
             <span className="text-[10.5px] text-stone-400">## heading · **bold** · &gt; quote · - list · :::callout</span>
           </div>
           <Textarea
+            id="article-body"
             name="body"
             required
             rows={24}
@@ -123,8 +124,9 @@ export function ArticleForm({
           </div>
 
           <div className="rounded-xl border border-navy/10 bg-paper p-5">
-            <Label hint="URL">Cover image</Label>
+            <Label htmlFor="article-cover-image" hint="URL">Cover image</Label>
             <Input
+              id="article-cover-image"
               name="coverImageUrl"
               defaultValue={article?.coverImageUrl ?? ""}
               placeholder="https://…"

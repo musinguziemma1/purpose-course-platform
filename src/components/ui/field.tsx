@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
@@ -76,13 +78,20 @@ export function Field({
   className?: string;
   htmlFor?: string;
 }) {
+  const generatedId = React.useId();
+  const control = React.isValidElement<React.InputHTMLAttributes<HTMLElement>>(children) ? children : null;
+  const controlId = htmlFor ?? control?.props.id ?? generatedId;
+  const hintId = hint ? `${controlId}-hint` : undefined;
+  const errorId = error ? `${controlId}-error` : undefined;
+  const describedBy = [control?.props["aria-describedby"], hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className={cn("w-full", className)}>
-      <Label hint={hint} required={required} htmlFor={htmlFor}>
+      <Label required={required} htmlFor={controlId}>
         {label}
       </Label>
-      {children}
-      {error ? <p className="mt-1 text-[11px] font-medium text-rose-600">{error}</p> : null}
+      {hint ? <p id={hintId} className="mb-1 text-[10.5px] text-stone-500">{hint}</p> : null}
+      {control ? React.cloneElement(control, { id: controlId, "aria-describedby": describedBy, "aria-invalid": error ? true : control.props["aria-invalid"], required: required || control.props.required }) : children}
+      {error ? <p id={errorId} role="alert" className="mt-1 text-[11px] font-medium text-rose-600">{error}</p> : null}
     </div>
   );
 }

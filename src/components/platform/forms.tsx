@@ -18,7 +18,7 @@ import {
   type PlatformState,
 } from "@/app/actions/platform";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 
 function Note({ state }: { state: PlatformState }) {
   if (state.error) return <p className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11.5px] text-rose-700">{state.error}</p>;
@@ -223,8 +223,8 @@ export function AttendanceForm({
           <Input name="minutes" type="number" min={0} defaultValue={90} className="text-[12.5px]" />
         </Field>
       </div>
-      <div>
-        <Label hint="select all who attended">Participants</Label>
+      <fieldset className="min-w-0">
+        <legend className="mb-1.5 text-xs font-medium text-navy">Participants <span className="font-normal text-stone-500">(select all who attended)</span></legend>
         <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-navy/12 bg-white p-2">
           {students.map((student) => (
             <label key={student.id} className="flex items-center gap-2 px-1 text-[12px] text-stone-700">
@@ -233,7 +233,7 @@ export function AttendanceForm({
             </label>
           ))}
         </div>
-      </div>
+      </fieldset>
       <Note state={state} />
       <Go label="Save attendance" pending="Saving…" />
     </form>

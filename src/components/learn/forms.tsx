@@ -11,7 +11,7 @@ import {
   type LearningState,
 } from "@/app/actions/learning";
 import { Button } from "@/components/ui/button";
-import { Input, Label, Select, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
 function StateNote({ state }: { state: LearningState }) {
@@ -77,6 +77,7 @@ export function AssignmentForm({
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="assignmentId" value={assignmentId} />
+      <Field label="Assignment response">
       <Textarea
         name="body"
         rows={4}
@@ -84,6 +85,7 @@ export function AssignmentForm({
         placeholder="Write your response. Be concrete — evidence beats adjectives."
         className="text-[12.5px]"
       />
+      </Field>
       <StateNote state={state} />
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -114,12 +116,10 @@ export function ReflectionForm({ sessions }: { sessions: { id: number; code: str
   const [state, formAction] = useActionState<LearningState, FormData>(saveReflection, {});
   return (
     <form action={formAction} className="space-y-3">
-      <div>
-        <Label>Prompt or title</Label>
+      <Field label="Prompt or title">
         <Input name="prompt" required placeholder="What shifted for me this week?" className="text-[12.5px]" />
-      </div>
-      <div>
-        <Label hint="minimum 40 characters">Reflection</Label>
+      </Field>
+      <Field label="Reflection" hint="minimum 40 characters">
         <Textarea
           name="body"
           rows={5}
@@ -127,10 +127,9 @@ export function ReflectionForm({ sessions }: { sessions: { id: number; code: str
           placeholder="Write honestly. This is a learning record, not a performance."
           className="text-[12.5px]"
         />
-      </div>
+      </Field>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <Label>Related session</Label>
+        <Field label="Related session">
           <Select name="sessionId" defaultValue="" className="text-[12.5px]">
             <option value="">General reflection</option>
             {sessions.map((session) => (
@@ -139,15 +138,14 @@ export function ReflectionForm({ sessions }: { sessions: { id: number; code: str
               </option>
             ))}
           </Select>
-        </div>
-        <div>
-          <Label>Visibility</Label>
+        </Field>
+        <Field label="Visibility">
           <Select name="visibility" defaultValue="mentor" className="text-[12.5px]">
             <option value="private">Private — only me</option>
             <option value="mentor">Share with my mentor</option>
             <option value="cohort">Share with the cohort</option>
           </Select>
-        </div>
+        </Field>
       </div>
       <StateNote state={state} />
       <Button type="submit" size="sm" className="w-full">
@@ -162,16 +160,13 @@ export function CoachingRequestForm() {
   const [defaultScheduledFor] = useState(() => new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 16));
   return (
     <form action={formAction} className="space-y-3">
-      <div>
-        <Label>Session title</Label>
+      <Field label="Session title">
         <Input name="title" required placeholder="Clarity session — purpose statement" className="text-[12.5px]" />
-      </div>
-      <div>
-        <Label hint="optional">What do you want to work on?</Label>
+      </Field>
+      <Field label="What do you want to work on?" hint="optional">
         <Textarea name="focus" rows={2} placeholder="Bring the two drafts and the gifting evidence." className="text-[12.5px]" />
-      </div>
-      <div>
-        <Label>Preferred date & time</Label>
+      </Field>
+      <Field label="Preferred date & time">
         <Input
           type="datetime-local"
           name="scheduledFor"
@@ -179,7 +174,7 @@ export function CoachingRequestForm() {
           defaultValue={defaultScheduledFor}
           className="text-[12.5px]"
         />
-      </div>
+      </Field>
       <StateNote state={state} />
       <Button type="submit" size="sm" className="w-full">
         <CalendarPlus className="h-3.5 w-3.5" /> Request coaching session

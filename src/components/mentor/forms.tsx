@@ -10,7 +10,7 @@ import {
   type MentorState,
 } from "@/app/actions/mentorship";
 import { Button } from "@/components/ui/button";
-import { Label, Select, Textarea, Input } from "@/components/ui/field";
+import { Field, Select, Textarea, Input } from "@/components/ui/field";
 
 function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus();
@@ -41,7 +41,7 @@ export function CompleteSessionForm({ sessionId, existingNotes }: { sessionId: n
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="sessionId" value={sessionId} />
-      <Label hint="shared with the student">Session notes</Label>
+      <Field label="Session notes" hint="shared with the student">
       <Textarea
         name="mentorNotes"
         rows={3}
@@ -49,6 +49,7 @@ export function CompleteSessionForm({ sessionId, existingNotes }: { sessionId: n
         placeholder="What did you hear, what did you name, and what is the homework?"
         className="text-[12.5px]"
       />
+      </Field>
       <StateNote state={state} />
       <Submit label="Mark complete & share notes" pendingLabel="Saving…" />
     </form>
@@ -60,8 +61,9 @@ export function ReviewSubmissionForm({ submissionId }: { submissionId: number })
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="submissionId" value={submissionId} />
-      <Label hint="be specific">Feedback</Label>
+      <Field label="Feedback" hint="be specific">
       <Textarea name="feedback" rows={3} placeholder="One strength, one gap, one next action." className="text-[12.5px]" />
+      </Field>
       <StateNote state={state} />
       <Submit label="Share feedback" pendingLabel="Sending…" />
     </form>
@@ -73,8 +75,7 @@ export function ScheduleSessionForm({ students }: { students: { profileId: strin
   const [defaultScheduledFor] = useState(() => new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 16));
   return (
     <form action={formAction} className="space-y-3">
-      <div>
-        <Label>Mentee</Label>
+      <Field label="Mentee">
         <Select name="studentId" defaultValue={students[0]?.profileId ?? ""} required>
           {students.map((student) => (
             <option key={student.profileId} value={student.profileId}>
@@ -82,17 +83,14 @@ export function ScheduleSessionForm({ students }: { students: { profileId: strin
             </option>
           ))}
         </Select>
-      </div>
-      <div>
-        <Label>Session title</Label>
+      </Field>
+      <Field label="Session title">
         <Input name="title" required placeholder="Clarity session — story review" className="text-[12.5px]" />
-      </div>
-      <div>
-        <Label hint="optional">Focus & preparation</Label>
+      </Field>
+      <Field label="Focus & preparation" hint="optional">
         <Textarea name="focus" rows={2} placeholder="What should they bring?" className="text-[12.5px]" />
-      </div>
-      <div>
-        <Label>Date & time</Label>
+      </Field>
+      <Field label="Date & time">
         <Input
           type="datetime-local"
           name="scheduledFor"
@@ -100,7 +98,7 @@ export function ScheduleSessionForm({ students }: { students: { profileId: strin
           defaultValue={defaultScheduledFor}
           className="text-[12.5px]"
         />
-      </div>
+      </Field>
       <StateNote state={state} />
       <Button type="submit" size="sm" className="w-full">
         <Send className="h-3.5 w-3.5" /> Schedule session
