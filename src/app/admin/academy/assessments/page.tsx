@@ -2,10 +2,10 @@ import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Award, ClipboardCheck, Plus, Target } from "lucide-react";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { db } from "@/db";
-import { assessmentAttempts, courseLevels, courseModules, courses, profiles } from "@/db/schema";
-import { getAssessmentAdminList, getCohortPerformance } from "@/db/assessments";
+import { courseLevels, courseModules, courses } from "@/db/schema";
+import { getAssessmentAdminList, getAssessmentResults, getCohortPerformance } from "@/db/assessments";
 import { canManageAssessments, getSessionUser } from "@/lib/auth";
 import { AssessmentForm } from "@/components/academy/assessment-forms";
 import { updatePassMark } from "@/app/actions/assessments";
@@ -27,22 +27,11 @@ export default async function AdminAssessmentsPage() {
     db.select({ id: courses.id, title: courses.title }).from(courses).orderBy(asc(courses.sortOrder)),
     db.select({ id: courseModules.id, title: courseModules.title }).from(courseModules).orderBy(asc(courseModules.sortOrder)),
     getCohortPerformance(),
-    db
-      .select({ attempt: assessmentAttempts, studentName: profiles.fullName })
-      .from(assessmentAttempts)
-      .innerJoin(profiles, eq(assessmentAttempts.profileId, profiles.id))
-      .orderBy(desc(assessmentAttempts.submittedAt))
-      .limit(8),
+    getAssessmentResults().then((rows) => rows.slice(0, 8)),
   ]);
 
   const totalAttempts = list.reduce((sum, row) => sum + Number(row.attemptCount), 0);
-  const averageOfAverages = list.filter((row) => row.averageScore !== null).length
-    ? Math.round(
-        list
-          .filter((row) => row.averageScore !== null)
-          .reduce((sum, row) => sum + Number(row.averageScore), 0) / list.filter((row) => row.averageScore !== null).length,
-      )
-    : null;
+  const averageScore = totalAttempts ? Math.round(list.reduce((sum, row) => sum + Number(row.averageScore ?? 0) * Number(row.attemptCount), 0) / totalAttempts) : null;
 
   return (
     <div className="space-y-5">
@@ -64,7 +53,7 @@ export default async function AdminAssessmentsPage() {
           { label: "Assessments", value: list.length, icon: ClipboardCheck },
           { label: "Questions", value: list.reduce((sum, row) => sum + Number(row.questionCount), 0), icon: Target },
           { label: "Attempts", value: totalAttempts, icon: ArrowRight },
-          { label: "Average score", value: averageOfAverages === null ? "—" : `${averageOfAverages}%`, icon: Award },
+          { label: "Average score", value: averageScore === null ? "—" : `${averageScore}%`, icon: Award },
         ].map((card) => (
           <div key={card.label} className="admin-card p-4">
             <card.icon className="h-4 w-4 text-gold-dark" />

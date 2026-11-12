@@ -34,7 +34,7 @@ export default async function MentorAssessmentsPage() {
         <h1 className="font-serif text-2xl text-navy">Assessment performance</h1>
         <p className="text-[12.5px] text-stone-600">
           Auto-graded scores from every session quiz and level exam, with lesson completion and group work — so you can
-          see who is growing and intervene early.
+          see who is growing and intervene early. Score change compares first and latest submissions with the same assessment, question set and pass mark. Follow-up indicators flag latest failed assessments; they do not predict dropout.
         </p>
       </div>
 
@@ -93,7 +93,7 @@ export default async function MentorAssessmentsPage() {
                 <th className="px-4 py-2 font-semibold">Lessons</th>
                 <th className="px-4 py-2 font-semibold">Avg score</th>
                 <th className="px-4 py-2 font-semibold">Last</th>
-                <th className="px-4 py-2 font-semibold">Trend</th>
+                <th className="px-4 py-2 font-semibold">Comparable change</th>
                 <th className="px-4 py-2 font-semibold">Passed</th>
                 <th className="px-4 py-2 font-semibold">Group</th>
                 <th className="px-4 py-2 font-semibold">Certs</th>
@@ -135,7 +135,7 @@ export default async function MentorAssessmentsPage() {
                   <td className="px-4 py-2.5 text-stone-600">{student.certificates}</td>
                   <td className="px-4 py-2.5">
                     <span className={`rounded-full border px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] ${RISK_META[student.risk].tone}`}>
-                      {RISK_META[student.risk].label}
+                      {student.attempts ? RISK_META[student.risk].label : "No scores yet"}
                     </span>
                   </td>
                 </tr>

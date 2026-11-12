@@ -1,338 +1,295 @@
-import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import {
-  Activity,
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  CalendarDays,
-  GraduationCap,
-  Search,
-  ShieldCheck,
-  Target,
-  TrendingUp,
-  Users,
-} from "lucide-react";
-import { db } from "@/db";
-import { analyticsReports, profiles } from "@/db/schema";
-import { getAuditTrail, getEngagementTrend, getPlatformAnalytics, getProgrammeAnalytics, getRetention } from "@/db/analytics";
-import { getCohortPerformance } from "@/db/assessments";
-import { getSessionUser } from "@/lib/auth";
-import { can } from "@/lib/rbac";
-import { formatDate } from "@/lib/utils";
+import { notFound } from "next/navigation";
+import { getLearningReport } from "@/db/learning-metrics";
+import { requireAdminPage } from "@/lib/page-access";
+import { Label, Select } from "@/components/ui/field";
 
 export const dynamic = "force-dynamic";
-
 export const metadata = { title: "Learning analytics" };
+const percent = (completed: number, total: number) =>
+  total ? `${Math.round((completed / total) * 100)}%` : "—";
 
-const RISK_TONE: Record<string, string> = {
-  excellent: "bg-source/10 text-source",
-  on_track: "bg-cream text-stone-600",
-  at_risk: "bg-amber-100 text-amber-900",
-  critical: "bg-rose-100 text-rose-800",
-};
-
-export default async function AdminAnalyticsPage() {
-  await requireAdminPage("/admin/analytics");
-  const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (!can(user, "analytics.view") && !can(user, "academy.oversee") && !can(user, "people.manage")) redirect("/admin");
-
-  const [platform, programme, performance, trend, retention, audit, people, reports] = await Promise.all([
-    getPlatformAnalytics(),
-    getProgrammeAnalytics(),
-    getCohortPerformance(),
-    getEngagementTrend(14),
-    getRetention(),
-    getAuditTrail(8),
-    db.select({ id: profiles.id, fullName: profiles.fullName, title: profiles.title }).from(profiles).limit(8),
-    db.select().from(analyticsReports).orderBy(analyticsReports.scope),
-  ]);
-
-  const activeCohort = programme.cohorts.find((cohort) => cohort.status === "active") ?? programme.cohorts[0];
-  const maxMinutes = Math.max(...trend.map((row) => row.minutes), 1);
-
+export default async function AdminAnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cohort?: string }>;
+}) {
+  const actor = await requireAdminPage("/admin/analytics");
+  const query = await searchParams;
+  const cohortId = query.cohort ? Number(query.cohort) : null;
+  const report = await getLearningReport(actor, cohortId);
+  if (!report) notFound();
+  const { summary: s, courses, cohorts, daily, weekly } = report;
+  const selected = cohorts.find((cohort) => cohort.id === cohortId);
+  const maxActions = Math.max(1, ...daily.map((day) => day.actions));
+  const change =
+    s.improvement === null
+      ? "—"
+      : `${s.improvement > 0 ? "+" : ""}${s.improvement}`;
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-dark">Enterprise analytics</p>
-          <h1 className="mt-1.5 font-serif text-2xl text-navy">Learning intelligence</h1>
-          <p className="max-w-2xl text-[12.5px] leading-relaxed text-stone-600">
-            Platform, programme and individual measures drawn from live data — enrolment, completion, assessment
-            improvement, goal achievement, mentor engagement and dropout.
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gold-dark">
+          Purpose Course
+        </p>
+        <h1 className="mt-2 font-serif text-3xl text-navy">
+          Learning analytics
+        </h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-stone-600">
+          Enrolment, published lesson progress, assessment results and recorded
+          learning activity. Inactive accounts, staff activity and demonstration
+          events are excluded.
+        </p>
+      </header>
+      <form
+        action="/admin/analytics"
+        method="get"
+        className="flex flex-wrap items-end gap-3 rounded-xl border border-navy/10 bg-paper p-4"
+      >
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="analytics-cohort">Report scope</Label>
+          <Select
+            id="analytics-cohort"
+            name="cohort"
+            defaultValue={cohortId ?? ""}
+          >
+            <option value="">All active learner accounts</option>
+            {cohorts.map((cohort) => (
+              <option key={cohort.id} value={cohort.id}>
+                {cohort.name} · {cohort.learners} active members
+              </option>
+            ))}
+          </Select>
+        </div>
+        <button
+          type="submit"
+          className="rounded-full bg-navy px-5 py-3 text-sm font-semibold text-paper"
+        >
+          Apply scope
+        </button>
+      </form>
+      <p className="text-sm font-semibold text-navy" role="status">
+        {selected
+          ? `Scope: ${selected.name} · active learner memberships only`
+          : "Scope: all active learner accounts"}
+      </p>
+      <section
+        aria-label="Learning measures"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+      >
+        {[
+          {
+            label: "Learner accounts",
+            value: s.learners,
+            detail: "Active accounts with the student role in this scope.",
+          },
+          {
+            label: "Active learners · 30 days",
+            value: s.activeLearners,
+            detail:
+              "Distinct learners with a recorded learning action in the last 30 days.",
+          },
+          {
+            label: "Lesson completion",
+            value: percent(s.completed, s.opportunities),
+            detail: `${s.completed} of ${s.opportunities} learner–lesson opportunities. Unstarted lessons remain in the denominator.`,
+          },
+          {
+            label: "Course award rate",
+            value: percent(s.courseAwards, s.coursePairs),
+            detail: `${s.courseAwards} valid course awards across ${s.coursePairs} learner–course pairs with published lessons.`,
+          },
+          {
+            label: "Valid certificates",
+            value: s.certificates,
+            detail:
+              "Issued course and level certificates; revoked certificates excluded.",
+          },
+          {
+            label: "Assessment pass rate",
+            value: percent(s.passed, s.attempts),
+            detail: `${s.passed} passes from ${s.attempts} submitted attempts in the current enrolled curriculum. Voided attempts excluded.`,
+          },
+        ].map((card) => (
+          <article
+            key={card.label}
+            className="rounded-xl border border-navy/10 bg-paper p-5"
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-stone-600">
+              {card.label}
+            </h2>
+            <p className="mt-3 font-serif text-3xl text-navy">{card.value}</p>
+            <p className="mt-2 text-xs leading-relaxed text-stone-600">
+              {card.detail}
+            </p>
+          </article>
+        ))}
+      </section>
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <section className="rounded-xl border border-navy/10 bg-paper p-5">
+          <h2 className="font-serif text-xl text-navy">Assessment change</h2>
+          <p className="mt-3 font-serif text-3xl text-navy">
+            {change}
+            <span className="ml-2 font-sans text-sm text-stone-600">
+              percentage points
+            </span>
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-stone-600">
+            Mean change from first to latest submission for each learner and
+            assessment with the same stored question set and pass mark.{" "}
+            {s.comparisons} comparable series.
+          </p>
+          <p className="mt-3 text-sm text-stone-600">
+            Average submitted score:{" "}
+            <strong>{s.average === null ? "—" : `${s.average}%`}</strong>
+          </p>
+        </section>
+        <section className="rounded-xl border border-navy/10 bg-paper p-5">
+          <h2 className="font-serif text-xl text-navy">Development goals</h2>
+          <p className="mt-3 font-serif text-3xl text-navy">
+            {percent(s.achievedGoals, s.goals)}
+          </p>
+          <p className="mt-2 text-sm text-stone-600">
+            {s.achievedGoals} achieved of {s.goals} active or achieved goals.
+            Cancelled goals are excluded.
+          </p>
+          <p className="mt-3 text-sm text-stone-600">
+            Active mentor assignments: <strong>{s.mentors}</strong>
+          </p>
+        </section>
+      </div>
+      <section className="overflow-hidden rounded-xl border border-navy/10 bg-paper">
+        <div className="p-5">
+          <h2 className="font-serif text-xl text-navy">
+            Progress by published course
+          </h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Each learner is counted once per course granted by an enrolled or
+            completed level enrolment.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/programme" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 bg-paper px-3.5 text-[11.5px] font-medium text-navy hover:bg-cream">
-            <CalendarDays className="h-3.5 w-3.5" /> Programme control
-          </Link>
-          <Link href="/search" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-3.5 text-[11.5px] font-semibold text-paper hover:bg-navy-700">
-            <Search className="h-3.5 w-3.5" /> Search platform
-          </Link>
-        </div>
-      </div>
-
-      <section>
-        <h2 className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-          <BarChart3 className="h-3.5 w-3.5 text-gold-dark" /> Platform level
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-          {[
-            { label: "Registered users", value: platform.users, icon: Users },
-            { label: "Active learners (30d)", value: platform.activeLearners, icon: Activity },
-            { label: "Lesson completion", value: `${platform.completionRate}%`, icon: BookOpen },
-            { label: "Course completion", value: `${platform.courseCompletion}%`, icon: GraduationCap },
-            { label: "Certificates", value: platform.certificates, icon: TrendingUp },
-            { label: "Assessment pass rate", value: `${platform.assessmentPassRate}%`, icon: Target },
-          ].map((card) => (
-            <div key={card.label} className="admin-card p-3.5">
-              <card.icon className="h-4 w-4 text-gold-dark" />
-              <p className="mt-2 font-serif text-xl text-navy">{card.value}</p>
-              <p className="text-[9.5px] uppercase leading-tight tracking-[0.08em] text-stone-500">{card.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="admin-card p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Principle coverage across the curriculum</p>
-            <span className="text-[10px] uppercase tracking-[0.08em] text-stone-500">all learners</span>
-          </div>
-          <ul className="mt-3 space-y-2.5">
-            {platform.principles.map((principle) => (
-              <li key={principle.principle}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-[12px] font-medium text-navy">
-                    {principle.principle} <span className="text-[10px] font-normal text-stone-500">· {principle.question}</span>
-                  </p>
-                  <span className="text-[10.5px] font-semibold text-gold-dark">{principle.percent}%</span>
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="meter h-2 flex-1">
-                    <span style={{ width: `${principle.percent}%` }} />
-                  </span>
-                  <span className="text-[9.5px] text-stone-500">
-                    {principle.completed}/{principle.lessons}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="admin-card p-4">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Engagement trend (14 days)</p>
-          <div className="mt-3 flex h-28 items-end gap-1">
-            {trend.length === 0 ? (
-              <p className="text-[11.5px] text-stone-500">No engagement snapshots yet.</p>
-            ) : (
-              trend.map((row) => (
-                <div key={row.date} className="flex flex-1 flex-col items-center gap-1" title={`${row.date}: ${row.minutes} min · ${row.active} active`}>
-                  <span className="w-full rounded-t bg-navy/70" style={{ height: `${(row.minutes / maxMinutes) * 96}px` }} />
-                  <span className="text-[7.5px] text-stone-400">{row.date.slice(8)}</span>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 border-t border-navy/8 pt-2 text-center">
-            {[
-              { label: "Minutes", value: trend.reduce((sum, row) => sum + row.minutes, 0) },
-              { label: "Lessons", value: trend.reduce((sum, row) => sum + row.lessons, 0) },
-              { label: "Retention w1", value: `${retention.slice(-1)[0]?.learners ?? 0}` },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="font-serif text-base text-navy">{stat.value}</p>
-                <p className="text-[8.5px] uppercase tracking-[0.08em] text-stone-500">{stat.label}</p>
+        <ul className="divide-y divide-navy/10">
+          {courses.map((course) => (
+            <li key={course.id} className="p-5">
+              <div className="flex flex-wrap justify-between gap-2">
+                <h3 className="font-semibold text-navy">{course.title}</h3>
+                <span className="text-sm text-stone-600">
+                  {course.learners} learners · {course.awarded} course awards
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <section>
-        <h2 className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-          <CalendarDays className="h-3.5 w-3.5 text-gold-dark" /> Programme level
-        </h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="admin-card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Cohort performance</p>
-            {activeCohort ? (
-              <>
-                <p className="mt-1 font-serif text-[14px] text-navy">{activeCohort.name}</p>
-                <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">
-                  {formatDate(activeCohort.startsAt, "short")} → {formatDate(activeCohort.endsAt, "short")}
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="flex-1 overflow-hidden rounded-full bg-cream">
-                    <span className="block h-2 rounded-full bg-gold" style={{ width: `${Math.min(100, Math.round((activeCohort.learners / Math.max(activeCohort.capacity, 1)) * 100))}%` }} />
-                  </span>
-                  <span className="text-[10px] text-stone-600">{activeCohort.learners}/{activeCohort.capacity}</span>
-                </div>
-                <ul className="mt-2 space-y-1">
-                  {performance.slice(0, 5).map((student) => (
-                    <li key={student.profileId} className="flex items-center justify-between gap-2 text-[11px]">
-                      <span className="truncate text-navy">{student.fullName}</span>
-                      <span className={`rounded-full px-1.5 py-0.5 text-[8.5px] font-semibold uppercase ${RISK_TONE[student.risk]}`}>
-                        {student.averageScore === null ? "no scores" : `${student.averageScore}%`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <p className="mt-2 text-[11.5px] text-stone-500">No cohorts yet.</p>
-            )}
-          </div>
-
-          <div className="admin-card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Assessment improvement</p>
-            <p className="mt-2 font-serif text-3xl text-navy">
-              {platform.assessmentImprovement === null ? "—" : `${platform.assessmentImprovement > 0 ? "+" : ""}${platform.assessmentImprovement}`}
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">points, last 7 days vs prior</p>
-            <ul className="mt-2 space-y-1 text-[11px] text-stone-600">
-              <li>Attempts: <strong className="text-navy">{platform.assessmentAttempts}</strong></li>
-              <li>Average score: <strong className="text-navy">{platform.assessmentAverage ?? "—"}</strong></li>
-              <li>Pass rate: <strong className="text-navy">{platform.assessmentPassRate}%</strong></li>
-              <li>Active cohorts: <strong className="text-navy">{platform.activeCohorts}</strong></li>
-            </ul>
-          </div>
-
-          <div className="admin-card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Goals & mentorship</p>
-            <p className="mt-2 font-serif text-3xl text-navy">{programme.goals.achievedRate}%</p>
-            <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">goal achievement</p>
-            <ul className="mt-2 space-y-1 text-[11px] text-stone-600">
-              <li>Goals: <strong className="text-navy">{programme.goals.total}</strong> ({programme.goals.active} active)</li>
-              <li>Mentor assignments: <strong className="text-navy">{programme.mentorAssignments}</strong></li>
-              <li>Mentoring notes: <strong className="text-navy">{programme.mentoringNotes}</strong></li>
-              <li>Satisfaction index: <strong className="text-navy">{programme.satisfaction}</strong></li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="admin-card mt-3 overflow-hidden">
-          <div className="border-b border-navy/10 px-5 py-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Content engagement & dropout by course</p>
-          </div>
-          <ul className="divide-y divide-navy/8">
-            {programme.dropout.map((course) => (
-              <li key={course.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
-                <p className="min-w-0 flex-1 truncate text-[12px] text-navy">{course.title}</p>
-                <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-stone-500">
-                  completion {course.completion}%
-                </span>
-                <span className="inline-flex min-w-40 items-center gap-1.5">
-                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-cream">
-                    <span className="block h-full rounded-full bg-source" style={{ width: `${course.completion}%` }} />
-                  </span>
-                  <span className="text-[10px] font-semibold text-rose-600">{course.dropout}% dropout</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-          <Users className="h-3.5 w-3.5 text-gold-dark" /> Individual level
-        </h2>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {performance.slice(0, 2).map((student) => (
-            <div key={student.profileId} className="admin-card p-4">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="font-serif text-[15px] text-navy">{student.fullName}</p>
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">{student.levelName ?? "Learner"}</p>
-                </div>
-                <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${RISK_TONE[student.risk]}`}>{student.risk.replace("_", " ")}</span>
+              <p className="mt-2 text-sm text-stone-600">
+                {course.completed}/{course.total} lesson opportunities completed
+                · {percent(course.completed, course.total)}
+              </p>
+              <div
+                className="mt-2 h-2 overflow-hidden rounded-full bg-cream"
+                aria-hidden="true"
+              >
+                <div
+                  className="h-full rounded-full bg-gold"
+                  style={{
+                    width: course.total
+                      ? `${(course.completed / course.total) * 100}%`
+                      : "0%",
+                  }}
+                />
               </div>
-              <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-stone-600">
-                <li>Lessons: <strong className="text-navy">{student.lessonsCompleted}/{student.lessonsTotal}</strong></li>
-                <li>Average score: <strong className="text-navy">{student.averageScore ?? "—"}</strong></li>
-                <li>Group work: <strong className="text-navy">{student.groupScore ?? "—"}</strong></li>
-                <li>Certificates: <strong className="text-navy">{student.certificates}</strong></li>
-              </ul>
-              {student.attention.length > 0 ? (
-                <p className="mt-1.5 rounded-md bg-amber-50 px-2 py-1 text-[10.5px] leading-relaxed text-amber-900">
-                  {student.attention.slice(0, 2).join(" · ")}
-                </p>
-              ) : (
-                <p className="mt-1.5 rounded-md bg-source/5 px-2 py-1 text-[10.5px] text-source">On track — no follow-up required.</p>
-              )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
+        {!courses.length ? (
+          <p className="px-5 pb-5 text-sm text-stone-600">
+            No published courses are assigned to enrolled learners in this
+            scope.
+          </p>
+        ) : null}
       </section>
-
-      <section>
-        <h2 className="mb-2 inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-          <BarChart3 className="h-3.5 w-3.5 text-gold-dark" /> Report catalogue (M&amp;E definitions)
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {reports.map((report) => (
-            <div key={report.id} className="admin-card p-4">
-              <p className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-gold-dark">{report.scope}</p>
-              <p className="mt-0.5 font-serif text-[14px] text-navy">{report.title}</p>
-              <p className="mt-1 text-[11px] leading-relaxed text-stone-600">{report.definition}</p>
-              <p className="mt-1 font-mono text-[9.5px] text-stone-400">{report.queryRef}</p>
-            </div>
-          ))}
-          {reports.length === 0 ? <p className="admin-card p-4 text-[12px] text-stone-500">No report definitions yet.</p> : null}
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="admin-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-navy/10 px-5 py-3">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-              <ShieldCheck className="h-3.5 w-3.5 text-gold-dark" /> Audit trail
-            </p>
-            <Link href="/admin/activity" className="text-[10.5px] font-semibold text-gold-dark hover:underline">
-              Full log <ArrowRight className="ml-1 inline h-2.5 w-2.5" />
-            </Link>
-          </div>
-          <ul className="divide-y divide-navy/8">
-            {audit.changes.map((row, index) => (
-              <li key={index} className="px-5 py-2">
-                <p className="text-[11.5px] text-navy">
-                  {(row.change as { table?: string }).table} · {(row.change as { type?: string }).type} · {(row.change as { record?: string }).record}
-                </p>
-                <p className="text-[10px] text-stone-500">{row.actor ?? "system"}</p>
-              </li>
-            ))}
-            {audit.changes.length === 0 ? <li className="px-5 py-3 text-[11.5px] text-stone-500">No data changes recorded yet.</li> : null}
-          </ul>
-        </div>
-
-        <div className="admin-card overflow-hidden">
-          <div className="border-b border-navy/10 px-5 py-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Top platform events</p>
-          </div>
-          <ul className="divide-y divide-navy/8">
-            {platform.topEvents.map((event) => (
-              <li key={event.name} className="flex items-center justify-between gap-2 px-5 py-2">
-                <p className="text-[11.5px] text-navy">{event.name}</p>
-                <span className="inline-flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.08em] text-stone-500">
-                  {event.module} <span className="rounded-full bg-cream px-1.5 py-0.5 font-semibold text-navy">{event.value}</span>
+      <div className="grid items-start gap-5 lg:grid-cols-[1.4fr_1fr]">
+        <section className="rounded-xl border border-navy/10 bg-paper p-5">
+          <h2 className="font-serif text-xl text-navy">
+            Recorded activity · 14 days
+          </h2>
+          <p className="mt-1 text-xs text-stone-600">
+            Dates use Africa/Kampala. Bars count learning actions, including
+            completion, reopening, assessment and award events.
+          </p>
+          <ul className="mt-4 space-y-2">
+            {daily.map((day) => (
+              <li key={day.date} className="flex items-center gap-3 text-xs">
+                <time
+                  dateTime={day.date}
+                  className="w-20 shrink-0 text-stone-600"
+                >
+                  {day.date}
+                </time>
+                <div
+                  className="h-2 min-w-0 flex-1 rounded-full bg-cream"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full rounded-full bg-navy/70"
+                    style={{ width: `${(day.actions / maxActions) * 100}%` }}
+                  />
+                </div>
+                <span className="w-32 shrink-0 text-right text-stone-600">
+                  {day.actions} actions · {day.active} learners
                 </span>
               </li>
             ))}
-            {platform.topEvents.length === 0 ? <li className="px-5 py-3 text-[11.5px] text-stone-500">No events yet.</li> : null}
           </ul>
-          <div className="border-t border-navy/8 bg-cream/40 px-5 py-2.5">
-            <p className="text-[10px] leading-relaxed text-stone-500">
-              {people.length} people in the directory · {platform.articlePipeline.published}/{platform.articlePipeline.total} articles published ·{" "}
-              {platform.threads} discussions · {platform.replies} replies
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+        <section className="rounded-xl border border-navy/10 bg-paper p-5">
+          <h2 className="font-serif text-xl text-navy">
+            Weekly active learners
+          </h2>
+          <p className="mt-1 text-xs text-stone-600">
+            Calendar weeks start Monday in Africa/Kampala. The current week is
+            partial; these are activity counts, not a retention rate.
+          </p>
+          <table className="mt-4 w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th scope="col" className="py-2 font-semibold text-navy">
+                  Week beginning
+                </th>
+                <th
+                  scope="col"
+                  className="py-2 text-right font-semibold text-navy"
+                >
+                  Learners
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {weekly.map((week) => (
+                <tr key={week.date} className="border-t border-navy/10">
+                  <td className="py-2">
+                    <time dateTime={week.date}>{week.date}</time>
+                  </td>
+                  <td className="py-2 text-right">{week.active}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </div>
+      <aside className="rounded-xl border border-navy/10 bg-paper p-5 text-sm leading-relaxed text-stone-600">
+        <h2 className="font-semibold text-navy">Reading this report</h2>
+        <p className="mt-2">
+          A dash means there is no denominator or no comparable score series.
+          Progress is based on published lessons and current eligible
+          enrolments. Activity uses recorded learning events and excludes
+          entries marked as seed data. Time spent learning, satisfaction,
+          dropout and retention require separate measurements and are not
+          inferred here.
+        </p>
+        <Link
+          href="/admin/programme"
+          className="mt-3 inline-block font-semibold text-navy underline underline-offset-4"
+        >
+          Open programme control
+        </Link>
+      </aside>
     </div>
   );
 }

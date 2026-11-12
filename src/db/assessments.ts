@@ -17,12 +17,14 @@ import {
   liveSessions,
   profiles,
   roles,
+  users,
 } from "@/db/schema";
 import { getAcademyTree } from "@/db/courses";
 import { getSessionUser } from "@/lib/auth";
 import { synchronizeCertificates } from "@/db/certificate-awards";
 import { assessmentReadable } from "@/db/learning-access";
 import { groupReviewable, learnerReadable } from "@/db/learner-access";
+import { getLearnerMetrics } from "@/db/learning-metrics";
 
 /* ------------------------------------------------------------------ *
  * Assessment catalogue
@@ -248,131 +250,153 @@ export type StudentPerformance = {
   attention: string[];
 };
 
-export async function getCohortPerformance(levelId?: number | null): Promise<StudentPerformance[]> {
+export async function getCohortPerformance(
+  levelId?: number | null,
+): Promise<StudentPerformance[]> {
   const viewer = await getSessionUser();
   const students = await db
-    .select({
-      profileId: profiles.id,
-      fullName: profiles.fullName,
-      slug: profiles.slug,
-      title: profiles.title,
-    })
+    .select({ id: profiles.id })
     .from(profiles)
     .innerJoin(roles, eq(profiles.roleId, roles.id))
-    .where(and(eq(roles.slug, "student"), learnerReadable(profiles.id, viewer)))
-    .orderBy(asc(profiles.fullName));
-  const studentIds = students.map((student) => student.profileId);
-  if (!studentIds.length) return [];
-
-  const tree = await getAcademyTree();
-  const totalLessons = tree.reduce(
-    (sum, course) => sum + course.modules.flatMap((module) => module.lessons).filter((lesson) => lesson.status === "published").length,
-    0,
+    .innerJoin(users, eq(profiles.userId, users.id))
+    .where(
+      and(
+        eq(roles.slug, "student"),
+        eq(users.isActive, true),
+        learnerReadable(profiles.id, viewer),
+      ),
+    );
+  const metrics = await getLearnerMetrics(
+    viewer,
+    students.map((student) => student.id),
+    levelId ?? null,
   );
-
-  const [progressRows, attemptRows, groupRows, certificateRows, levelRows, groupScoreRows] = await Promise.all([
-    db
-      .select({ profileId: lessonProgress.profileId, value: sql<number>`count(*)::int` })
-      .from(lessonProgress)
-      .where(and(eq(lessonProgress.status, "completed"), inArray(lessonProgress.profileId, studentIds)))
-      .groupBy(lessonProgress.profileId),
+  const studentIds = metrics.map((student) => student.profileId);
+  if (!studentIds.length) return [];
+  const [groupRows, groupScoreRows] = await Promise.all([
     db
       .select({
-        profileId: assessmentAttempts.profileId,
-        score: assessmentAttempts.score,
-        passed: assessmentAttempts.passed,
-        submittedAt: assessmentAttempts.submittedAt,
-        levelId: assessments.levelId,
+        profileId: groupMembers.profileId,
+        groupId: groupMembers.groupId,
       })
-      .from(assessmentAttempts)
-      .innerJoin(assessments, eq(assessmentAttempts.assessmentId, assessments.id))
-      .where(inArray(assessmentAttempts.profileId, studentIds))
-      .orderBy(asc(assessmentAttempts.submittedAt)),
-    db
-      .select({ profileId: groupMembers.profileId, groupId: groupMembers.groupId, groupName: courseGroups.name })
       .from(groupMembers)
       .innerJoin(courseGroups, eq(groupMembers.groupId, courseGroups.id))
-      .where(inArray(groupMembers.profileId, studentIds)),
-    db.select({ profileId: certificates.profileId, value: sql<number>`count(*)::int` }).from(certificates).where(inArray(certificates.profileId, studentIds)).groupBy(certificates.profileId),
-    db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
+      .leftJoin(courses, eq(courseGroups.courseId, courses.id))
+      .where(
+        and(
+          inArray(groupMembers.profileId, studentIds),
+          levelId ? eq(courses.levelId, levelId) : undefined,
+        ),
+      ),
     db
       .select({
         groupId: groupSubmissions.groupId,
         score: sql<number | null>`max(${groupSubmissions.score})`,
       })
       .from(groupSubmissions)
+      .where(eq(groupSubmissions.status, "reviewed"))
       .groupBy(groupSubmissions.groupId),
   ]);
-
-  const progressByProfile = new Map(progressRows.map((row) => [row.profileId, Number(row.value)]));
-  const certificateByProfile = new Map(certificateRows.map((row) => [row.profileId, Number(row.value)]));
-  const groupScoreByGroup = new Map(groupScoreRows.map((row) => [row.groupId, row.score === null ? null : Number(row.score)]));
-  const leadPassMark = levelRows.find((level) => level.id === levelId)?.passMark ?? 80;
-
-  return students.map((student) => {
-    const attempts = attemptRows.filter((row) => row.profileId === student.profileId);
-    const scores = attempts.map((row) => row.score);
-    const averageScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const groupScoreByGroup = new Map(
+    groupScoreRows.map((row) => [
+      row.groupId,
+      row.score === null ? null : Number(row.score),
+    ]),
+  );
+  return metrics.map((student) => {
+    const attempts = student.attempts,
+      scores = attempts.map((row) => row.score);
+    const averageScore = scores.length
+      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      : null;
     const bestScore = scores.length ? Math.max(...scores) : null;
     const lastScore = scores.length ? scores[scores.length - 1] : null;
-    const trend = scores.length >= 2 ? scores[scores.length - 1] - scores[scores.length - 2] : null;
     const passedAssessments = attempts.filter((row) => row.passed).length;
-    const failedAssessments = attempts.length - passedAssessments;
-
-    const memberships = groupRows.filter((row) => row.profileId === student.profileId);
-    const groupScores = memberships
+    const latest = new Map(
+      attempts.map((attempt) => [attempt.assessmentId, attempt]),
+    );
+    const latestFailures = [...latest.values()].filter(
+      (attempt) => !attempt.passed,
+    );
+    const groupScores = groupRows
+      .filter((row) => row.profileId === student.profileId)
       .map((row) => groupScoreByGroup.get(row.groupId))
       .filter((value): value is number => typeof value === "number");
-    const groupScore = groupScores.length ? Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length) : null;
-
-    const lessonsCompleted = progressByProfile.get(student.profileId) ?? 0;
-    const lessonPercent = totalLessons ? Math.round((lessonsCompleted / totalLessons) * 100) : 0;
+    const groupScore = groupScores.length
+      ? Math.round(groupScores.reduce((a, b) => a + b, 0) / groupScores.length)
+      : null;
+    const lessonPercent = student.lessonsTotal
+      ? Math.round((student.lessonsCompleted / student.lessonsTotal) * 100)
+      : 0;
     const attention: string[] = [];
-
-    if (averageScore !== null && averageScore < leadPassMark) attention.push(`Assessment average ${averageScore}% is below the ${leadPassMark}% pass mark`);
-    if (trend !== null && trend < 0) attention.push(`Score fell ${Math.abs(trend)} points between the last two attempts`);
-    if (lessonsCompleted === 0) attention.push("No lessons completed yet");
-    else if (lessonPercent < 40) attention.push(`Only ${lessonPercent}% of lessons completed`);
-    if (attempts.length === 0) attention.push("No assessments attempted");
-    if (groupScore !== null && groupScore < 70) attention.push(`Group work scored ${groupScore}%`);
-    if (failedAssessments >= 2) attention.push(`${failedAssessments} failed assessment attempts`);
-
+    for (const failure of latestFailures)
+      attention.push(
+        failure.title +
+          ": latest score " +
+          failure.score +
+          "% is below its " +
+          failure.passMark +
+          "% pass mark",
+      );
+    if (student.improvement !== null && student.improvement < 0)
+      attention.push(
+        "Comparable assessment scores changed by " +
+          student.improvement +
+          " points from first to latest",
+      );
+    if (student.lessonsTotal && !student.lessonsCompleted)
+      attention.push("No assigned lessons completed yet");
+    if (student.lessonsTotal && !attempts.length)
+      attention.push("No current curriculum assessments submitted yet");
+    if (groupScore !== null && groupScore < 70)
+      attention.push("Reviewed group work scored " + groupScore + "%");
+    // Follow-up indicators, not a dropout prediction. New learners are not
+    // classified at risk merely because their curriculum has not started.
     const risk: StudentPerformance["risk"] =
-      (averageScore !== null && averageScore < 60) || (attempts.length > 0 && failedAssessments >= 2 && lessonPercent < 30)
+      latestFailures.length >= 2
         ? "critical"
-        : attention.length >= 2 || (averageScore !== null && averageScore < leadPassMark)
+        : latestFailures.length
           ? "at_risk"
           : averageScore !== null && averageScore >= 90 && lessonPercent >= 80
             ? "excellent"
             : "on_track";
-
     return {
       profileId: student.profileId,
       fullName: student.fullName,
-      email: `${student.slug}@purposecourse.app`,
-      levelName: student.title,
-      lessonsCompleted,
-      lessonsTotal: totalLessons,
+      email: student.email,
+      levelName: student.levelName,
+      lessonsCompleted: student.lessonsCompleted,
+      lessonsTotal: student.lessonsTotal,
       lessonPercent,
       averageScore,
       bestScore,
       lastScore,
-      trend,
+      trend: student.improvement,
       attempts: attempts.length,
       passedAssessments,
-      failedAssessments,
+      failedAssessments: attempts.length - passedAssessments,
       groupScore,
-      certificates: certificateByProfile.get(student.profileId) ?? 0,
+      certificates: student.certificates,
       risk,
       attention,
     };
   });
 }
 
-export async function getAssessmentResults(filters: { assessmentId?: number; profileId?: string } = {}) {
-  const conditions = [learnerReadable(assessmentAttempts.profileId, await getSessionUser())];
-  if (filters.assessmentId) conditions.push(eq(assessmentAttempts.assessmentId, filters.assessmentId));
-  if (filters.profileId) conditions.push(eq(assessmentAttempts.profileId, filters.profileId));
+export async function getAssessmentResults(
+  filters: { assessmentId?: number; profileId?: string } = {},
+) {
+  const conditions = [
+    learnerReadable(assessmentAttempts.profileId, await getSessionUser()),
+    eq(assessmentAttempts.status, "submitted"),
+    eq(users.isActive, true),
+    eq(roles.slug, "student"),
+    sql`${assessmentAttempts.submittedAt} <= now()`,
+  ];
+  if (filters.assessmentId)
+    conditions.push(eq(assessmentAttempts.assessmentId, filters.assessmentId));
+  if (filters.profileId)
+    conditions.push(eq(assessmentAttempts.profileId, filters.profileId));
 
   return db
     .select({
@@ -385,6 +409,8 @@ export async function getAssessmentResults(filters: { assessmentId?: number; pro
     .from(assessmentAttempts)
     .innerJoin(assessments, eq(assessmentAttempts.assessmentId, assessments.id))
     .innerJoin(profiles, eq(assessmentAttempts.profileId, profiles.id))
+    .innerJoin(users, eq(profiles.userId, users.id))
+    .innerJoin(roles, eq(profiles.roleId, roles.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(assessmentAttempts.submittedAt))
     .limit(60);
@@ -392,6 +418,11 @@ export async function getAssessmentResults(filters: { assessmentId?: number; pro
 
 export async function getAssessmentAdminList() {
   const viewer = await getSessionUser();
+  const attemptsFrom = sql`from ${assessmentAttempts} inner join ${profiles} on ${profiles.id}=${assessmentAttempts.profileId}
+    inner join ${users} on ${users.id}=${profiles.userId} inner join ${roles} on ${roles.id}=${profiles.roleId}
+    where ${assessmentAttempts.assessmentId}=${assessments.id} and ${assessmentAttempts.status}='submitted'
+      and ${assessmentAttempts.submittedAt}<=now() and ${users.isActive} and ${roles.slug}='student'
+      and ${learnerReadable(assessmentAttempts.profileId, viewer)}`;
   const rows = await db
     .select({
       assessment: assessments,
@@ -399,15 +430,23 @@ export async function getAssessmentAdminList() {
       courseTitle: courses.title,
       moduleTitle: courseModules.title,
       questionCount: sql<number>`(select count(*) from ${assessmentQuestions} where ${assessmentQuestions.assessmentId} = ${assessments.id})::int`,
-      attemptCount: sql<number>`(select count(*) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})::int`,
-      averageScore: sql<number | null>`(select round(avg(${assessmentAttempts.score})) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})`,
-      passRate: sql<number | null>`(select round(100.0 * count(*) filter (where ${assessmentAttempts.passed}) / greatest(count(*),1)) from ${assessmentAttempts} where ${assessmentAttempts.assessmentId} = ${assessments.id} and ${learnerReadable(assessmentAttempts.profileId, viewer)})`,
+      attemptCount: sql<number>`(select count(*) ${attemptsFrom})::int`,
+      averageScore: sql<
+        number | null
+      >`(select avg(${assessmentAttempts.score}) ${attemptsFrom})`,
+      passRate: sql<
+        number | null
+      >`(select round(100.0 * count(*) filter (where ${assessmentAttempts.passed}) / nullif(count(*),0)) ${attemptsFrom})`,
     })
     .from(assessments)
     .leftJoin(courseLevels, eq(assessments.levelId, courseLevels.id))
     .leftJoin(courses, eq(assessments.courseId, courses.id))
     .leftJoin(courseModules, eq(assessments.moduleId, courseModules.id))
-    .orderBy(asc(courseLevels.sortOrder), asc(assessments.kind), asc(assessments.sortOrder));
+    .orderBy(
+      asc(courseLevels.sortOrder),
+      asc(assessments.kind),
+      asc(assessments.sortOrder),
+    );
   return rows;
 }
 
@@ -437,7 +476,9 @@ export async function getAssessmentForAdmin(assessmentId: number) {
       .select({ attempt: assessmentAttempts, studentName: profiles.fullName })
       .from(assessmentAttempts)
       .innerJoin(profiles, eq(assessmentAttempts.profileId, profiles.id))
-      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), learnerReadable(assessmentAttempts.profileId, viewer)))
+      .innerJoin(users, eq(profiles.userId, users.id))
+      .innerJoin(roles, eq(profiles.roleId, roles.id))
+      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), learnerReadable(assessmentAttempts.profileId, viewer), eq(assessmentAttempts.status, "submitted"), eq(users.isActive, true), eq(roles.slug, "student"), sql`${assessmentAttempts.submittedAt} <= now()`))
       .orderBy(desc(assessmentAttempts.submittedAt))
       .limit(20),
   ]);

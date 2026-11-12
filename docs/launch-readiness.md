@@ -49,7 +49,7 @@ not establish launch readiness.
   - [x] Implement expiring single-use invitations, account activation, durable delivery, signed callbacks and recovery controls.
   - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
 - [x] Expose the staff contact inbox with appropriate access checks.
-- [ ] Correct analytics definitions and record real learning events.
+- [x] Correct analytics definitions and report actual recorded learning events.
 - [ ] Fix the identified mobile overflow, form labels, and missing public links.
 - [ ] Document deployment, backup/restore, monitoring, and required external account settings.
 
@@ -251,3 +251,30 @@ Migration `20261112070652_add_staff_contact_inbox.sql` was applied on 12 Novembe
 application tables have RLS and no anonymous/authenticated API grants. Restricted
 runtime CRUD passed in a rolled-back transaction; hosted enquiry/reply counts
 remain zero and migration history has no pending entries. See [contact inbox](contact-inbox.md).
+
+Learning analytics: one shared query model counts distinct eligible enrolments
+against all assigned published lessons, including unstarted lessons. It excludes
+inactive/staff accounts, draft content, void attempts, revoked certificates,
+future events and marked seed activity. Cohort filters use real active
+memberships and their assigned curriculum. Score improvement compares first and
+latest attempts only within the same learner, assessment, saved question set and
+pass mark. Daily and weekly activity use Kampala calendar boundaries and include
+zero-activity periods. Unsupported minutes, satisfaction, dropout and retention
+claims were removed from the dashboard.
+
+Learner dashboards show real digital modules rather than inferring principles
+from session-code suffixes. Mentor progress uses each learner's enrolled
+curriculum, real email and comparable score history, with current assignment
+checks. Latest successful attempts resolve prior failure indicators; unstarted
+learning alone does not classify new learners as at risk. Assessment history
+omits void results, and administration averages weight individual attempts.
+
+Six analytics regressions bring the suite to 84 passing tests. Type checking,
+production build and lint (21 existing warnings, no errors) pass. Chrome verified
+cohort switching, 1/4 versus 1/2 completion denominators, +40 comparable score
+change, a 73% weighted average, learner module labels, mentor isolation,
+editor denial, void-history exclusion and the mobile layout. The restricted
+Supabase runtime executed the read-only report successfully with verified TLS:
+zero active learner accounts, attempts, awards or recorded activity, rather
+than the old demonstration figures. No hosted records or schema were changed
+by this batch. See [learning analytics definitions](learning-analytics.md).

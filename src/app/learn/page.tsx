@@ -183,32 +183,34 @@ export default async function StudentDashboardPage() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-              <Target className="h-3.5 w-3.5 text-gold-dark" /> Learner progress by principle
+              <Target className="h-3.5 w-3.5 text-gold-dark" /> Digital lesson progress
             </p>
-            <p className="text-[10.5px] text-stone-500">Completion across the five purpose principles in your curriculum.</p>
+            <p className="text-[10.5px] text-stone-500">Published lessons in the levels where you are enrolled, grouped by module.</p>
           </div>
           <span className="rounded-full bg-cream px-2.5 py-1 text-[10px] font-semibold text-stone-600">
             {analytics.lessons.completed}/{analytics.lessons.total} lessons · {analytics.lessons.percent}%
           </span>
         </div>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-5">
-          {analytics.principles.map((principle) => (
-            <li key={principle.principle}>
+        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {analytics.modules.map((module) => (
+            <li key={module.id}>
               <div className="flex items-baseline justify-between gap-1">
-                <p className="text-[11.5px] font-semibold text-navy">{principle.principle}</p>
-                <span className="text-[10px] font-semibold text-gold-dark">{principle.percent}%</span>
+                <p className="text-[11.5px] font-semibold text-navy">{module.title}</p>
+                <span className="text-[10px] font-semibold text-gold-dark">{module.percent}%</span>
               </div>
-              <p className="text-[9px] uppercase tracking-[0.06em] text-stone-400">{principle.question}</p>
+              <p className="text-[9px] uppercase tracking-[0.06em] text-stone-400">{module.courseTitle}</p>
               <span className="mt-1 block h-2 overflow-hidden rounded-full bg-cream">
-                <span className="block h-full rounded-full bg-gold" style={{ width: `${principle.percent}%` }} />
+                <span className="block h-full rounded-full bg-gold" style={{ width: `${module.percent}%` }} />
               </span>
-              <p className="mt-0.5 text-[9px] text-stone-500">{principle.completed}/{principle.total} lessons</p>
+              <p className="mt-0.5 text-[9px] text-stone-500">{module.completed}/{module.total} lessons</p>
             </li>
           ))}
         </ul>
+        {!analytics.modules.length ? <p className="mt-3 text-sm text-stone-600">No published lessons are assigned to your current enrolments.</p> : null}
+        <p className="mt-3 text-[10.5px] text-stone-500">Assessment change compares your first and latest submissions for the same assessment, question set and pass mark.</p>
         <div className="mt-3 grid grid-cols-2 gap-2 border-t border-navy/8 pt-2 sm:grid-cols-4">
           {[
-            { label: "Assessment trajectory", value: analytics.assessments.improvement === null ? "—" : `${analytics.assessments.improvement > 0 ? "+" : ""}${analytics.assessments.improvement}` },
+            { label: "Comparable score change", value: analytics.assessments.improvement === null ? "—" : `${analytics.assessments.improvement > 0 ? "+" : ""}${analytics.assessments.improvement}` },
             { label: "Average score", value: analytics.assessments.average === null ? "—" : `${analytics.assessments.average}%` },
             { label: "Goal progress", value: `${analytics.goals.averageProgress}%` },
             { label: "Achievements", value: analytics.achievements.length },

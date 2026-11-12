@@ -227,8 +227,8 @@ export async function seedEnterprise() {
 
 function analyticsReportSeed() {
   return [
-    { slug: "platform-overview", title: "Platform overview", scope: "platform", definition: "Registered users, active learners, completion, engagement, retention.", queryRef: "getPlatformAnalytics" },
-    { slug: "programme-performance", title: "Programme performance", scope: "programme", definition: "Enrolment, completion, assessment improvement, goals, mentor engagement, dropout.", queryRef: "getProgrammeAnalytics" },
-    { slug: "learner-progress", title: "Learner progress", scope: "individual", definition: "Per-principle progress, assessment trajectory, goals and achievements.", queryRef: "getLearnerAnalytics" },
+    { slug: "platform-overview", title: "Learning overview", scope: "platform", definition: "Active learner accounts, published lesson opportunities, valid awards and recorded activity.", queryRef: "getLearningReport" },
+    { slug: "programme-performance", title: "Cohort learning", scope: "programme", definition: "Active cohort membership, current enrolled curriculum and comparable assessment score changes.", queryRef: "getLearningReport" },
+    { slug: "learner-progress", title: "Learner progress", scope: "individual", definition: "Enrolled digital module progress, comparable assessment scores, goals and achievements.", queryRef: "getLearnerAnalytics" },
   ];
 }
