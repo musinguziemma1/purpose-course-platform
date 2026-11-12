@@ -20,6 +20,33 @@ workflow passes. `.vercelignore` excludes private local state and environment
 files from CLI uploads. The build command does not run seed routines or
 database migrations.
 
+The database client initializes on first use, so collecting route configuration
+during `next build` does not require database credentials or a reachable server.
+Database operations still require DATABASE_URL and, for a remote database,
+DATABASE_SSL_CA. A successful build does not establish runtime connectivity.
+CI explicitly clears both variables for its production build to guard this
+deployment path.
+
+If Vercel reports `DATABASE_URL is required` while collecting page data, deploy
+the updated lazy-client implementation and configure the runtime environment:
+
+1. Open the intended Vercel project, then Settings > Environment Variables.
+2. In Production, add DATABASE_URL and DATABASE_SSL_CA using the existing
+   restricted runtime values from private `.env.local`. Copy the values without
+   the surrounding dotenv quotes. The CA accepts actual newlines or literal
+   `\n` sequences. Do not use `.env.supabase.local` administrator credentials.
+3. Set DATABASE_POOL_MAX to `5`, PURPOSE_DEMO_OPEN to `false`, and APP_URL to the
+   project's HTTPS production origin. Retain the existing operational secrets
+   in the table below for the features that need them.
+4. Redeploy the latest GitHub commit after saving variables. Test `/api/health`
+   and password sign-in on that deployment. A health failure means the runtime
+   settings, connectivity or TLS still need attention even if the build passes.
+
+Local `.env` files are deliberately ignored by Git. `.env.example` is a template,
+not a Vercel settings file; copying secrets into it does not configure a GitHub
+deployment and would risk committing them. See
+[Vercel environment settings](https://vercel.com/docs/environment-variables).
+
 GitHub Actions uses an ephemeral PostgreSQL 18 service on loopback port 54329,
 an isolated test database, Node 24, immutable action commits and read-only
 repository permission. It creates the test schema, seeds local fixtures, runs

@@ -50,5 +50,9 @@ jobs:
       - run: npm run test:migrations
       - run: npm run test:security
       - run: npm run lint
-      - run: npm run build
+      - name: Build without database credentials
+        run: npm run build
+        env:
+          DATABASE_URL: ""
+          DATABASE_SSL_CA: ""
       - run: npm audit

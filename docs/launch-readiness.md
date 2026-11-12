@@ -62,6 +62,19 @@ based on placeholder configuration.
 
 ## Verification log
 
+Vercel build configuration: database imports no longer validate credentials or
+create a connection pool during route configuration collection. The first
+database API call still validates the URI, verified remote CA and pool limits,
+and bound methods retain normal Drizzle transactions and PostgreSQL behavior.
+A production build with DATABASE_URL and DATABASE_SSL_CA explicitly cleared
+passed, including `/api/community/posts`; CI now repeats that build condition.
+Four new isolated-process regressions cover import safety, runtime failure,
+remote CA enforcement and query construction without connecting, bringing the
+security suite to 101 passing tests. Missing runtime configuration yields a
+controlled failing health response. A restricted Supabase read-only transaction
+passed with verified TLS. Vercel runtime environment configuration remains
+required; local secret files are deliberately absent from GitHub deployments.
+
 Curriculum and release preparation: the read-only hosted audit mapped all 15
 programme sessions to eight digital modules and 24 lessons. The 100 questions
 across 11 assessments pass structural validation; seven missing digital-session
