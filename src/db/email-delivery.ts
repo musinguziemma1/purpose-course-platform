@@ -38,8 +38,9 @@ async function claim(id?: number) {
     } else if (row.templateKey === "account.invitation") return stop("cancelled", "Invitation is no longer available.");
     let recipient = row.recipientEmail;
     if (row.profileId) {
-      const [account] = await tx.select({ email: users.email, active: users.isActive }).from(profiles).innerJoin(users, eq(profiles.userId, users.id)).where(eq(profiles.id, row.profileId)).limit(1);
+      const [account] = await tx.select({ email: users.email, active: users.isActive, demo: users.isDemoAccount }).from(profiles).innerJoin(users, eq(profiles.userId, users.id)).where(eq(profiles.id, row.profileId)).limit(1);
       if (!account?.active) return stop("cancelled", "Recipient account is inactive or unavailable.");
+      if (account.demo) return stop("cancelled", "Practice accounts do not receive outbound email.");
       if (recipient && recipient !== account.email) return stop("cancelled", "Recipient address changed.");
       recipient = account.email;
       const category = TEMPLATES[row.templateKey]?.category;

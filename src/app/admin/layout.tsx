@@ -41,6 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {user.isDemoAccount ? <p className="border-b border-gold/30 bg-gold/10 px-4 py-3 text-sm text-navy">Demo account · Use your practice records while exploring. This account has Super Admin permissions.</p> : null}
         {user.isDemo ? (
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-b border-gold/40 bg-gold/15 px-4 py-2 text-[11.5px] text-stone-700">
             <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.1em] text-gold-dark">

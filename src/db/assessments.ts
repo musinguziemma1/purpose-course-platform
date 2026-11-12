@@ -386,10 +386,12 @@ export async function getCohortPerformance(
 export async function getAssessmentResults(
   filters: { assessmentId?: number; profileId?: string } = {},
 ) {
+  const viewer = await getSessionUser();
   const conditions = [
-    learnerReadable(assessmentAttempts.profileId, await getSessionUser()),
+    learnerReadable(assessmentAttempts.profileId, viewer),
     eq(assessmentAttempts.status, "submitted"),
     eq(users.isActive, true),
+    eq(users.isDemoAccount, Boolean(viewer?.isDemoAccount)),
     eq(roles.slug, "student"),
     sql`${assessmentAttempts.submittedAt} <= now()`,
   ];
@@ -422,6 +424,7 @@ export async function getAssessmentAdminList() {
     inner join ${users} on ${users.id}=${profiles.userId} inner join ${roles} on ${roles.id}=${profiles.roleId}
     where ${assessmentAttempts.assessmentId}=${assessments.id} and ${assessmentAttempts.status}='submitted'
       and ${assessmentAttempts.submittedAt}<=now() and ${users.isActive} and ${roles.slug}='student'
+      and ${users.isDemoAccount}=${Boolean(viewer?.isDemoAccount)}
       and ${learnerReadable(assessmentAttempts.profileId, viewer)}`;
   const rows = await db
     .select({
@@ -478,7 +481,7 @@ export async function getAssessmentForAdmin(assessmentId: number) {
       .innerJoin(profiles, eq(assessmentAttempts.profileId, profiles.id))
       .innerJoin(users, eq(profiles.userId, users.id))
       .innerJoin(roles, eq(profiles.roleId, roles.id))
-      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), learnerReadable(assessmentAttempts.profileId, viewer), eq(assessmentAttempts.status, "submitted"), eq(users.isActive, true), eq(roles.slug, "student"), sql`${assessmentAttempts.submittedAt} <= now()`))
+      .where(and(eq(assessmentAttempts.assessmentId, assessmentId), learnerReadable(assessmentAttempts.profileId, viewer), eq(assessmentAttempts.status, "submitted"), eq(users.isActive, true), eq(users.isDemoAccount, Boolean(viewer?.isDemoAccount)), eq(roles.slug, "student"), sql`${assessmentAttempts.submittedAt} <= now()`))
       .orderBy(desc(assessmentAttempts.submittedAt))
       .limit(20),
   ]);

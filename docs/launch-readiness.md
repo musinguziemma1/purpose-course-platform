@@ -9,7 +9,7 @@ not establish launch readiness.
 
 - [x] Move the application database to Supabase with a verified backup and data comparison.
 - [x] Restrict SQL runtime credentials and block public Data API access to application tables.
-- [x] Disable remote/production demo identities and account auto-provisioning; reject inactive sessions.
+- [x] Disable anonymous remote review and former public seed credentials; reject inactive sessions.
 - [x] Fix email-only newsletter submissions and verify the browser-to-database flow.
 
 ## 1. Access control and learner privacy
@@ -52,6 +52,7 @@ not establish launch readiness.
 - [x] Correct analytics definitions and report actual recorded learning events.
 - [ ] Fix the identified mobile overflow, form labels, and missing public links.
 - [ ] Document deployment, backup/restore, monitoring, and required external account settings.
+- [ ] Disable the three owner-requested password-protected demo logins after dashboard review and before public launch.
 
 External provider configuration and product decisions that cannot be completed
 from this workspace will be recorded explicitly; they will not be marked done
@@ -278,3 +279,22 @@ Supabase runtime executed the read-only report successfully with verified TLS:
 zero active learner accounts, attempts, awards or recorded activity, rather
 than the old demonstration figures. No hosted records or schema were changed
 by this batch. See [learning analytics definitions](learning-analytics.md).
+
+Owner-requested dashboard demo accounts: on 12 November 2026, three new
+password-protected Super Admin, Mentor and Student accounts were provisioned
+for prelaunch review. The owner login and the disabled public seed credentials
+were preserved. A practice cohort, enrolment, mentor assignment and goal provide
+a coherent starting experience; no scores, progress or awards were fabricated.
+Credentials are unique and stored only in an ignored private file. Provisioning
+is atomic and repeatable; disable revokes sessions and does not remove records.
+
+The `is_demo_account` migration was applied after a verified snapshot of 90
+tables/1,113 rows. Real staff learning reports exclude practice learners; demo
+staff see practice reports. Email to demo profiles is cancelled before provider
+dispatch. All 91 security regressions, three migration-history checks, type
+checking, production build and lint (21 existing warnings, no errors) pass.
+Chrome performed actual password sign-in, 16 admin/8 mentor/14 student navigation
+routes, role boundaries and logout, without browser errors or email delivery.
+Restricted runtime checks confirm the owner's production learning report still
+has no eligible learner activity. These accounts remain available for the owner's
+review and are an explicit prelaunch disable item. See [demo accounts](demo-accounts.md).

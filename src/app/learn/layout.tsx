@@ -58,6 +58,7 @@ export default async function LearnLayout({ children }: { children: ReactNode })
       accent="gold"
       reviewMode={Boolean(user.isDemo)}
     >
+      {user.isDemoAccount ? <p className="mb-4 rounded-lg border border-gold/30 bg-gold/10 p-3 text-sm text-navy">Demo Student · Your practice work is separate from production learning reports.</p> : null}
       {children}
     </WorkspaceShell>
   );

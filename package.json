@@ -24,6 +24,7 @@
     "test:database": "node --test scripts/database-config.test.mjs",
     "test:security": "node --import tsx --test tests/*.test.mjs",
     "admin:manage": "node scripts/manage-admin.mjs",
+    "demo:manage": "node scripts/manage-demo-accounts.mjs",
     "email:prepare": "node scripts/prepare-email.mjs",
     "test:passwords": "node --test scripts/password-security.test.mjs"
   },

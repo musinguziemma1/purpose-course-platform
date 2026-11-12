@@ -28,6 +28,7 @@ export default async function AdminAnalyticsPage({
       : `${s.improvement > 0 ? "+" : ""}${s.improvement}`;
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      {actor.isDemoAccount ? <p className="rounded-xl border border-gold/30 bg-gold/10 p-4 text-sm text-navy">Demo account: this learning report shows practice learners. Normal staff reports exclude their activity.</p> : null}
       <header>
         <p className="text-xs font-semibold uppercase tracking-widest text-gold-dark">
           Purpose Course

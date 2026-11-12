@@ -129,6 +129,12 @@ test("delivery respects inactive recipients, email opt-out, address changes and 
   const failure = await queued(); await send(failure.id, async () => ({ error: "Simulated HTTP 403", retryable: false })); assert.equal((await row(failure.id)).status, "failed"); assert.equal((await row(failure.id)).sent_at, null);
 });
 
+test("password-protected practice accounts never trigger outbound email", async () => {
+  const item = await queued(); await client.query("update users set is_demo_account=true where id=$1", [actors.learner.userId]);
+  try { await send(item.id, async () => { throw Error("Practice email must not leave the app"); }); assert.equal((await row(item.id)).status, "cancelled"); }
+  finally { await client.query("update users set is_demo_account=false where id=$1", [actors.learner.userId]); }
+});
+
 test("callbacks arriving before acceptance are reconciled, deduplicated and never regress terminal status", async () => {
   const item = await queued(), receipt = accepted(), eventId = randomUUID();
   const event = { type: "email.delivered", created_at: new Date().toISOString(), data: { email_id: receipt.id } };

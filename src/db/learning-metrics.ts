@@ -9,7 +9,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 async function currentActor(tx: Tx, actor: SessionUser | null) {
   if (!actor || actor.isDemo) return null;
   const [account] = await tx
-    .select({ roleSlug: roles.slug, permissions: roles.permissions })
+    .select({ roleSlug: roles.slug, permissions: roles.permissions, isDemoAccount: users.isDemoAccount })
     .from(profiles)
     .innerJoin(users, eq(profiles.userId, users.id))
     .innerJoin(roles, eq(profiles.roleId, roles.id))
@@ -24,11 +24,12 @@ function metricsCtes(
   scope: SQL,
   levelId: number | null = null,
   cohortId: number | null = null,
+  demoAccounts = false,
 ) {
   return sql`with eligible_learners as (
     select profiles.id as profile_id, profiles.full_name, users.email, profiles.title
     from profiles join users on users.id=profiles.user_id join roles on roles.id=profiles.role_id
-    where users.is_active and roles.slug='student' and (${scope})
+    where users.is_active and users.is_demo_account=${demoAccounts} and roles.slug='student' and (${scope})
   ), learner_courses as (
     select distinct el.profile_id,c.id as course_id,c.title,c.level_id
     from eligible_learners el join enrollments e on e.profile_id=el.profile_id
@@ -119,7 +120,7 @@ export async function getLearnerMetrics(
           inArray(profiles.id, profileIds),
           learnerReadable(profiles.id, viewer),
         )!,
-        levelId,
+        levelId, null, Boolean(viewer.isDemoAccount),
       );
       const result =
         await tx.execute(sql`${ctes} select el.profile_id as "profileId",el.full_name as "fullName",el.email,
@@ -189,7 +190,7 @@ export async function getLearningReport(
       const cohortRows =
         await tx.execute(sql`select co.id,co.name,co.status,count(distinct p.id)::int as learners from cohorts co
       left join cohort_members cm on cm.cohort_id=co.id and cm.role='learner' and cm.status='active'
-      left join (profiles p join users u on u.id=p.user_id and u.is_active join roles r on r.id=p.role_id and r.slug='student') on p.id=cm.profile_id
+      left join (profiles p join users u on u.id=p.user_id and u.is_active and u.is_demo_account=${Boolean(viewer?.isDemoAccount)} join roles r on r.id=p.role_id and r.slug='student') on p.id=cm.profile_id
       where co.status in ('active','completed') group by co.id,co.name,co.status order by co.starts_at desc,co.id`);
       const cohorts = cohortRows.rows as LearningReport["cohorts"];
       if (
@@ -201,7 +202,7 @@ export async function getLearningReport(
         cohortId === null
           ? sql`true`
           : sql`exists(select 1 from cohort_members cm where cm.profile_id=profiles.id and cm.cohort_id=${cohortId} and cm.role='learner' and cm.status='active')`;
-      const ctes = metricsCtes(scope, null, cohortId);
+      const ctes = metricsCtes(scope, null, cohortId, Boolean(viewer?.isDemoAccount));
       const summaryRows = await tx.execute(sql`${ctes} select
       (select count(*)::int from eligible_learners) as learners,
       (select count(distinct profile_id)::int from recorded_events where occurred_at>=now()-interval '30 days') as "activeLearners",

@@ -29,6 +29,8 @@ export type SessionUser = {
   permissions: string[];
   /** True when the identity came from review mode rather than a real session. */
   isDemo?: boolean;
+  /** A password-protected practice account, distinct from local anonymous review. */
+  isDemoAccount?: boolean;
 };
 
 const WORKSPACE_ROLE: Record<string, string> = {
@@ -75,6 +77,7 @@ const sessionSelection = {
   roleName: roles.name,
   roleLevel: roles.level,
   permissions: roles.permissions,
+  isDemoAccount: users.isDemoAccount,
 };
 
 async function findByRoleSlug(roleSlug: string): Promise<SessionUser | null> {

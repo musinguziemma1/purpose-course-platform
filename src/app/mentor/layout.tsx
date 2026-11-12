@@ -53,6 +53,7 @@ export default async function MentorLayout({ children }: { children: ReactNode }
       accent="teal"
       reviewMode={Boolean(user.isDemo)}
     >
+      {user.isDemoAccount ? <p className="mb-4 rounded-lg border border-gold/30 bg-gold/10 p-3 text-sm text-navy">Demo Mentor · Explore the assigned Demo Student and practice coaching records.</p> : null}
       {children}
     </WorkspaceShell>
   );
