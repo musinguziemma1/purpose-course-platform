@@ -37,6 +37,8 @@ not establish launch readiness.
 - [x] Issue course/level certificates only for the intended completed scope.
 - [x] Resolve certificate uniqueness and verify the complete learner journey.
 - [ ] Reconcile programme structure, question banks, and missing resource files.
+  - [x] Provide three owner-requested starter PDFs and remove fabricated download responses and demonstration counters for missing files.
+  - [ ] Complete the curriculum/session mapping and review the remaining teaching materials and question banks.
 
 ## 4. Production operations and experience
 
@@ -206,3 +208,19 @@ lint (21 existing warnings), type checking, the production build and schema
 generation pass. Chrome reverified activation/sign-in, the complete learner
 assessment/certificate journey and editorial publishing/concurrency/timezone
 behavior under Next.js 16.4.6. See [dependency security](dependency-security.md).
+
+Starter resources: the owner requested a few materials while the final media
+are unavailable. Three tagged, selectable-text PDFs now provide the five-principle
+overview, gifting evidence/peer-feedback worksheet, and twelve-month vision plan.
+Editable HTML/CSS sources and a reusable renderer are committed. The renderer's
+page/footer checks and prebuild PDF validation pass. Missing files show Coming
+soon, return 404 and record no download. Request insertion and counter increment
+are atomic; counts are labeled as requests rather than unique people or receipt.
+
+All 68 regressions, lint (21 existing warnings), type checking and the production
+build pass. Chrome downloaded each PDF and verified its exact bytes, and confirmed
+the missing-file flow leaves metrics unchanged. The resource migration was
+applied on 12 November 2026 after a verified snapshot of 88 tables/1,109 records.
+It preserves uploaded URLs and their counters; historical request rows are
+retained. Restricted runtime reads confirm three attached PDFs. The journal,
+career guide and audio still need real files. See [starter resources](resources/README.md).
