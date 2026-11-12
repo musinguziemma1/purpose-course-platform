@@ -1661,6 +1661,44 @@ export const messages = pgTable(
   (table) => [index("messages_recipient_idx").on(table.recipientId, table.isRead)],
 );
 
+export const contactEnquiries = pgTable("contact_enquiries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fullName: varchar("full_name", { length: 160 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  subject: varchar("subject", { length: 240 }).notNull(),
+  body: text("body").notNull(),
+  status: varchar("status", { length: 24 }).notNull().default("new"),
+  source: varchar("source", { length: 24 }).notNull().default("website"),
+  senderProfileId: uuid("sender_profile_id").references(() => profiles.id, { onDelete: "set null" }),
+  assignedToId: uuid("assigned_to_id").references(() => profiles.id, { onDelete: "set null" }),
+  legacyMessageId: integer("legacy_message_id").unique().references(() => messages.id, { onDelete: "set null" }),
+  rateKey: varchar("rate_key", { length: 64 }),
+  fingerprint: varchar("fingerprint", { length: 64 }),
+  version: integer("version").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+}, (table) => [
+  index("contact_enquiries_inbox_idx").on(table.status, table.createdAt),
+  index("contact_enquiries_rate_idx").on(table.rateKey, table.createdAt),
+  index("contact_enquiries_fingerprint_idx").on(table.fingerprint, table.createdAt),
+  index("contact_enquiries_sender_idx").on(table.senderProfileId),
+  index("contact_enquiries_assigned_idx").on(table.assignedToId),
+  check("contact_enquiries_status_check", sql`${table.status} in ('new','in_progress','resolved')`),
+  check("contact_enquiries_source_check", sql`${table.source} in ('website','legacy')`),
+  check("contact_enquiries_version_check", sql`${table.version} >= 0`),
+]);
+
+export const contactReplies = pgTable("contact_replies", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  enquiryId: uuid("enquiry_id").notNull().references(() => contactEnquiries.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+  recipientEmail: varchar("recipient_email", { length: 255 }).notNull(),
+  body: text("body").notNull(),
+  outboxId: integer("outbox_id").notNull().unique().references(() => notificationOutbox.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("contact_replies_enquiry_idx").on(table.enquiryId), index("contact_replies_author_idx").on(table.authorId)]);
+
 export const platformEvents = pgTable(
   "events",
   {

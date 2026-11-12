@@ -115,9 +115,9 @@ export const TEMPLATES: Record<string, NotificationTemplate> = {
     key: "contact.message_received",
     category: "account",
     title: () => "New website enquiry",
-    body: (vars) => `${vars.from ?? "A visitor"}: ${vars.subject ?? "a new message"}`,
-    href: () => "/admin",
-    defaultChannels: ["in_app", "email"],
+    body: () => "An enquiry is waiting in the staff contact inbox.",
+    href: () => "/admin/contact",
+    defaultChannels: ["in_app"],
   },
   "account.role_changed": {
     key: "account.role_changed",

@@ -48,7 +48,7 @@ not establish launch readiness.
 - [ ] Deliver invitations and operational email through Resend (selected by the user); configure a verified sender and API key.
   - [x] Implement expiring single-use invitations, account activation, durable delivery, signed callbacks and recovery controls.
   - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
-- [ ] Expose the staff contact inbox with appropriate access checks.
+- [x] Expose the staff contact inbox with appropriate access checks.
 - [ ] Correct analytics definitions and record real learning events.
 - [ ] Fix the identified mobile overflow, form labels, and missing public links.
 - [ ] Document deployment, backup/restore, monitoring, and required external account settings.
@@ -224,3 +224,30 @@ applied on 12 November 2026 after a verified snapshot of 88 tables/1,109 records
 It preserves uploaded URLs and their counters; historical request rows are
 retained. Restricted runtime reads confirm three attached PDFs. The journal,
 career guide and audio still need real files. See [starter resources](resources/README.md).
+
+Contact inbox: public submissions now create one enquiry with bounded inputs,
+idempotent retries, a honeypot and serialized hourly rate limiting. Generic staff
+notifications and audit records commit with the enquiry. Only active users with
+contact permission can read or manage the inbox; database checks revalidate
+current permissions. Staff ownership and status changes reject stale versions.
+Replies bind the submitted recipient, queue one encrypted provider request per
+reply UUID and display real outbox status. Missing provider settings disable
+reply controls without blocking staff access to enquiries.
+
+Historical per-staff contact messages are preserved and imported once per
+submission. Their unstructured email footers require staff confirmation before
+replying. Legacy contact messages no longer appear in personal message screens,
+and old contact notifications contain only a generic inbox link.
+
+Ten contact regressions bring the suite to 78 passing tests. Migration-history
+checks, type checking and the production build pass; lint has the same 21
+warnings and no errors. Chrome verified anonymous submission, inert stored
+markup, staff ownership, stale-update rejection, encrypted reply queuing,
+editor/anonymous access denial, legacy-message privacy and disabled replies
+without provider settings. No email was sent.
+
+Migration `20261112070652_add_staff_contact_inbox.sql` was applied on 12 November
+2026 after a verified snapshot of 88 tables/1,109 records. All 90 resulting
+application tables have RLS and no anonymous/authenticated API grants. Restricted
+runtime CRUD passed in a rolled-back transaction; hosted enquiry/reply counts
+remain zero and migration history has no pending entries. See [contact inbox](contact-inbox.md).

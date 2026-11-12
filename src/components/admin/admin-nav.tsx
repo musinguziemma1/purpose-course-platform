@@ -32,6 +32,7 @@ const ITEMS = [
   { href: "/admin/programme", label: "Programme control", icon: Users },
   { href: "/admin/analytics", label: "Learning analytics", icon: BarChart3 },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/contact", label: "Contact inbox", icon: MessagesSquare },
   { href: "/admin/architecture", label: "Data architecture", icon: Database },
   { href: "/admin/reviews", label: "Review queue", icon: FileCheck2 },
   { href: "/admin/students", label: "Audience & students", icon: Users },

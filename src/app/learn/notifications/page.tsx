@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Bell, CheckCheck, Mail, MessageSquare, MailOpen } from "lucide-react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { messages, notifications, profiles } from "@/db/schema";
 import { getPreferences } from "@/lib/notifications";
@@ -23,7 +23,7 @@ export default async function LearnerNotificationsPage() {
       .select({ message: messages, senderName: profiles.fullName })
       .from(messages)
       .leftJoin(profiles, eq(messages.senderId, profiles.id))
-      .where(eq(messages.recipientId, user.profileId))
+      .where(and(eq(messages.recipientId, user.profileId), sql`${messages.contextType} is distinct from 'contact'`))
       .orderBy(desc(messages.createdAt))
       .limit(20),
     getPreferences(user.profileId),

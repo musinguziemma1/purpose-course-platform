@@ -5,6 +5,7 @@ export const PERMISSIONS = {
   "people.manage": "Invite people and assign roles",
   "people.view": "See the people directory",
   "audience.view": "View newsletter subscribers and the audience waitlist",
+  "contact.manage": "Read and respond to website enquiries",
   "content.write": "Draft and edit articles",
   "content.review": "Review, approve and publish articles",
   "content.publish": "Publish scheduled content",
@@ -54,7 +55,7 @@ export const ROLE_DEFINITIONS: RoleDefinition[] = [
     blurb: "Runs the platform day to day: people, academy, cohorts and settings.",
     workspace: "/admin",
     permissions: [
-      "org.manage", "people.manage", "people.view", "audience.view", "content.review", "content.publish", "academy.author",
+      "org.manage", "people.manage", "people.view", "audience.view", "contact.manage", "content.review", "content.publish", "academy.author",
       "academy.assess", "academy.oversee", "cohort.manage", "mentorship.view", "community.moderate",
       "notifications.manage", "analytics.view",
     ],

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { SiteHeader } from "@/components/site/site-header";
@@ -86,7 +87,7 @@ export default async function ContactPage() {
                 Your message lands in the faculty inbox inside the platform, so it is tracked rather than lost.
               </p>
               <div className="mt-4">
-                <ContactForm defaultName={user?.fullName ?? ""} defaultEmail={user?.email ?? ""} signedIn={Boolean(user)} />
+                <ContactForm submissionId={randomUUID()} defaultName={user?.fullName ?? ""} defaultEmail={user?.email ?? ""} />
               </div>
             </Card>
           </div>

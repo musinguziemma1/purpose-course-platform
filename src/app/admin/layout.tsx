@@ -86,6 +86,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             ["/admin/programme", "Programme"],
             ["/admin/analytics", "Analytics"],
             ["/admin/notifications", "Notifications"],
+            ["/admin/contact", "Contact inbox"],
             ["/admin/community", "Community"],
             ["/admin/activity", "Activity"],
             ["/admin/settings", "Settings"],

@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { sendContactMessage, type ContactState } from "@/app/actions/messages";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Input, Label, Textarea } from "@/components/ui/field";
 
 const initial: ContactState = {};
 
@@ -25,11 +25,11 @@ function Submit() {
 export function ContactForm({
   defaultName,
   defaultEmail,
-  signedIn,
+  submissionId,
 }: {
   defaultName: string;
   defaultEmail: string;
-  signedIn: boolean;
+  submissionId: string;
 }) {
   const [state, action] = useActionState<ContactState, FormData>(sendContactMessage, initial);
 
@@ -45,27 +45,32 @@ export function ContactForm({
 
   return (
     <form action={action} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Your name">
-          <Input name="name" required defaultValue={defaultName} placeholder="Your name" className="text-[12.5px]" />
-        </Field>
-        <Field label="Email">
-          <Input name="email" type="email" required defaultValue={defaultEmail} placeholder="you@example.com" className="text-[12.5px]" />
-        </Field>
+      <input type="hidden" name="submissionId" value={submissionId} />
+      <div hidden aria-hidden="true">
+        <label htmlFor="contact-website">Website</label>
+        <input id="contact-website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
-      <Field label="Subject">
-        <Input name="subject" required placeholder="Cohort dates, partnership, or a question" className="text-[12.5px]" />
-      </Field>
-      <Field label="Message" hint="min 30 characters">
-        <Textarea name="body" rows={5} required placeholder="Tell us what you need." className="text-[12.5px]" />
-      </Field>
-      {!signedIn ? (
-        <p className="text-[10.5px] leading-relaxed text-stone-500">
-          We will store your message against a faculty inbox. If you have an account, sign in so replies appear in your
-          portal.
-        </p>
-      ) : null}
-      {state.error ? <p className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11.5px] text-rose-700">{state.error}</p> : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="contact-name">Your name</Label>
+          <Input id="contact-name" name="name" autoComplete="name" maxLength={160} required defaultValue={defaultName} placeholder="Your name" className="text-[12.5px]" />
+        </div>
+        <div>
+          <Label htmlFor="contact-email">Email</Label>
+          <Input id="contact-email" name="email" type="email" autoComplete="email" maxLength={255} required defaultValue={defaultEmail} placeholder="you@example.com" className="text-[12.5px]" />
+        </div>
+      </div>
+      <div>
+        <Label htmlFor="contact-subject">Subject</Label>
+        <Input id="contact-subject" name="subject" minLength={4} maxLength={240} required placeholder="Cohort dates, partnership, or a question" className="text-[12.5px]" />
+      </div>
+      <div>
+        <Label htmlFor="contact-body">Message</Label>
+        <p id="contact-body-hint" className="mb-1 text-[10.5px] text-stone-500">30 to 10,000 characters</p>
+        <Textarea id="contact-body" name="body" aria-describedby="contact-body-hint" rows={5} minLength={30} maxLength={10000} required placeholder="Tell us what you need." className="text-[12.5px]" />
+      </div>
+      <p className="text-[10.5px] leading-relaxed text-stone-500">We store your enquiry in a staff inbox and use your email address to respond. Please avoid including passwords or sensitive personal information.</p>
+      {state.error ? <p role="alert" className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11.5px] text-rose-700">{state.error}</p> : null}
       <Submit />
     </form>
   );
