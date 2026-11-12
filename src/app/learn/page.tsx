@@ -45,7 +45,7 @@ function ProgressRing({ percent }: { percent: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="font-serif text-2xl text-navy">{percent}%</span>
-        <span className="text-[9.5px] uppercase tracking-[0.12em] text-stone-500">level complete</span>
+        <span className="text-[9.5px] uppercase tracking-[0.12em] text-stone-500">checklist</span>
       </div>
     </div>
   );
@@ -84,15 +84,15 @@ export default async function StudentDashboardPage() {
         title={`Welcome back, ${user.fullName.split(" ")[0]}.`}
         description={
           <>
-            {level ? `${level.name} level · ${level.tagline}` : "Enrolment pending"} · {enrollment?.cohort ?? "Cohort 04"}
+            {level ? `${level.name} level · ${level.tagline}` : "Enrolment pending"}{enrollment?.cohort ? ` · ${enrollment.cohort}` : ""}
           </>
         }
         meta={
           <>
             <Badge variant={percent >= 80 ? "success" : "gold"} dot>
-              {percent}% of your level complete
+              {percent}% of your session checklist
             </Badge>
-            <Badge variant="muted">{completedInLevel}/{levelSessions.length} sessions</Badge>
+            <Badge variant="muted">{completedInLevel}/{levelSessions.length} self-reported sessions</Badge>
             {upcomingCoaching[0] ? <Badge variant="info" dot>Next coaching booked</Badge> : null}
           </>
         }
@@ -113,17 +113,18 @@ export default async function StudentDashboardPage() {
             <ProgressRing percent={percent} />
             <div className="min-w-0 flex-1">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-cream px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-600">
-                <Flame className="h-3 w-3 text-gold-dark" /> {completedInLevel} of {levelSessions.length} sessions complete
+                <Flame className="h-3 w-3 text-gold-dark" /> {completedInLevel} of {levelSessions.length} sessions checked
               </p>
               <p className="mt-3 font-serif text-2xl leading-snug text-navy">
-                {nextSession ? nextSession.title : "Level complete — time to present."}
+                {nextSession ? nextSession.title : !enrollment ? "Your enrolment is awaiting confirmation." : !levelSessions.length ? "Your programme sessions are not available yet." : "Your session checklist is up to date."}
               </p>
               <p className="mt-1 text-[12px] text-stone-600">
                 {nextSession
                   ? `${nextSession.code} · ${nextSession.format} · ${nextSession.durationMinutes} minutes`
-                  : "Your capstone is ready for the panel."}
+                  : "Digital lessons, assessments and faculty review determine your next learning milestone."}
               </p>
-              {nextSession ? (
+              <p className="mt-2 text-xs text-stone-500">Self-reported session attendance is separate from digital lesson progress and certificate requirements.</p>
+              {nextSession && enrollment?.status === "enrolled" ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <SessionToggle sessionId={nextSession.id} completed={false} />
                   <Link
@@ -250,7 +251,7 @@ export default async function StudentDashboardPage() {
           <div className="admin-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-navy/10 px-5 py-3.5">
               <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-                <Target className="h-3.5 w-3.5 text-gold-dark" /> Your level at a glance
+                <Target className="h-3.5 w-3.5 text-gold-dark" /> Your session checklist
               </p>
               <Link href="/learn/programme" className="text-[11.5px] font-semibold text-navy hover:text-gold-dark">
                 All sessions
@@ -263,7 +264,7 @@ export default async function StudentDashboardPage() {
                     {session.code}
                   </span>
                   <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-navy">{session.title}</p>
-                  <SessionToggle sessionId={session.id} completed={completedIds.has(session.id)} compact />
+                  {enrollment?.status === "enrolled" ? <SessionToggle sessionId={session.id} completed={completedIds.has(session.id)} compact /> : null}
                 </li>
               ))}
               {levelSessions.length === 0 ? (

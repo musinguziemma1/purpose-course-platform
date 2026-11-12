@@ -38,20 +38,22 @@ not establish launch readiness.
 - [x] Resolve certificate uniqueness and verify the complete learner journey.
 - [ ] Reconcile programme structure, question banks, and missing resource files.
   - [x] Provide three owner-requested starter PDFs and remove fabricated download responses and demonstration counters for missing files.
-  - [ ] Complete the curriculum/session mapping and review the remaining teaching materials and question banks.
+  - [x] Map the published digital modules to programme sessions and distinguish self-reported attendance from assessed progress.
+  - [ ] Complete missing teaching materials and obtain faculty review of question coverage and explanations; see [curriculum review](curriculum-review.md).
 
 ## 4. Production operations and experience
 
-- [ ] Resolve dependency vulnerabilities and validate upgrades.
+- [x] Resolve dependency vulnerabilities and validate upgrades.
   - [x] Patch all critical/high/moderate findings; verify zero production dependency findings.
-  - [ ] Revisit the unpatched low-severity deepmerge advisory in development-only shadcn tooling.
+  - [x] Remove the unused shadcn generator/CSS integration and its vulnerable deepmerge dependency path; both full and production audits report zero findings.
 - [ ] Deliver invitations and operational email through Resend (selected by the user); configure a verified sender and API key.
   - [x] Implement expiring single-use invitations, account activation, durable delivery, signed callbacks and recovery controls.
   - [ ] Configure the verified sender/domain, production URL, API key, webhook and scheduler; confirm an authorized real delivery.
 - [x] Expose the staff contact inbox with appropriate access checks.
 - [x] Correct analytics definitions and report actual recorded learning events.
 - [x] Fix the identified mobile overflow, form labels, and missing public links.
-- [ ] Document deployment, backup/restore, monitoring, and required external account settings.
+- [x] Document deployment, backup/restore, monitoring, and required external account settings; see [operations runbook](deployment-operations.md).
+- [ ] Verify production deployment, recurring jobs, availability alerts and an isolated restore rehearsal with the owner's account settings.
 - [ ] Disable the three owner-requested password-protected demo logins after dashboard review and before public launch.
 
 External provider configuration and product decisions that cannot be completed
@@ -59,6 +61,26 @@ from this workspace will be recorded explicitly; they will not be marked done
 based on placeholder configuration.
 
 ## Verification log
+
+Curriculum and release preparation: the read-only hosted audit mapped all 15
+programme sessions to eight digital modules and 24 lessons. The 100 questions
+across 11 assessments pass structural validation; seven missing digital-session
+mappings and 60 missing examination explanations remain explicitly open for
+faculty review. Learner checklists now show their self-reported scope, retain
+progress from eligible prior enrolments and cannot issue digital awards.
+Four local regressions cover authorization, concurrent retries and separation
+from lesson/certificate records. Chrome verified pending enrolment, prior/current
+progress, a saved checklist change, paused access and 390-pixel layout.
+
+Protected GET/POST job routes support scheduler invocation, and canonical links
+use the configured production origin. The complete security suite passes 97
+tests, with four database-config, two password and three migration-history tests
+also passing. Both dependency audits report zero findings. A fresh disposable
+local database and isolated checkout passed the CI prepare/schema/seed/security
+sequence; this found and fixed config-loader interop and request-only seed
+imports. GitHub-hosted execution, production deployment and external operational
+checks remain distinct from that local rehearsal. No email or deployment was
+triggered by verification.
 
 Interface review: the community board wraps long discussion titles, prompts
 and replies at 320, 390, 768 and 1,280 pixels without horizontal page overflow.

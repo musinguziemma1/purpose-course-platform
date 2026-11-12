@@ -1,3 +1,4 @@
+import { publicOrigin } from "@/lib/site-url";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
@@ -8,7 +9,7 @@ import { serializeStructuredData } from "@/lib/structured-data";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://purposecourse.org"),
+  metadataBase: new URL(publicOrigin()),
   title: {
     default: "Purpose Course — Discover. Clarify. Live. Impact.",
     template: "%s · Purpose Course",

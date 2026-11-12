@@ -18,8 +18,8 @@ export default async function StudentCertificatesPage() {
       <div>
         <h1 className="font-serif text-2xl text-navy">Certificates</h1>
         <p className="text-[12.5px] text-stone-600">
-          Issued automatically the moment verified completion is recorded — every lesson finished, and the assessment
-          passed at your level&apos;s pass mark. Each certificate carries a verification code.
+          Course awards require the published lessons and required course assessments. Level awards additionally require the level examination.
+          Each award covers its named course or level. The self-reported programme checklist does not issue certificates.
         </p>
       </div>
 

@@ -16,7 +16,7 @@ import {
   profiles,
   roles,
 } from "./schema";
-import { syncCertificates } from "./assessments";
+import { synchronizeCertificates } from "./certificate-awards";
 
 type Q = [string, string[], number, string];
 
@@ -359,7 +359,7 @@ Shared finding: each statement needed a limit before it felt truthful.`,
             });
         }
       }
-      await syncCertificates(student.id);
+      await synchronizeCertificates(student.id);
     }
   }
 

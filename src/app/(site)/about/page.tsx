@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   title: "About the school",
   description:
     "Purpose Course is the publishing and learning platform of the School of Purpose and Leadership — three levels, fifteen sessions and a community of practice.",
-  alternates: { canonical: "https://purposecourse.org/about" },
+  alternates: { canonical: publicUrl("/about") },
 };
 
 export default async function AboutPage() {

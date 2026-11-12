@@ -1,0 +1,54 @@
+name: Verify application
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: purpose_course_ci
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d purpose_course_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54329/purpose_course_ci
+      PURPOSE_DEMO_OPEN: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      APP_URL: https://purpose-course.example
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: node scripts/prepare-ci.mjs
+      - name: Create ephemeral test schema
+        run: npm run db:push -- --force
+      - name: Seed local fixtures only
+        run: npm run db:seed
+      - run: npm run test:database
+      - run: npm run test:passwords
+      - run: npm run test:migrations
+      - run: npm run test:security
+      - run: npm run lint
+      - run: npm run build
+      - run: npm audit

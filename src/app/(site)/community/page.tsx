@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bell, CalendarClock, MessagesSquare, Users, Video } from "lucide-react";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   title: "The learning community",
   description:
     "Join live discussions, round-table prompts and mentorship conversations in the Purpose Course learning community.",
-  alternates: { canonical: "https://purposecourse.org/community" },
+  alternates: { canonical: publicUrl("/community") },
 };
 
 export default async function CommunityPage() {

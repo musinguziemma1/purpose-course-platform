@@ -25,6 +25,7 @@
     "test:security": "node --import tsx --test tests/*.test.mjs",
     "admin:manage": "node scripts/manage-admin.mjs",
     "demo:manage": "node scripts/manage-demo-accounts.mjs",
+    "curriculum:audit": "node scripts/audit-curriculum.mjs",
     "email:prepare": "node scripts/prepare-email.mjs",
     "test:passwords": "node --test scripts/password-security.test.mjs"
   },
@@ -59,7 +60,6 @@
     "eslint": "9.39.4",
     "eslint-config-next": "16.4.6",
     "postcss": "8.5.32",
-    "shadcn": "4.23.0",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3"
   },

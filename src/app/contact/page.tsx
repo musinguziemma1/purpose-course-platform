@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Contact",
   description: "Talk to the Purpose Course team about the programme, cohorts, partnerships or the journal.",
-  alternates: { canonical: "https://purposecourse.org/contact" },
+  alternates: { canonical: publicUrl("/contact") },
 };
 
 export default async function ContactPage() {

@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, BookOpenCheck, CalendarDays, MessagesSquare, Presentation, Puzzle, Users } from "lucide-react";
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   title: "The 15-session programme",
   description:
     "Foundation, Intermediate and Advanced levels — 15 sessions over 15 weeks exploring identity, source, purpose, potential and destiny.",
-  alternates: { canonical: "https://purposecourse.org/course" },
+  alternates: { canonical: publicUrl("/course") },
 };
 
 const FORMATS = [

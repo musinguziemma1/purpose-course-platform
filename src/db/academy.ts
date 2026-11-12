@@ -8,9 +8,12 @@ import {
   assignments,
   coachingSessions,
   courseLevels,
+  courseModules,
   courseSessions,
+  courses,
   enrollments,
   learningProgress,
+  lessons,
   mentorAssignments,
   profiles,
   reflections,
@@ -34,18 +37,20 @@ export async function getStudentWorkspace(profileId: string) {
     .from(enrollments)
     .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
     .where(and(eq(enrollments.profileId, profileId), inArray(enrollments.status, ["enrolled", "completed"]), learnerReadable(enrollments.profileId, viewer)))
-    .orderBy(desc(enrollments.createdAt))
+    .orderBy(desc(enrollments.createdAt), desc(enrollments.id))
     .limit(1);
 
   const enrollment = enrollmentRows[0]?.enrollment ?? null;
   const level = enrollmentRows[0]?.level ?? null;
 
-  const [levels, sessions, progress, coaching, assignmentRows, reflectionRows, mentorRows] = await Promise.all([
+  const [levels, sessions, progress, coaching, assignmentRows, reflectionRows, mentorRows, programmeModules] = await Promise.all([
     db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
     db.select().from(courseSessions).orderBy(asc(courseSessions.sortOrder)),
-    enrollment
-      ? db.select().from(learningProgress).where(eq(learningProgress.enrollmentId, enrollment.id))
-      : Promise.resolve([]),
+    db.select({ progress: learningProgress }).from(learningProgress)
+      .innerJoin(enrollments, eq(enrollments.id, learningProgress.enrollmentId))
+      .innerJoin(courseSessions, and(eq(courseSessions.id, learningProgress.sessionId), eq(courseSessions.levelId, enrollments.levelId)))
+      .where(and(eq(enrollments.profileId, profileId), inArray(enrollments.status, ["enrolled", "completed"])))
+      .then((rows) => rows.map((row) => row.progress)),
     db
       .select()
       .from(coachingSessions)
@@ -75,6 +80,12 @@ export async function getStudentWorkspace(profileId: string) {
       .from(mentorAssignments)
       .where(and(eq(mentorAssignments.studentId, profileId), eq(mentorAssignments.status, "active")))
       .limit(1),
+    db.select({ id: courseModules.id, title: courseModules.title, sessionCode: courseModules.sessionCode, levelId: courses.levelId,
+      courseSlug: courses.slug, lessons: sql<number>`count(${lessons.id})::int` }).from(courseModules)
+      .innerJoin(courses, eq(courses.id, courseModules.courseId))
+      .innerJoin(lessons, and(eq(lessons.moduleId, courseModules.id), eq(lessons.status, "published")))
+      .where(eq(courses.status, "published")).groupBy(courseModules.id, courses.id)
+      .orderBy(asc(courses.sortOrder), asc(courseModules.sortOrder), asc(courseModules.id)),
   ]);
 
   const mentorId = mentorRows[0]?.mentorId ?? null;
@@ -105,6 +116,7 @@ export async function getStudentWorkspace(profileId: string) {
     level,
     levels,
     sessions,
+    programmeModules,
     levelSessions,
     progress,
     completedIds,

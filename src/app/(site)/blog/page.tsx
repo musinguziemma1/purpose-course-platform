@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Filter, Search } from "lucide-react";
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   title: "The Purpose Journal",
   description:
     "Articles on identity, source, purpose, potential and destiny — practical writing for people serious about living their assignment.",
-  alternates: { canonical: "https://purposecourse.org/blog" },
+  alternates: { canonical: publicUrl("/blog") },
 };
 
 const PAGE_SIZE = 9;

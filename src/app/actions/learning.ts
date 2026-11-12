@@ -10,7 +10,6 @@ import {
   coachingSessions,
   courseSessions,
   enrollments,
-  learningProgress,
   mentorAssignments,
   notifications,
   profiles,
@@ -19,6 +18,7 @@ import {
 } from "@/db/schema";
 import { getSessionUser, isStudent } from "@/lib/auth";
 import { levelEnrolled } from "@/db/learning-access";
+import { setProgrammeSessionComplete } from "@/db/programme-progress";
 
 export type LearningState = { ok?: boolean; error?: string; message?: string };
 
@@ -37,43 +37,9 @@ export async function toggleSessionComplete(formData: FormData) {
   const user = await requireStudent();
   if (!user) return;
   const sessionId = Number(formData.get("sessionId"));
-  if (!sessionId) return;
-
-  const [record] = await db.select({ enrollment: enrollments }).from(enrollments)
-    .innerJoin(courseSessions, eq(courseSessions.levelId, enrollments.levelId))
-    .where(and(eq(courseSessions.id, sessionId), eq(enrollments.profileId, user.profileId), eq(enrollments.status, "enrolled"))).limit(1);
-  const enrollment = record?.enrollment;
-  if (!enrollment) return;
-
-  const existing = await db
-    .select()
-    .from(learningProgress)
-    .where(and(eq(learningProgress.enrollmentId, enrollment.id), eq(learningProgress.sessionId, sessionId)))
-    .limit(1);
-
-  const wasCompleted = existing[0]?.completed ?? false;
-
-  if (existing[0]) {
-    await db
-      .update(learningProgress)
-      .set({ completed: !wasCompleted, completedAt: wasCompleted ? null : new Date() })
-      .where(eq(learningProgress.id, existing[0].id));
-  } else {
-    await db.insert(learningProgress).values({
-      enrollmentId: enrollment.id,
-      sessionId,
-      completed: true,
-      completedAt: new Date(),
-    });
-  }
-
-  await db.insert(activityLogs).values({
-    actorId: user.profileId,
-    action: wasCompleted ? "learning.session_reopened" : "learning.session_completed",
-    entityType: "course_session",
-    entityId: String(sessionId),
-    description: `${wasCompleted ? "Reopened" : "Completed"} course session #${sessionId}.`,
-  });
+  const desired = String(formData.get("completed"));
+  if (!["true", "false"].includes(desired)) return;
+  if (!(await setProgrammeSessionComplete(sessionId, desired === "true", user))) return;
 
   revalidatePath("/learn");
   revalidatePath("/learn/programme");

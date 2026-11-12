@@ -23,7 +23,8 @@ import {
   roles,
   sessionAttendance,
 } from "./schema";
-import { seedInstruments, submitInstrument } from "./engine";
+import { seedInstruments } from "./seed-instruments";
+import { submitInstrument } from "./instrument-scoring";
 
 const daysAgo = (days: number, hour = 9) => {
   const date = new Date();

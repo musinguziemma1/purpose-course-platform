@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Download, FileAudio, FileSpreadsheet, FileText, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: "Resource library",
   description:
     "Free worksheets, field guides and planning canvases from the Purpose Course — the Purpose Journal, gifting audit, vision plan and more.",
-  alternates: { canonical: "https://purposecourse.org/resources" },
+  alternates: { canonical: publicUrl("/resources") },
 };
 
 const ICONS = {

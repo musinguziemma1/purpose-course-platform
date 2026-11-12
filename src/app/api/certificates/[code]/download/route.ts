@@ -1,3 +1,4 @@
+import { publicOrigin } from "@/lib/site-url";
 import { getCertificateByCode } from "@/db/assessments";
 
 export const dynamic = "force-dynamic";
@@ -92,14 +93,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     <text x="230" y="972" font-family="Georgia, serif" font-size="24" fill="#122a4d">${escapeXml(issued)}</text>
     <line x1="230" y1="996" x2="470" y2="996" stroke="#d6cdb8" stroke-width="1.5"/>
 
-    <text x="230" y="1030" font-size="13" fill="#78716c">${escapeXml(scoreLine)}Programme: 15 weeks · 3 levels</text>
+    <text x="230" y="1030" font-size="13" fill="#78716c">${escapeXml(scoreLine)}Scope: ${certificate.kind === "level" ? "Named level" : "Named course"}</text>
 
     <text x="1370" y="940" text-anchor="end" font-size="14" letter-spacing="2" fill="#a8a29e">VERIFICATION CODE</text>
     <text x="1370" y="972" text-anchor="end" font-family="'Courier New', monospace" font-size="22" fill="#122a4d">${escapeXml(
       certificate.code,
     )}</text>
     <line x1="1130" y1="996" x2="1370" y2="996" stroke="#d6cdb8" stroke-width="1.5"/>
-    <text x="1370" y="1030" text-anchor="end" font-size="13" fill="#78716c">Verify at purposecourse.org/verify</text>
+    <text x="1370" y="1030" text-anchor="end" font-size="13" fill="#78716c">Verify at ${escapeXml(new URL(publicOrigin()).host)}/verify</text>
   </g>
 
   <text x="800" y="1050" text-anchor="middle" font-family="Georgia, serif" font-size="17" font-style="italic" fill="#57534e">From purpose discovery to kingdom impact — you were born for significance.</text>

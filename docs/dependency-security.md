@@ -18,24 +18,18 @@ minimatch 3 line and tsx's newer esbuild are retained. The overridden loader was
 verified by generating SQL for all 88 tables into ignored local files, without
 connecting to or changing a database.
 
-The shadcn generator/CSS package is a development dependency. The application
-imports its CSS at build time, and imports no shadcn generator JavaScript.
-Builds require development dependencies; the deployed Next.js output includes
-the application runtime.
+The unused shadcn generator and its CSS import were removed. The application
+uses its own UI components and does not use the generator's custom CSS variants,
+scroll-fade utilities or accordion keyframes. Existing local shimmer rules and
+the separate tw-animate-css dependency are retained.
 
-## Remaining upstream advisory
+## Audit result
 
-`npm audit --omit=dev` reports **zero production vulnerabilities**. The complete
-development tree still reports **three low-severity findings**, all from the
-same unpatched `deepmerge` advisory propagated through `@shadcn/registry` and
-`shadcn`. Upstream lists no patched version. Downgrading shadcn to 1.0.0 would
-remove the current CSS integration and is not a compatible remediation.
-
-This is a tracked development-tool limitation, not a clean full audit. Avoid
-processing untrusted registry definitions with the generator; the normal
-application build imports static CSS and does not invoke the affected merge
-code. Revisit this advisory when upstream publishes a compatible fix. No audit
-finding is suppressed in npm configuration.
+Both `npm audit --omit=dev` and the complete `npm audit` report **zero findings**
+after removing the unused generator. This removes the vulnerable deepmerge
+dependency path instead of overriding its behavior or downgrading the generator.
+No audit finding is suppressed in npm configuration. Recheck on dependency
+changes and in CI; a clean audit is a dated result, not a future guarantee.
 
 ## Repeatable checks
 

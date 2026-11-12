@@ -1,10 +1,11 @@
+import { publicOrigin } from "@/lib/site-url";
 import type { MetadataRoute } from "next";
 import { getPublishedArchive } from "@/db/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = "https://purposecourse.org";
+  const base = publicOrigin();
   const staticRoutes = ["", "/course", "/blog", "/resources", "/community", "/about", "/contact", "/privacy"].map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),

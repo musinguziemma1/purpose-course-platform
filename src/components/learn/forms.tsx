@@ -35,14 +35,22 @@ export function SessionToggle({
   completed: boolean;
   compact?: boolean;
 }) {
-  const { pending } = useFormStatus();
   return (
     <form action={toggleSessionComplete}>
       <input type="hidden" name="sessionId" value={sessionId} />
+      <input type="hidden" name="completed" value={String(!completed)} />
+      <SessionToggleButton completed={completed} compact={compact} />
+    </form>
+  );
+}
+
+function SessionToggleButton({ completed, compact }: { completed: boolean; compact: boolean }) {
+  const { pending } = useFormStatus();
+  return (
       <button
         type="submit"
         disabled={pending}
-        aria-label={completed ? "Mark session as not complete" : "Mark session complete"}
+        aria-label={completed ? "Uncheck self-reported session" : "Check self-reported session"}
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border text-[11px] font-medium transition-colors disabled:opacity-60",
           compact ? "h-7 px-2.5" : "h-8 px-3",
@@ -58,9 +66,8 @@ export function SessionToggle({
         ) : (
           <Circle className="h-3.5 w-3.5" />
         )}
-        {completed ? "Completed" : "Mark complete"}
+        {completed ? "Checked" : "Mark attended"}
       </button>
-    </form>
   );
 }
 

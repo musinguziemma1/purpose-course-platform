@@ -1,3 +1,4 @@
+import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -24,7 +25,7 @@ export async function generateMetadata({
   return {
     title: article.seoTitle ?? article.title,
     description: article.seoDescription ?? article.excerpt ?? undefined,
-    alternates: { canonical: `https://purposecourse.org/blog/${article.slug}` },
+    alternates: { canonical: publicUrl(`/blog/${article.slug}`) },
     openGraph: {
       title: article.title,
       description: article.excerpt ?? undefined,
@@ -43,7 +44,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!article) notFound();
 
   const accent = accentClasses(article.categoryAccent);
-  const shareUrl = `https://purposecourse.org/blog/${article.slug}`;
+  const shareUrl = publicUrl(`/blog/${article.slug}`);
   const shareText = encodeURIComponent(article.title);
 
   return (
