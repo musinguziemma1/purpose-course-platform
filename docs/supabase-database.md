@@ -15,12 +15,15 @@ database cutover.
 
 Runtime variables:
 
-- `DATABASE_URL`: the **purpose_app** role using the project's Session pooler.
+- `DATABASE_URL`: the **purpose_app** role using the project's transaction pooler
+  on port 6543 for Vercel. Private operator tools and persistent local servers
+  can use the Session pooler on port 5432.
   Passwords in a URI must be URL encoded. Use the dashboard's **Connect** panel
   for the project's actual host; do not infer the region.
 - `DATABASE_SSL_CA`: the project's PEM CA certificate, with escaped `\n`
   newlines if stored on one line. Remote connections require verified TLS.
-- `DATABASE_POOL_MAX`: maximum connections **per server process**, default 5.
+- `DATABASE_POOL_MAX`: maximum connections **per server process**, default 5
+  for persistent local servers. Set it explicitly to `1` in Vercel Production.
   Budget connections across all deployed instances and the Supabase pool limit.
 - `NEXT_PUBLIC_SUPABASE_URL`: base project URL, without `/rest/v1/`.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: public client key.
@@ -30,6 +33,14 @@ Runtime variables:
 Never put an administrator database URI, secret API key, or service-role key
 in a `NEXT_PUBLIC_` variable. `.env.supabase.local` contains administrator
 migration access only. It is not loaded by Next.js.
+
+Production dashboard testing exposed session-pool exhaustion despite successful
+single-request health checks. The Vercel runtime now uses transaction pooling;
+the restricted role, database and verified CA are unchanged. The application
+uses unnamed queries and transaction-scoped advisory locks, which are compatible
+with this mode. Keep named prepared statements and persistent session state out
+of transaction-pool queries. See [connection modes](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and the [deployment runbook](deployment-operations.md).
 
 ## Access model
 

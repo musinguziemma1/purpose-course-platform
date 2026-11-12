@@ -1,15 +1,22 @@
 # Deployment and operations
 
-Prepared 12 November 2026. The application builds locally; a production Vercel
-deployment, production domain, real Resend delivery, recurring scheduler and
-restore rehearsal have not been verified. Keep these as launch prerequisites.
+Updated 12 November 2026. The owner's production Vercel project and domain are
+identified, and public pages and database health have passed hosted checks.
+Production settings now select Node 24.x and Supabase transaction pooling.
+Verify each new deployment's dashboard journeys before accepting it. Real
+Resend delivery, recurring jobs, availability alerts and a restore rehearsal
+remain launch prerequisites.
 
 ## Release target and build
 
 Use the owner's Vercel team and link this repository explicitly. Confirm the
 team, project, GitHub repository and production branch before linking or
-deploying. The currently connected Vercel account has not been established as
-the owner's target. Do not deploy into an unrelated team. Use a protected preview
+deploying. The production target is `purpose-course-platform` in
+`musinguzie612-7522s-projects`, linked to
+`musinguziemma1/purpose-course-platform`, branch `main`. Its public origin is
+`https://purpose-course-platform.vercel.app`. The connected app may expose a
+different account; the owner's authenticated CLI was used to verify and update
+this target. Do not deploy into an unrelated team. Use a protected preview
 with a separate staging database for review; previews must not write to the
 production database or send operational emails.
 
@@ -31,11 +38,13 @@ If Vercel reports `DATABASE_URL is required` while collecting page data, deploy
 the updated lazy-client implementation and configure the runtime environment:
 
 1. Open the intended Vercel project, then Settings > Environment Variables.
-2. In Production, add DATABASE_URL and DATABASE_SSL_CA using the existing
-   restricted runtime values from private `.env.local`. Copy the values without
-   the surrounding dotenv quotes. The CA accepts actual newlines or literal
-   `\n` sequences. Do not use `.env.supabase.local` administrator credentials.
-3. Set DATABASE_POOL_MAX to `5`, PURPOSE_DEMO_OPEN to `false`, and APP_URL to the
+2. In Production, use the existing restricted role/password from private
+   `.env.local` with the verified project transaction endpoint on port 6543 for
+   DATABASE_URL. Copy DATABASE_SSL_CA without the surrounding dotenv quotes;
+   the CA accepts actual newlines or literal `\n` sequences. A local persistent
+   server can retain port 5432. Do not use `.env.supabase.local` administrator
+   credentials.
+3. Set DATABASE_POOL_MAX to `1`, PURPOSE_DEMO_OPEN to `false`, and APP_URL to the
    project's HTTPS production origin. Retain the existing operational secrets
    in the table below for the features that need them.
 4. Redeploy the latest GitHub commit after saving variables. Test `/api/health`
@@ -46,6 +55,24 @@ Local `.env` files are deliberately ignored by Git. `.env.example` is a template
 not a Vercel settings file; copying secrets into it does not configure a GitHub
 deployment and would risk committing them. See
 [Vercel environment settings](https://vercel.com/docs/environment-variables).
+
+An intermittent hosted `/admin` failure was traced to
+`EMAXCONNSESSION: max clients reached in session mode`, with a pool limit of 15.
+A healthy single request did not detect this exhaustion. Production now uses
+the same restricted role, project, database and CA through the shared
+transaction pool on port 6543, with one connection per Vercel instance. Three
+independent clients passed verified client TLS, restricted-role reads,
+read-only transactions and transaction advisory locks before the cutover.
+Session pooling on port 5432 remains appropriate for the private operator tools.
+The application uses unnamed node-postgres queries and transaction-scoped locks;
+do not introduce named prepared statements or persistent session state on the
+transaction endpoint. See [Supabase connection modes and client settings](https://supabase.com/docs/guides/database/connecting-to-postgres).
+
+APP_URL, the existing CRON_SECRET and the existing EMAIL_OUTBOX_ENCRYPTION_KEY
+were added to Production. Keep the encryption key stable for queued messages.
+These values and the database password stay outside Git. Environment changes
+take effect in a new deployment; redeploy after saving them. Preserve Standard
+Deployment Protection and use the public production origin for learner review.
 
 GitHub Actions uses an ephemeral PostgreSQL 18 service on loopback port 54329,
 an isolated test database, Node 24, immutable action commits and read-only
@@ -62,9 +89,9 @@ source files, screenshots or logs. `.env.example` contains placeholders only.
 
 | Variable | Required value |
 | --- | --- |
-| DATABASE_URL | Restricted `purpose_app` session-pooler URI, never the database administrator |
+| DATABASE_URL | Restricted `purpose_app` transaction-pooler URI on port 6543 for Vercel; never the database administrator |
 | DATABASE_SSL_CA | Supabase CA certificate, with verified TLS enabled |
-| DATABASE_POOL_MAX | Start with 5; total pools across function instances must fit database capacity |
+| DATABASE_POOL_MAX | `1` for Vercel; budget total connections across function instances before increasing |
 | PURPOSE_DEMO_OPEN | `false` |
 | APP_URL | Final canonical HTTPS origin, without a path; used by invitation links, metadata, sharing, sitemap and certificates |
 | RESEND_API_KEY | Sending key restricted to the verified sending domain |

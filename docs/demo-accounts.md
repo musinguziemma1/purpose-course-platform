@@ -24,6 +24,11 @@ identifiers are not deliverable mailboxes. Verification means the password
 hash, account state, role and browser sign-in work; no email-ownership claim is
 made. Public sign-up and anonymous production review remain disabled.
 
+The hosted review login is
+[purpose-course-platform.vercel.app/login](https://purpose-course-platform.vercel.app/login).
+The same three accounts and private passwords apply there because the hosted
+application connects to the same Supabase application database.
+
 The Student receives an enrolled place in the first published level, membership
 in a clearly labelled practice cohort, an active assignment to the Demo Mentor,
 and a development goal. Content comes from the existing published curriculum.

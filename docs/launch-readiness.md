@@ -53,6 +53,7 @@ not establish launch readiness.
 - [x] Correct analytics definitions and report actual recorded learning events.
 - [x] Fix the identified mobile overflow, form labels, and missing public links.
 - [x] Document deployment, backup/restore, monitoring, and required external account settings; see [operations runbook](deployment-operations.md).
+- [x] Identify the owner's production Vercel target, align Node 24.x, configure the canonical origin and operational secrets, and replace the exhausted session pool with a verified restricted-role transaction pool capped at one connection per instance.
 - [ ] Verify production deployment, recurring jobs, availability alerts and an isolated restore rehearsal with the owner's account settings.
 - [ ] Disable the three owner-requested password-protected demo logins after dashboard review and before public launch.
 
