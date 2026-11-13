@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { getEventCalendar } from "@/db/live-events";
 import { getSessionUser } from "@/lib/auth";
 import { EventCalendar } from "@/components/academy/event-calendar";
@@ -19,14 +20,17 @@ export default async function EventsPage({
       limit: 60,
     });
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8">
+    <>
+    <section className="relative isolate overflow-hidden border-b border-navy/10 bg-ink text-paper">
+      <HeroBackdrop src="/images/hero-workshop.jpg" tone="dark" />
+      <div className="shell relative py-14 lg:py-20">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gold-dark">
         Learn together
       </p>
-      <h1 className="mt-3 font-serif text-4xl text-navy sm:text-5xl">
+      <h1 className="mt-3 font-serif text-4xl text-paper sm:text-5xl">
         Live event calendar
       </h1>
-      <p className="mt-4 max-w-2xl text-base leading-relaxed text-stone-600">
+      <p className="mt-4 max-w-2xl text-base leading-relaxed text-paper/85">
         Discover teaching sessions, group discussions and office hours. Sign in
         to join the sessions available to your account.
       </p>
@@ -34,18 +38,21 @@ export default async function EventsPage({
         <Link
           href="/events"
           aria-current={!past ? "page" : undefined}
-          className="rounded-full border border-navy/20 px-4 py-2 text-sm text-navy"
+          className="rounded-full border border-white/40 bg-ink/40 px-4 py-2 text-sm text-paper hover:bg-white/15"
         >
           Upcoming and live
         </Link>
         <Link
           href="/events?past=1"
           aria-current={past ? "page" : undefined}
-          className="rounded-full border border-navy/20 px-4 py-2 text-sm text-navy"
+          className="rounded-full border border-white/40 bg-ink/40 px-4 py-2 text-sm text-paper hover:bg-white/15"
         >
           Past and cancelled
         </Link>
       </nav>
+      </div>
+    </section>
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
       <EventCalendar
         key={String(past)}
         initialEvents={events.map((row) => ({
@@ -55,5 +62,6 @@ export default async function EventsPage({
         past={past}
       />
     </div>
+    </>
   );
 }

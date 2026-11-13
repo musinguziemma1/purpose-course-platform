@@ -1,4 +1,5 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
@@ -29,7 +30,7 @@ export default async function AboutPage() {
   return (
     <>
       <section className="relative overflow-hidden border-b border-navy/10 bg-cream/60">
-        <div className="absolute inset-0 paper-texture opacity-50" aria-hidden />
+        <HeroBackdrop src="/images/learning-together.jpg" />
         <div className="shell relative py-14 lg:py-20">
           <p className="eyebrow">About Purpose Course</p>
           <h1 className="display mt-4 max-w-4xl text-4xl text-navy sm:text-5xl lg:text-[3.6rem]">
@@ -46,7 +47,7 @@ export default async function AboutPage() {
         <div className="relative overflow-hidden rounded-2xl border border-navy/10 shadow-lift">
           <img
             src="/images/about-team.jpg"
-            alt="The Purpose Course faculty team"
+            alt="People bringing their hands together during a collaborative workshop"
             className="h-56 w-full object-cover sm:h-72"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent" />

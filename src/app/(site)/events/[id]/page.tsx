@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { notFound } from "next/navigation";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
@@ -45,6 +46,9 @@ export default async function EventPage({
   );
   return (
     <main className="mx-auto max-w-4xl px-5 py-12 sm:px-8">
+      <header className="relative isolate overflow-hidden rounded-2xl border border-navy/10 bg-paper p-6 sm:p-9">
+      <HeroBackdrop src={event.type === "group_work" || event.type === "discussion" ? "/images/learning-together.jpg" : "/images/online-learning.jpg"} />
+      <div className="relative">
       <Link
         href="/events"
         className="text-sm font-semibold text-gold-dark underline"
@@ -70,6 +74,8 @@ export default async function EventPage({
       <p className="mt-6 whitespace-pre-line break-words text-base leading-relaxed text-stone-700">
         {event.description}
       </p>
+      </div>
+      </header>
       <section className="mt-8 space-y-4 rounded-2xl border border-navy/15 bg-paper p-6">
         <h2 className="font-serif text-2xl text-navy">
           {open

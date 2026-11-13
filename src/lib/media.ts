@@ -1,4 +1,10 @@
 export const IMAGES = {
+  learningTogether: "/images/learning-together.jpg",
+  studyPartners: "/images/study-partners.jpg",
+  mentorGuidance: "/images/mentor-guidance.jpg",
+  learningMaterials: "/images/learning-materials.jpg",
+  onlineLearning: "/images/online-learning.jpg",
+  learnerSupport: "/images/learner-support.jpg",
   heroWorkshop: "/images/hero-workshop.jpg",
   roundTable: "/images/community.jpg",
   mentorship: "/images/mentorship.jpg",
@@ -15,6 +21,20 @@ export const IMAGES = {
   identity: "/images/journal-identity.jpg",
   team: "/images/about-team.jpg",
 } as const;
+
+/** Illustrative covers for published content that has no uploaded photograph. */
+export function editorialImage(topic?: string | null) {
+  switch (topic?.toLowerCase()) {
+    case "foundation": return IMAGES.learningTogether;
+    case "intermediate": return IMAGES.studyPartners;
+    case "advanced": return IMAGES.heroWorkshop;
+    case "identity": return IMAGES.identity;
+    case "source": return IMAGES.foundation;
+    case "potential": return IMAGES.studyPartners;
+    case "destiny": return IMAGES.advanced;
+    default: return IMAGES.journal;
+  }
+}
 
 export const PRINCIPLES = [
   {

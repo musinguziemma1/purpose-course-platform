@@ -1,4 +1,5 @@
 import { UpcomingEvents } from "@/components/academy/upcoming-events";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,7 +41,7 @@ export default async function CoursePage() {
   return (
     <>
       <section className="relative overflow-hidden border-b border-navy/10 bg-cream/60">
-        <div className="absolute inset-0 paper-texture opacity-50" aria-hidden />
+        <HeroBackdrop src="/images/hero-workshop.jpg" />
         <div className="shell relative grid gap-10 py-14 lg:grid-cols-[1.25fr_0.75fr] lg:items-end lg:py-20">
           <div>
             <p className="eyebrow">The programme</p>

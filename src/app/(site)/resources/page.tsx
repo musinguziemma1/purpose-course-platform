@@ -1,4 +1,6 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
+import { CoverImage } from "@/components/site/cover-image";
 import type { Metadata } from "next";
 import { Download, FileAudio, FileSpreadsheet, FileText, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +38,7 @@ export default async function ResourcesPage() {
   return (
     <>
       <section className="relative overflow-hidden border-b border-navy/10 bg-cream/60">
-        <div className="absolute inset-0 paper-texture opacity-50" aria-hidden />
+        <HeroBackdrop src="/images/learning-materials.jpg" />
         <div className="shell relative grid gap-8 py-14 lg:grid-cols-[1.2fr_0.8fr] lg:items-end lg:py-20">
           <div>
             <p className="eyebrow">Resource library</p>
@@ -50,8 +52,8 @@ export default async function ResourcesPage() {
           <div className="space-y-3">
             <div className="relative hidden overflow-hidden rounded-xl border border-navy/10 sm:block">
               <img
-                src="/images/student-study.jpg"
-                alt="Printed worksheets and a journal on a study desk"
+                src="/images/learning-materials.jpg"
+                alt="An open notebook, pen and coloured study tabs on a wooden desk"
                 className="h-32 w-full object-cover"
                 loading="lazy"
               />
@@ -87,6 +89,9 @@ export default async function ResourcesPage() {
               return (
                 <Reveal key={resource.id} delay={index * 0.07}>
                   <div className="interactive flex h-full flex-col rounded-xl border border-navy/12 bg-navy p-6 text-paper">
+                    <div className="relative -mx-6 -mt-6 mb-6 h-40 overflow-hidden rounded-t-xl">
+                      <CoverImage src={resource.type === "audio" || resource.type === "video" ? "/images/online-learning.jpg" : "/images/learning-materials.jpg"} alt="" sizes="(min-width: 1024px) 33vw, 100vw" />
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-gold">
                         <Icon className="h-5 w-5" />

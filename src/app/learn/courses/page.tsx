@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { CoverImage } from "@/components/site/cover-image";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
+import { editorialImage } from "@/lib/media";
 import { ArrowRight, BookOpen, Clock, Filter, Layers, Lock, PlayCircle, Sparkles } from "lucide-react";
 import { getStudentAcademy } from "@/db/courses";
 import { EmptyState } from "@/components/ui/card";
@@ -26,14 +29,8 @@ export default async function StudentCoursesPage() {
     <div className="space-y-6">
       <LevelProgression user={user} />
       <div className="relative overflow-hidden rounded-2xl border border-navy/10">
-        <img
-          src="/images/student-study.jpg"
-          alt="A study desk with notes, a laptop and a cup of tea"
-          className="h-32 w-full object-cover sm:h-40"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-ink/85 via-ink/45 to-transparent" />
-        <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5">
+        <HeroBackdrop src="/images/online-learning.jpg" tone="dark" />
+        <div className="relative flex min-h-44 flex-col justify-center px-5 py-6 sm:min-h-40">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">Purpose Course Academy</p>
           <p className="mt-1 font-serif text-xl text-paper sm:text-2xl">Structured lessons, in progression</p>
           <p className="mt-1 max-w-md text-[11.5px] leading-relaxed text-paper/70">
@@ -91,15 +88,12 @@ export default async function StudentCoursesPage() {
           const locked = !course.enrolled && !course.progression.some((lesson) => lesson.unlocked);
           return (
             <div key={course.id} className="interactive flex flex-col overflow-hidden rounded-xl border border-navy/10 bg-paper shadow-xs">
-              {course.coverImageUrl ? (
                 <div className="relative h-36 w-full overflow-hidden bg-cream">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={course.coverImageUrl} alt={course.title} className="h-full w-full object-cover" />
+                  <CoverImage src={course.coverImageUrl || editorialImage(course.levelName)} alt="" sizes="(min-width: 1024px) 40vw, 100vw" />
                   <span className="absolute left-3 top-3 rounded-full bg-paper/95 px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-navy">
                     {course.levelName} · Level {course.levelNumber}
                   </span>
                 </div>
-              ) : null}
               <div className="flex flex-1 flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>

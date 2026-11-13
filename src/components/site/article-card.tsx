@@ -3,6 +3,8 @@ import { ArrowUpRight, Clock } from "lucide-react";
 import type { ArticleCard as ArticleCardType } from "@/db/queries";
 import { cn, formatDate } from "@/lib/utils";
 import { accentClasses } from "@/components/site/principle-icon";
+import { CoverImage } from "@/components/site/cover-image";
+import { editorialImage } from "@/lib/media";
 
 export function ArticleCard({
   article,
@@ -14,6 +16,8 @@ export function ArticleCard({
   className?: string;
 }) {
   const accent = accentClasses(article.categoryAccent);
+  const cover = article.coverImageUrl || editorialImage(article.categorySlug);
+  const coverAlt = article.coverImageUrl ? (article.coverAlt ?? "") : "";
 
   if (variant === "feature") {
     return (
@@ -24,13 +28,12 @@ export function ArticleCard({
           className,
         )}
       >
-        {article.coverImageUrl ? (
-          <img
-            src={article.coverImageUrl}
-            alt={article.coverAlt ?? article.title}
+          <CoverImage
+            src={cover}
+            alt={coverAlt}
+            sizes="(min-width: 1024px) 60vw, 100vw"
             className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-[900ms] group-hover:scale-[1.04]"
           />
-        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-navy/10" />
         <div className="relative z-10 p-7">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em]">
@@ -85,15 +88,14 @@ export function ArticleCard({
   if (variant === "compact") {
     return (
       <Link href={`/blog/${article.slug}`} className={cn("group flex gap-4", className)}>
-        {article.coverImageUrl ? (
           <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-lg bg-cream">
-            <img
-              src={article.coverImageUrl}
-              alt={article.coverAlt ?? article.title}
+            <CoverImage
+              src={cover}
+              alt={coverAlt}
+              sizes="96px"
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
           </div>
-        ) : null}
         <div>
           <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", accent.fg)}>
             {article.categoryName ?? "Purpose"}
@@ -118,15 +120,12 @@ export function ArticleCard({
       )}
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-cream">
-        {article.coverImageUrl ? (
-          <img
-            src={article.coverImageUrl}
-            alt={article.coverAlt ?? article.title}
+          <CoverImage
+            src={cover}
+            alt={coverAlt}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="h-full w-full object-cover transition-transform duration-[900ms] group-hover:scale-[1.05]"
           />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-navy/10 to-gold/20" />
-        )}
         {article.categoryName ? (
           <span className="absolute left-4 top-4 rounded-full bg-paper/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-navy shadow-sm">
             {article.categoryName}

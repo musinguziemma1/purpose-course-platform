@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { Compass, ArrowUpRight } from "lucide-react";
 import type { ReactNode } from "react";
 export function AuthShell({
@@ -11,19 +11,9 @@ export function AuthShell({
 }) {
   return (
     <main className="min-h-screen bg-[#f8f6f0] lg:grid lg:grid-cols-[1.05fr_1fr]">
-      <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden bg-[#112b35] p-10 text-paper lg:flex xl:p-14">
-        <Image
-          src="/images/level-foundation.jpg"
-          alt=""
-          fill
-          sizes="(min-width: 1024px) 52vw, 1px"
-          className="object-cover opacity-30"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-[#112b35]/65 via-[#112b35]/40 to-[#112b35]"
-        />
-        <Link href="/" className="relative flex items-center gap-3">
+      <aside className="relative flex min-h-56 flex-col justify-between overflow-hidden bg-[#112b35] p-6 text-paper sm:p-8 lg:min-h-screen lg:p-10 xl:p-14">
+        <HeroBackdrop src={mode === "signup" ? "/images/learning-together.jpg" : "/images/online-learning.jpg"} tone="dark" />
+        <Link href="/" className="relative hidden items-center gap-3 lg:flex">
           <span className="rounded-full border border-gold/40 p-2.5 text-gold">
             <Compass className="h-7 w-7" />
           </span>
@@ -36,20 +26,20 @@ export function AuthShell({
             </span>
           </span>
         </Link>
-        <div className="relative py-16">
-          <p className="mb-6 text-xs font-semibold uppercase tracking-[0.25em] text-gold">
+        <div className="relative py-4 lg:py-16">
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-gold lg:mb-6 lg:text-xs">
             Discover. Clarify. Live. Impact.
           </p>
-          <h2 className="max-w-lg font-serif text-5xl leading-[1.13] xl:text-6xl">
+          <h2 className="max-w-lg font-serif text-3xl leading-[1.13] sm:text-4xl lg:text-5xl xl:text-6xl">
             A clearer purpose.
             <br />
             <span className="text-[#d8bf81]">A life of impact.</span>
           </h2>
-          <p className="mt-7 max-w-sm text-base leading-relaxed text-paper/75">
+          <p className="mt-7 hidden max-w-sm text-base leading-relaxed text-paper/85 lg:block">
             Learn with intention, grow with a mentor, and turn your calling into
             meaningful action.
           </p>
-          <div className="mt-9 flex flex-wrap gap-x-5 gap-y-3 text-xs text-paper/65">
+          <div className="mt-9 hidden flex-wrap gap-x-5 gap-y-3 text-xs text-paper/85 lg:flex">
             {["Identity", "Source", "Purpose", "Potential", "Destiny"].map(
               (item, index) => (
                 <span key={item}>
@@ -60,7 +50,7 @@ export function AuthShell({
             )}
           </div>
         </div>
-        <div className="relative flex items-center justify-between border-t border-paper/20 pt-5 text-xs text-paper/60">
+        <div className="relative hidden items-center justify-between border-t border-paper/20 pt-5 text-xs text-paper/80 lg:flex">
           <span>Grow through every level.</span>
           <Link
             href="/course"
@@ -70,29 +60,29 @@ export function AuthShell({
           </Link>
         </div>
       </aside>
-      <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-12 xl:px-20">
-        <header className="flex items-center justify-between gap-4">
+      <section className="flex min-h-[calc(100svh-14rem)] flex-col px-5 py-6 sm:px-10 lg:min-h-screen lg:px-12 xl:px-20">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 font-serif text-lg text-navy"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-serif text-base text-navy sm:text-lg"
           >
             <Compass className="h-6 w-6 text-gold-dark" />
             Purpose Course
           </Link>
           <nav
             aria-label="Account access"
-            className="flex rounded-full border border-navy/10 bg-paper p-1 text-xs font-semibold"
+            className="flex shrink-0 rounded-full border border-navy/10 bg-paper p-1 text-xs font-semibold"
           >
             <Link
               aria-current={mode === "login" ? "page" : undefined}
-              className={`rounded-full px-4 py-2 ${mode === "login" ? "bg-navy text-paper" : "text-stone-500"}`}
+              className={`whitespace-nowrap rounded-full px-3 py-2 sm:px-4 ${mode === "login" ? "bg-navy text-paper" : "text-stone-500"}`}
               href="/login"
             >
               Sign in
             </Link>
             <Link
               aria-current={mode === "signup" ? "page" : undefined}
-              className={`rounded-full px-4 py-2 ${mode === "signup" ? "bg-navy text-paper" : "text-stone-500"}`}
+              className={`whitespace-nowrap rounded-full px-3 py-2 sm:px-4 ${mode === "signup" ? "bg-navy text-paper" : "text-stone-500"}`}
               href="/signup"
             >
               Sign up

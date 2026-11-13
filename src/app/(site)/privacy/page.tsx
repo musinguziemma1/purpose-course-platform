@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 
 export const metadata: Metadata = { title: "Privacy and data use", description: "How Purpose Course uses account information, learning records and contact enquiries." };
 
 export default function PrivacyPage() {
   return <article className="shell-narrow py-12 sm:py-16">
-    <p className="eyebrow">Purpose Course</p><h1 className="mt-3 font-serif text-3xl text-navy sm:text-4xl">Privacy and data use</h1>
-    <p className="mt-3 text-sm text-stone-500">Updated 13 November 2026</p>
+    <header className="relative isolate overflow-hidden rounded-2xl border border-navy/10 bg-paper p-6 sm:p-9">
+    <HeroBackdrop src="/images/learning-materials.jpg" />
+    <div className="relative"><p className="eyebrow">Purpose Course</p><h1 className="mt-3 font-serif text-3xl text-navy sm:text-4xl">Privacy and data use</h1>
+    <p className="mt-3 text-sm text-stone-600">Updated 13 November 2026</p></div>
+    </header>
     <p className="mt-6 leading-relaxed text-stone-700">Purpose Course stores information needed to operate the learning programme, support learners and respond to enquiries. This notice describes the current platform.</p>
     <div className="mt-8 space-y-7 text-sm leading-relaxed text-stone-700">
       <section><h2 className="font-serif text-xl text-navy">Accounts and sign-in</h2><p className="mt-2">Account records include your name, email address, role and profile information. Required profile details include a phone number, city/country, time zone and a short introduction. Contact details support course administration and are not listed in the public team directory. New student applications require staff approval; their passwords are stored as salted hashes. An essential sign-in cookie keeps your session active until you sign out or it expires. Deactivated accounts cannot sign in.</p></section>

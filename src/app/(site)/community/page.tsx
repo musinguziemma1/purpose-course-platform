@@ -1,4 +1,5 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Bell, CalendarClock, MessagesSquare, Users, Video } from "lucide-react";
@@ -49,7 +50,7 @@ export default async function CommunityPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-ink py-14 text-paper lg:py-18">
-        <div className="absolute inset-0 ink-grid opacity-40" aria-hidden />
+        <HeroBackdrop src="/images/learning-together.jpg" tone="dark" />
         <div className="shell relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold">
@@ -71,14 +72,14 @@ export default async function CommunityPage() {
           <div className="space-y-3">
             <div className="relative overflow-hidden rounded-2xl border border-white/15">
               <img
-                src="/images/community.jpg"
-                alt="Purpose Course participants in a round-table discussion circle"
+                src="/images/study-partners.jpg"
+                alt="Two learners discussing their work together at a laptop"
                 className="h-40 w-full object-cover sm:h-48"
                 loading="lazy"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
               <p className="absolute bottom-3 left-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
-                Round table · Kampala cohort
+                Learn together · Grow together
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -91,7 +92,7 @@ export default async function CommunityPage() {
               <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
                 <item.icon className="h-4 w-4 text-gold" />
                 <p className="mt-2 font-serif text-xl text-paper">{item.value}</p>
-                <p className="text-[10.5px] uppercase tracking-[0.1em] text-paper/45">{item.label}</p>
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-paper/80">{item.label}</p>
               </div>
             ))}
             </div>

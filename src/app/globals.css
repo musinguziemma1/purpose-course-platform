@@ -154,6 +154,20 @@
 .section-tight {
   padding-block: clamp(2rem, 4vw, 3rem);
 }
+.hero-photo-paper {
+  background: linear-gradient(90deg, rgba(255,253,248,.97) 0%, rgba(255,253,248,.92) 36%, rgba(255,253,248,.78) 65%, rgba(255,253,248,.3) 100%);
+}
+.hero-photo-dark {
+  background: linear-gradient(90deg, rgba(10,26,48,.94) 0%, rgba(10,26,48,.82) 45%, rgba(10,26,48,.72) 100%);
+}
+@media (max-width: 767px) {
+  .hero-photo-paper {
+    background: linear-gradient(180deg, rgba(255,253,248,.82), rgba(255,253,248,.96));
+  }
+  .hero-photo-dark {
+    background: linear-gradient(180deg, rgba(10,26,48,.76), rgba(10,26,48,.93));
+  }
+}
 .stack-sm > * + * {
   margin-top: 0.75rem;
 }

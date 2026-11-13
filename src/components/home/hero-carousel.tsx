@@ -18,6 +18,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { PRINCIPLES } from "@/lib/media";
 import { PrincipleIcon } from "@/components/site/principle-icon";
 import { cn } from "@/lib/utils";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
+import { CoverImage } from "@/components/site/cover-image";
 
 const AUTOPLAY_MS = 7000;
 
@@ -55,13 +57,13 @@ export function HeroCarousel({
   const slides: HeroSlide[] = [
     {
       eyebrow: `${cohortName} · ${enrolmentStatus}`,
-      headline: headline ?? "You were born for",
+      headline: headline?.replace(/\s+significance[.!]?$/i, "").trim() || "You were born for",
       highlight: "significance.",
       subhead:
         subhead ??
         "A 15-week journey through Identity, Source, Purpose, Potential and Destiny — teaching, reflection and a community that helps you live what you discover.",
-      image: "/images/hero-workshop.jpg",
-      imageAlt: "Participants listening to a facilitator during a group workshop",
+      image: "/images/learning-together.jpg",
+      imageAlt: "A teacher and adult learners discussing their work together in a library",
       bullets: ["Key presentations", "Case studies", "Round tables"],
       stats: [
         { value: "3", label: "Levels" },
@@ -78,8 +80,8 @@ export function HeroCarousel({
       highlight: "purpose statement.",
       subhead:
         "Eight proprietary assessments, gifting evidence and clarity coaching with a mentor — so your direction is articulated, tested and evidenced rather than assumed.",
-      image: "/images/level-intermediate.jpg",
-      imageAlt: "A small group discussing ideas and planning their next steps",
+      image: "/images/mentor-guidance.jpg",
+      imageAlt: "A mentor helping an adult learner with her work on a laptop",
       bullets: ["8 assessments", "1:1 clarity coaching", "Verified certificates"],
       stats: [
         { value: "8", label: "Instruments" },
@@ -143,8 +145,7 @@ export function HeroCarousel({
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
-      <div className="absolute inset-0 paper-texture opacity-60" aria-hidden />
-      <div className="absolute -right-40 top-10 hidden h-[34rem] w-[34rem] rounded-full bg-gradient-to-br from-gold/15 via-cream to-transparent blur-2xl lg:block" aria-hidden />
+      <HeroBackdrop src="/images/hero-workshop.jpg" />
 
       <div className="shell relative grid items-center gap-9 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-18">
         <div className="min-w-0">
@@ -168,7 +169,7 @@ export function HeroCarousel({
 
               <h1 className="display mt-5 text-[2.6rem] text-navy sm:text-5xl lg:text-[4rem]">
                 {slide.headline}{" "}
-                <span className="relative whitespace-nowrap text-gold-dark">
+                <span className="relative text-gold-dark">
                   {slide.highlight}
                   <svg className="absolute -bottom-2 left-0 h-3 w-full text-gold/60" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden>
                     <path d="M2 9C40 3 80 3 100 6s60 4 98-2" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" />
@@ -289,13 +290,9 @@ export function HeroCarousel({
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="relative overflow-hidden rounded-[1.75rem] border border-navy/10 shadow-editorial"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.image}
-                alt={slide.imageAlt}
-                fetchPriority={index === 0 ? "high" : "auto"}
-                className="h-[22rem] w-full object-cover sm:h-[28rem]"
-              />
+              <div className="relative h-[22rem] sm:h-[28rem]">
+                <CoverImage src={slide.image} alt={slide.imageAlt} eager={index === 0} sizes="(min-width: 1024px) 45vw, 100vw" className={index === 1 ? "object-[center_40%]" : undefined} />
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-ink/65 via-transparent to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-xl border border-white/20 bg-ink/55 px-4 py-3 backdrop-blur-md">
                 <div>

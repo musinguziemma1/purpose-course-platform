@@ -82,6 +82,7 @@ export default async function StudentDashboardPage() {
     <div className="space-y-6">
       <UpcomingEvents />
       <PageHeader
+        image="/images/study-partners.jpg"
         eyebrow="Purpose Course Academy"
         title={`Welcome back, ${user.fullName.split(" ")[0]}.`}
         description={

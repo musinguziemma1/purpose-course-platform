@@ -49,6 +49,7 @@ export default async function AdminOverviewPage() {
     <div className="space-y-6">
       <UpcomingEvents />
       <PageHeader
+        image="/images/learning-together.jpg"
         eyebrow={`${workspaceLabelForRole(user?.roleSlug)} · ${user?.roleName ?? "Staff"}`}
         title={`Good to see you, ${user?.fullName.split(" ")[0] ?? "there"}.`}
         description={`${stats.totalArticles} articles in the system · ${stats.reviewQueue.length} waiting on an editorial decision.`}

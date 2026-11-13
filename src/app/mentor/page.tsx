@@ -46,6 +46,7 @@ export default async function MentorOverviewPage() {
     <div className="space-y-6">
       <UpcomingEvents />
       <PageHeader
+        image="/images/mentor-guidance.jpg"
         eyebrow={<span className="text-[#155e63]">Mentorship workspace</span>}
         title="Walk with your mentees, not above them."
         description={`${workspace.stats.mentees} mentees · ${workspace.stats.completed} completed sessions · clarity notes stored in each student's learning record.`}

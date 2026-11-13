@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CoverImage } from "@/components/site/cover-image";
+import { editorialImage } from "@/lib/media";
 import { renderRichText } from "@/lib/markdown";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, FileAudio, FileText, ImageIcon, Layers, Lock, PlayCircle, Sparkles } from "lucide-react";
@@ -53,14 +55,8 @@ export default async function CourseOverviewPage({ params }: Params) {
         <div className="mt-3 max-w-3xl">{renderRichText(course.description ?? course.summary)}</div>
       </div>
 
-      {course.coverImageUrl ? (
-        <div className="relative overflow-hidden rounded-2xl border border-navy/10">
-          <img
-            src={course.coverImageUrl}
-            alt={`${course.title} course cover`}
-            className="h-40 w-full object-cover sm:h-52"
-            loading="lazy"
-          />
+        <div className="relative h-48 overflow-hidden rounded-2xl border border-navy/10 sm:h-52">
+          <CoverImage src={course.coverImageUrl || editorialImage(course.levelName)} alt="" sizes="(min-width: 1024px) 80vw, 100vw" eager />
           <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/20 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-between gap-2 px-5 py-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gold">
@@ -71,7 +67,6 @@ export default async function CourseOverviewPage({ params }: Params) {
             </p>
           </div>
         </div>
-      ) : null}
 
       <div className="space-y-4">
         {course.modules.map((module, moduleIndex) => {

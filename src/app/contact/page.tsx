@@ -1,4 +1,6 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
+import { CoverImage } from "@/components/site/cover-image";
 import type { Metadata } from "next";
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
@@ -35,8 +37,9 @@ export default async function ContactPage() {
         dashboardLabel={workspaceLabelForRole(user?.roleSlug)}
       />
       <main className="flex-1">
-        <section className="border-b border-navy/10 bg-cream/50">
-          <div className="shell py-12 lg:py-16">
+        <section className="relative isolate overflow-hidden border-b border-navy/10 bg-cream/50">
+          <HeroBackdrop src="/images/learner-support.jpg" />
+          <div className="shell relative py-12 lg:py-16">
             <p className="eyebrow">Contact</p>
             <h1 className="display mt-3 max-w-3xl text-4xl text-navy sm:text-5xl">
               {page?.title ?? "Talk to us"}
@@ -51,6 +54,9 @@ export default async function ContactPage() {
         <section className="py-12">
           <div className="shell grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
             <div>
+              <div className="relative mb-7 aspect-[16/7] overflow-hidden rounded-2xl bg-cream">
+                <CoverImage src="/images/learner-support.jpg" alt="A support professional listening through a headset while using a laptop" sizes="(min-width: 1024px) 50vw, 100vw" />
+              </div>
               {page ? (
                 <div className="max-w-[44rem]">{renderRichText(page.body)}</div>
               ) : (

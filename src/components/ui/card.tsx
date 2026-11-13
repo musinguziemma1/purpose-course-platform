@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 
 export function Card({
   className,
@@ -182,6 +183,7 @@ export function PageHeader({
   actions,
   meta,
   className,
+  image,
 }: {
   eyebrow?: React.ReactNode;
   title: React.ReactNode;
@@ -189,10 +191,12 @@ export function PageHeader({
   actions?: React.ReactNode;
   meta?: React.ReactNode;
   className?: string;
+  image?: string;
 }) {
   return (
-    <header className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
-      <div className="min-w-0">
+    <header className={cn("relative isolate flex flex-wrap items-start justify-between gap-4", image && "overflow-hidden rounded-2xl border border-navy/10 bg-paper p-6 sm:p-8", className)}>
+      {image ? <HeroBackdrop src={image} /> : null}
+      <div className="relative min-w-0">
         {eyebrow ? (
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-dark">{eyebrow}</p>
         ) : null}
@@ -204,7 +208,7 @@ export function PageHeader({
         ) : null}
         {meta ? <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="relative flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }

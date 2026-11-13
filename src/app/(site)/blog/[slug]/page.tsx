@@ -1,4 +1,7 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
+import { CoverImage } from "@/components/site/cover-image";
+import { editorialImage } from "@/lib/media";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -70,8 +73,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         }}
       />
       <ReadingProgress />
-      <header className="border-b border-navy/10 bg-cream/50">
-        <div className="shell py-10 lg:py-14">
+      <header className="relative isolate overflow-hidden border-b border-navy/10 bg-cream/50">
+        <HeroBackdrop src={article.coverImageUrl || editorialImage(article.categorySlug)} />
+        <div className="shell relative py-10 lg:py-14">
           <Link href="/blog" className="inline-flex items-center gap-2 text-[12px] font-medium text-stone-600 hover:text-navy">
             <ArrowLeft className="h-3.5 w-3.5" /> Back to the journal
           </Link>
@@ -117,15 +121,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {article.coverImageUrl ? (
-              <div className="relative overflow-hidden rounded-2xl border border-navy/10 shadow-editorial">
-                <img
-                  src={article.coverImageUrl}
-                  alt={article.coverAlt ?? article.title}
-                  className="h-64 w-full object-cover sm:h-80"
-                />
+              <div className="relative h-64 overflow-hidden rounded-2xl border border-navy/10 shadow-editorial sm:h-80">
+                <CoverImage src={article.coverImageUrl || editorialImage(article.categorySlug)} alt={article.coverImageUrl ? (article.coverAlt ?? article.title) : ""} eager sizes="(min-width: 1024px) 40vw, 100vw" />
               </div>
-            ) : null}
           </div>
         </div>
       </header>

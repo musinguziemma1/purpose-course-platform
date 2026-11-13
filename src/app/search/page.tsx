@@ -16,6 +16,7 @@ import { getSearchFacets, searchPlatform, type SearchType } from "@/db/search";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { workspaceLabelForRole } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +55,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
       />
       <main className="flex-1 bg-cream/40">
         <div className="shell max-w-5xl py-10">
-          <p className="eyebrow">Search Purpose Course</p>
+          <header className="relative isolate -mx-1 overflow-hidden rounded-2xl border border-navy/10 bg-paper p-6 sm:p-9">
+          <HeroBackdrop src="/images/learning-materials.jpg" />
+          <div className="relative"><p className="eyebrow">Search Purpose Course</p>
           <h1 className="display mt-3 text-3xl text-navy sm:text-4xl">One search across the whole platform.</h1>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-stone-600">Find your next insight, lesson or conversation.</p></div>
+          </header>
 
           <form action="/search" className="mt-6 flex flex-wrap items-center gap-2">
             {activeType ? <input type="hidden" name="type" value={activeType} /> : null}

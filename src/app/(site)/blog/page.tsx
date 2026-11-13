@@ -1,4 +1,5 @@
 import { publicUrl } from "@/lib/site-url";
+import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Filter, Search } from "lucide-react";
@@ -60,7 +61,7 @@ export default async function BlogPage({
   return (
     <>
       <section className="relative overflow-hidden border-b border-navy/10 bg-cream/60">
-        <div className="absolute inset-0 paper-texture opacity-50" aria-hidden />
+        <HeroBackdrop src="/images/journal-purpose.jpg" />
         <div className="shell relative py-14 lg:py-20">
           <p className="eyebrow">The Purpose Journal</p>
           <h1 className="display mt-4 max-w-3xl text-4xl text-navy sm:text-5xl lg:text-[3.6rem]">
