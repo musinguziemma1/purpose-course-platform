@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { conferenceParticipants, conferenceSignals, courseLevels, courses, liveSessions, profiles } from "@/db/schema";
 import { liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
+import { can } from "@/lib/rbac";
 import type { SessionUser } from "@/lib/auth";
 
 const configuredSeats = Number(process.env.CONFERENCE_MAX_SEATS ?? 8);
@@ -38,7 +39,7 @@ export async function getRoomByCode(code: string, viewer: SessionUser | null, da
 }
 
 export function isRoomHost(hostId: string | null, viewer: SessionUser) {
-  return viewer.profileId === hostId || canOverseeLearners(viewer);
+  return canOverseeLearners(viewer) || (viewer.profileId === hostId && (can(viewer,"mentorship.coach") || can(viewer,"academy.author")));
 }
 
 async function prune(code: string, database: Database) {

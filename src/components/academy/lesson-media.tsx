@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileAudio, ImageIcon, Video } from "lucide-react";
+import { safeContentUrl, videoEmbedUrl } from "@/lib/content-media";
 
 export function LessonMedia({
   kind,
@@ -21,15 +22,16 @@ export function LessonMedia({
   downloadLabel: string | null;
 }) {
   const [playing, setPlaying] = useState(kind === "video" || kind === "audio");
+  if ([videoUrl, audioUrl, imageUrl, downloadUrl].some(url => url && !safeContentUrl(url, true))) return <p className="text-sm text-stone-500">This media link needs to be corrected by your course team.</p>;
 
   if (kind === "video" && videoUrl) {
-    const isEmbed = /youtube\.com|youtu\.be|vimeo\.com/.test(videoUrl);
+    const embedUrl = videoEmbedUrl(videoUrl);
     return (
       <div className="overflow-hidden rounded-xl border border-navy/10 bg-ink">
-        {isEmbed ? (
+        {embedUrl ? (
           <div className="aspect-video w-full">
             <iframe
-              src={videoUrl.replace("watch?v=", "embed/")}
+              src={embedUrl}
               title="Lesson video"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
               allowFullScreen

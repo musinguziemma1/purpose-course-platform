@@ -385,6 +385,93 @@ test("current permissions, not stale role claims, govern listing, signing and fi
   }
 });
 
+test("embedded lesson and course materials and recordings follow publication and enrolment", async () => {
+  const asset = await reserve(
+    actors.mentor,
+    "library",
+    pdf,
+    key + "-embedded.pdf",
+  );
+  assert.equal(
+    (await media.completeMediaUpload(asset.result.id, actors.mentor)).ok,
+    true,
+  );
+  const course = (
+    await client.query(
+      "insert into courses(level_id,slug,title,status,is_sequential,description)values($1,$2,'Embedded course','published',false,$3)returning id",
+      [levelId, key, asset.row.url],
+    )
+  ).rows[0];
+  let recordingId;
+  try {
+    assert.match(
+      await media.readableMedia(asset.result.id, actors.student),
+      /read-fixture/,
+    );
+    assert.equal(await media.readableMedia(asset.result.id, null), null);
+    await client.query("update courses set description='' where id=$1", [
+      course.id,
+    ]);
+    assert.equal(
+      await media.readableMedia(asset.result.id, actors.student),
+      null,
+    );
+    const unit = (
+      await client.query(
+        "insert into course_modules(course_id,slug,title)values($1,$2,'Unit')returning id",
+        [course.id, key],
+      )
+    ).rows[0];
+    const lesson = (
+      await client.query(
+        "insert into lessons(module_id,slug,title,body,status)values($1,$2,'Embedded lesson',$3,'published')returning id",
+        [unit.id, key, asset.row.url],
+      )
+    ).rows[0];
+    assert.match(
+      await media.readableMedia(asset.result.id, actors.student),
+      /read-fixture/,
+    );
+    await client.query("update lessons set status='draft' where id=$1", [
+      lesson.id,
+    ]);
+    assert.equal(
+      await media.readableMedia(asset.result.id, actors.student),
+      null,
+    );
+    const recording = (
+      await client.query(
+        "insert into live_sessions(course_id,host_id,title,status,starts_at,recording_url)values($1,$2,'Recording fixture','ended',now(),$3)returning id",
+        [course.id, actors.mentor.profileId, asset.row.url],
+      )
+    ).rows[0];
+    recordingId = recording.id;
+    assert.match(
+      await media.readableMedia(asset.result.id, actors.student),
+      /read-fixture/,
+    );
+    assert.equal(await media.readableMedia(asset.result.id, null), null);
+    await client.query(
+      "update enrollments set status='paused' where profile_id=$1 and level_id=$2",
+      [actors.student.profileId, levelId],
+    );
+    assert.equal(
+      await media.readableMedia(asset.result.id, actors.student),
+      null,
+    );
+  } finally {
+    await client.query(
+      "update enrollments set status='enrolled' where profile_id=$1 and level_id=$2",
+      [actors.student.profileId, levelId],
+    );
+    if (recordingId)
+      await client.query("delete from live_sessions where id=$1", [
+        recordingId,
+      ]);
+    await client.query("delete from courses where id=$1", [course.id]);
+  }
+});
+
 test("library upload limits are enforced and no public API role is granted admission credentials", async () => {
   await client.query(
     "insert into media_assets(url,file_name,uploaded_by) select 'unused',$1,$2 from generate_series(1,100)",

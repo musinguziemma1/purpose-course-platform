@@ -6,7 +6,7 @@ import { RecordingForm } from "@/components/academy/admin-forms";
 import { getLiveSessionRoom } from "@/db/courses";
 import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
-import { setLiveStatus } from "@/app/actions/academy";
+import { EventStatusForm } from "@/components/academy/event-forms";
 import { ensureRoomCode, isRoomHost } from "@/db/conference";
 
 export const dynamic = "force-dynamic";
@@ -43,16 +43,7 @@ export default async function MentorLiveRoomPage({ params }: Params) {
               <Video className="h-3.5 w-3.5" /> Open video room
             </Link>
           ) : null}
-          {canHost ? <form action={setLiveStatus}>
-            <input type="hidden" name="sessionId" value={room.session.id} />
-            <input type="hidden" name="status" value={room.session.status === "live" ? "ended" : "live"} />
-            <button
-              type="submit"
-              className="inline-flex h-9 items-center rounded-full bg-[#155e63] px-3.5 text-[11px] font-semibold text-paper hover:bg-[#124a4e]"
-            >
-              {room.session.status === "live" ? "End session" : "Go live"}
-            </button>
-          </form> : null}
+          {canHost ? <EventStatusForm id={room.session.id} status={room.session.status} version={room.session.updatedAt.toISOString()} /> : null}
         </div>
       </div>
 
@@ -80,7 +71,7 @@ export default async function MentorLiveRoomPage({ params }: Params) {
               Attach the recording so absent students can catch up, and students who missed it keep access.
             </p>
             <div className="mt-3">
-              {canHost ? <RecordingForm sessionId={room.session.id} /> : null}
+              {canHost ? <RecordingForm sessionId={room.session.id} version={room.session.updatedAt.toISOString()} /> : null}
             </div>
           </div>
           <div className="admin-card overflow-hidden">

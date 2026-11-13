@@ -9,7 +9,7 @@ import { getCohorts, getInstrumentResultsOverview, getOpenReports, getOrganizati
 import { canManagePeople, getSessionUser } from "@/lib/auth";
 import { PERMISSION_LIST, ROLE_DEFINITIONS, can } from "@/lib/rbac";
 import { CohortForm, OrgForm } from "@/components/platform/forms";
-import { addCohortMember, moderateThread, resolveReport, setCohortStatus } from "@/app/actions/platform";
+import { moderateThread, resolveReport } from "@/app/actions/platform";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getAttendanceForSession } from "@/db/learning";
 
@@ -77,37 +77,13 @@ export default async function AdminProgrammePage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {["active", "completed", "draft"].map((status) => (
-                    <form key={status} action={setCohortStatus}>
-                      <input type="hidden" name="cohortId" value={row.cohort.id} />
-                      <input type="hidden" name="status" value={status} />
-                      <button type="submit" className="rounded-full border border-navy/15 px-2.5 py-1 text-[10px] font-medium text-navy hover:bg-paper">
-                        {status}
-                      </button>
-                    </form>
-                  ))}
-                  <Link href={`/learn/cohort`} className="inline-flex items-center gap-1 rounded-full bg-navy px-2.5 py-1 text-[10px] font-semibold text-paper">
-                    Cohort view <ArrowRight className="h-2.5 w-2.5" />
+                                    <Link href={"/admin/cohorts/"+row.cohort.id} className="inline-flex items-center gap-1 rounded-full bg-navy px-2.5 py-1 text-[10px] font-semibold text-paper">
+                    Manage cohort <ArrowRight className="h-2.5 w-2.5" />
                   </Link>
                 </div>
               </div>
               <div className="px-5 py-3">
-                <form action={addCohortMember} className="flex flex-wrap items-end gap-1.5">
-                  <input type="hidden" name="cohortId" value={row.cohort.id} />
-                  <select name="profileId" defaultValue={people[0]?.id ?? ""} className="h-8 min-w-40 flex-1 rounded border border-navy/15 px-2 text-[11.5px]">
-                    {people.map((person) => (
-                      <option key={person.id} value={person.id}>{person.fullName}</option>
-                    ))}
-                  </select>
-                  <select name="role" defaultValue="learner" className="h-8 rounded border border-navy/15 px-2 text-[11.5px]">
-                    <option value="learner">learner</option>
-                    <option value="mentor">mentor</option>
-                    <option value="facilitator">facilitator</option>
-                  </select>
-                  <button type="submit" className="h-8 rounded-full bg-gold px-3 text-[10.5px] font-semibold text-ink">
-                    Add to cohort
-                  </button>
-                </form>
+                <Link href={"/admin/cohorts/"+row.cohort.id} className="text-sm font-semibold text-gold-dark underline">Manage enrolments, capacity and members</Link>
               </div>
             </div>
           ))}

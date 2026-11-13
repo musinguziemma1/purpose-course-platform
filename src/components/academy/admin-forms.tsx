@@ -1,8 +1,9 @@
 "use client";
 
+import { MediaEditor } from "@/components/media/media-editor";
 import { MediaField } from "@/components/media/media-field";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, Loader2, Plus, Save as SaveIcon } from "lucide-react";
 import {
@@ -10,7 +11,6 @@ import {
   createLevel,
   createModule,
   saveLesson,
-  saveLiveSession,
   saveRecording,
   updateCourse,
   updateModule,
@@ -152,7 +152,7 @@ export function CourseSettingsForm({
         <Textarea name="summary" rows={3} defaultValue={course.summary} className="text-[12.5px]" />
       </Field>
       <Field label="Description">
-        <Textarea name="description" rows={3} defaultValue={course.description ?? ""} className="text-[12.5px]" />
+        <MediaEditor name="description" rows={6} defaultValue={course.description ?? ""} className="text-[12.5px]" />
       </Field>
       <Field label="Cover image URL">
         <MediaField name="coverImageUrl" kind="image" defaultValue={course.coverImageUrl ?? ""} />
@@ -302,7 +302,7 @@ export function LessonForm({
         <Input name="summary" defaultValue={lesson?.summary ?? ""} placeholder="One line shown in the outline" className="text-[12.5px]" />
       </Field>
       <Field label="Structured content" hint="markdown: ## headings, lists, quotes, :::callout">
-        <Textarea name="body" rows={7} required defaultValue={lesson?.body} placeholder="Write the teaching in sections…" className="text-[12.5px]" />
+        <MediaEditor name="body" rows={7} required defaultValue={lesson?.body} placeholder="Write the teaching in sections…" className="text-[12.5px]" />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Video URL" hint="mp4 or YouTube/Vimeo">
@@ -354,88 +354,14 @@ export function LessonForm({
   );
 }
 
-export function LiveSessionForm({
-  courses,
-  hosts,
-}: {
-  courses: { id: number; title: string }[];
-  hosts: { id: string; fullName: string }[];
-}) {
-  const [state, action] = useActionState<AcademyState, FormData>(saveLiveSession, {});
-  const [defaultStartsAt] = useState(() => new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
-  return (
-    <form action={action} className="space-y-3">
-      <Field label="Session title">
-        <Input name="title" required placeholder="Clarity lab — purpose statements" className="text-[12.5px]" />
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Type">
-          <Select name="type" defaultValue="class" className="text-[12.5px]">
-            <option value="class">Live class</option>
-            <option value="group_work">Group work</option>
-            <option value="discussion">Discussion</option>
-            <option value="office_hours">Office hours</option>
-          </Select>
-        </Field>
-        <Field label="Host">
-          <Select name="hostId" defaultValue={hosts[0]?.id ?? ""} className="text-[12.5px]">
-            {hosts.map((host) => (
-              <option key={host.id} value={host.id}>
-                {host.fullName}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      </div>
-      <Field label="Course" hint="optional">
-        <Select name="courseId" defaultValue="" className="text-[12.5px]">
-          <option value="">No specific course</option>
-          {courses.map((course) => (
-            <option key={course.id} value={course.id}>
-              {course.title}
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Starts at">
-          <Input
-            type="datetime-local"
-            name="startsAt"
-            required
-            defaultValue={defaultStartsAt}
-            className="text-[12.5px]"
-          />
-        </Field>
-        <Field label="Minutes">
-          <Input name="durationMinutes" type="number" min={15} defaultValue={90} className="text-[12.5px]" />
-        </Field>
-      </div>
-      <Field label="Meeting link">
-        <Input name="meetingUrl" placeholder="https://meet.google.com/…" className="text-[12.5px]" />
-      </Field>
-      <Field label="Description">
-        <Textarea name="description" rows={2} className="text-[12.5px]" />
-      </Field>
-      <Field label="Agenda / group brief">
-        <Textarea name="agenda" rows={3} placeholder={"1. Teaching\n2. Groups of four\n3. One finding per group"} className="text-[12.5px]" />
-      </Field>
-      <Field label="Group size" hint="group work only">
-        <Input name="groupSize" type="number" min={2} max={12} placeholder="4" className="text-[12.5px]" />
-      </Field>
-      <Note state={state} />
-      <SaveButton label="Schedule session" icon="plus" />
-    </form>
-  );
-}
-
-export function RecordingForm({ sessionId }: { sessionId: number }) {
+export function RecordingForm({ sessionId, version }: { sessionId: number; version: string }) {
   const [state, action] = useActionState<AcademyState, FormData>(saveRecording, {});
   return (
     <form action={action} className="space-y-2">
       <input type="hidden" name="sessionId" value={sessionId} />
+      <input type="hidden" name="version" value={version} />
       <Field label="Recording link">
-        <Input name="recordingUrl" placeholder="https://…" className="text-[12px]" />
+        <MediaField name="recordingUrl" kind="video" placeholder="https://…" />
       </Field>
       <Note state={state} />
       <Button type="submit" size="sm" className="w-full">

@@ -1,4 +1,6 @@
 import type { JSX, ReactNode } from "react";
+import { EmbeddedMedia } from "@/components/media/embedded-media";
+import { parseMediaBlock, safeContentUrl } from "@/lib/content-media";
 
 /**
  * Small, dependency-free renderer for the editorial markdown subset used by
@@ -40,7 +42,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
         nodes.push(
           <a
             key={key}
-            href={link[2]}
+            href={safeContentUrl(link[2]) ?? undefined}
             className="font-medium text-[#122a4d] underline decoration-[#c9a227] decoration-2 underline-offset-4 hover:text-[#b98a1f]"
           >
             {link[1]}
@@ -65,6 +67,8 @@ export function renderRichText(source: string): JSX.Element[] {
     const block = rawBlock.trim();
     if (!block) return;
     const key = `block-${blockIndex}`;
+    const media = parseMediaBlock(block);
+    if (media) { output.push(<EmbeddedMedia key={key} {...media} />); return; }
 
     if (block.startsWith("### ")) {
       output.push(

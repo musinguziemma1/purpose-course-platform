@@ -38,7 +38,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
 
   await createSession(userId);
   const home = await redirectToWorkspace(userId), next = String(formData.get("next") ?? "");
-  const safeNext = /^\/(?:learn|mentor|admin|account|community)(?:[/?#]|$)/.test(next) && !/[\\\r\n]/.test(next);
+  const safeNext = /^\/(?:learn|mentor|admin|account|community|events)(?:[/?#]|$)/.test(next) && !/[\\\r\n]/.test(next);
   redirect(home.startsWith("/account?") ? home : safeNext ? next : home);
 }
 

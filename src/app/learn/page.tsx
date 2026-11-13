@@ -1,3 +1,4 @@
+import { UpcomingEvents } from "@/components/academy/upcoming-events";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -79,6 +80,7 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <UpcomingEvents />
       <PageHeader
         eyebrow="Purpose Course Academy"
         title={`Welcome back, ${user.fullName.split(" ")[0]}.`}

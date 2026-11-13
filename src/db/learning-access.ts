@@ -1,8 +1,9 @@
 import { and, eq, or, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { assessments, cohortMembers, cohorts, courseModules, courses, enrollments, lessonProgress, lessons, liveSessions } from "@/db/schema";
+import { assessments, cohortMembers, cohorts, courseModules, courses, enrollments, lessonProgress, lessons, liveSessions, mentorAssignments } from "@/db/schema";
 import type { SessionUser } from "@/lib/auth";
 import { can } from "@/lib/rbac";
+import { canUseMediaLibrary } from "@/lib/media-files";
 import { canOverseeLearners } from "@/db/learner-access";
 
 /** Completed enrolments retain read access; paused/waitlisted records do not. */
@@ -43,7 +44,7 @@ export function assessmentReadable(viewer: SessionUser | null) {
 
 export function liveHost(viewer: SessionUser | null) {
   if (!viewer) return sql`false`;
-  return canOverseeLearners(viewer) ? sql`true` : eq(liveSessions.hostId, viewer.profileId);
+  return canOverseeLearners(viewer) ? sql`true` : can(viewer, "mentorship.coach") || can(viewer,"academy.author") ? eq(liveSessions.hostId, viewer.profileId) : sql`false`;
 }
 
 export function cohortReadable(viewer: SessionUser | null) {
@@ -58,11 +59,11 @@ export function cohortReadable(viewer: SessionUser | null) {
 export function liveReadable(viewer: SessionUser | null) {
   if (!viewer) return sql`false`;
   return or(liveHost(viewer), and(
-    can(viewer, "learning.access") ? sql`true` : sql`false`,
+    can(viewer, "learning.access") || canUseMediaLibrary(viewer) ? sql`true` : sql`false`,
     sql`${liveSessions.status} <> 'cancelled'`,
     sql`(${liveSessions.courseId} is null or exists (
       select 1 from ${courses} where ${courses.id} = ${liveSessions.courseId}
-        and ${courses.status} = 'published' and ${levelEnrolled(courses.levelId, viewer)}))`,
+        and ${courses.status} = 'published' and (${levelEnrolled(courses.levelId, viewer)} or ${can(viewer,'mentorship.coach') ? sql`exists(select 1 from ${cohortMembers} faculty where faculty.cohort_id=${liveSessions.cohortId} and faculty.profile_id=${viewer.profileId} and faculty.status='active' and faculty.role in ('mentor','facilitator')) or exists(select 1 from ${mentorAssignments} ma join ${enrollments} en on en.profile_id=ma.student_id where ma.mentor_id=${viewer.profileId} and ma.status='active' and en.level_id=${courses.levelId} and en.status='enrolled')` : sql`false`})))`,
     sql`(${liveSessions.cohortId} is null or exists (
       select 1 from ${cohortMembers} inner join ${cohorts} on ${cohorts.id} = ${cohortMembers.cohortId}
       where ${cohortMembers.cohortId} = ${liveSessions.cohortId}

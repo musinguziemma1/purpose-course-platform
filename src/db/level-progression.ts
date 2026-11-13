@@ -117,7 +117,7 @@ export async function enrollInNextLevel(
     if (existing[0])
       await tx
         .update(enrollments)
-        .set({ status: "enrolled" })
+        .set({ status: "enrolled", updatedAt: new Date() })
         .where(eq(enrollments.id, existing[0].id));
     else
       await tx

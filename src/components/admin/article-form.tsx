@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react";
 import { saveArticle, type ActionState } from "@/app/actions/publishing";
 import { Field, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { MediaEditor } from "@/components/media/media-editor";
 import { MediaPickerButton } from "@/components/media/media-picker-button";
 
 type Option = { id: number; name: string };
@@ -81,7 +82,7 @@ export function ArticleForm({
             <Label htmlFor="article-body" hint="markdown-ish">Body</Label>
             <span className="text-[10.5px] text-stone-400">## heading · **bold** · &gt; quote · - list · :::callout</span>
           </div>
-          <Textarea
+          <MediaEditor
             id="article-body"
             name="body"
             required

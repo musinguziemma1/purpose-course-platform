@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { renderRichText } from "@/lib/markdown";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, FileAudio, FileText, ImageIcon, Layers, Lock, PlayCircle, Sparkles } from "lucide-react";
 import { getStudentAcademy } from "@/db/courses";
@@ -49,7 +50,7 @@ export default async function CourseOverviewPage({ params }: Params) {
             </p>
           </div>
         </div>
-        <p className="mt-3 max-w-3xl text-[13.5px] leading-relaxed text-stone-700">{course.description ?? course.summary}</p>
+        <div className="mt-3 max-w-3xl">{renderRichText(course.description ?? course.summary)}</div>
       </div>
 
       {course.coverImageUrl ? (

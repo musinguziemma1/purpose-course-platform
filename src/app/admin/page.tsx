@@ -1,3 +1,4 @@
+import { UpcomingEvents } from "@/components/academy/upcoming-events";
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import {
@@ -46,6 +47,7 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
+      <UpcomingEvents />
       <PageHeader
         eyebrow={`${workspaceLabelForRole(user?.roleSlug)} · ${user?.roleName ?? "Staff"}`}
         title={`Good to see you, ${user?.fullName.split(" ")[0] ?? "there"}.`}

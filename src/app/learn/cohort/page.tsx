@@ -22,11 +22,11 @@ export default async function LearnerCohortPage() {
         <Users className="mx-auto h-8 w-8 text-stone-300" />
         <p className="mt-2 font-serif text-lg text-navy">You are not in a cohort yet.</p>
         <p className="mx-auto mt-1 max-w-md text-[12.5px] text-stone-600">
-          Cohorts run eight weeks with a live class, a group-work studio and a weekly reflection. Ask the programme desk
-          to place you in the next intake.
+          Your programme team will place you in an eligible cohort. Keep learning from your enrolled courses
+          while the next teaching schedule is prepared.
         </p>
-        <Link href="/course#enrol" className="mt-3 inline-flex h-9 items-center rounded-full bg-navy px-4 text-[11.5px] font-semibold text-paper">
-          Join the interest list
+        <Link href="/events" className="mt-3 inline-flex h-9 items-center rounded-full bg-navy px-4 text-[11.5px] font-semibold text-paper">
+          View live events
         </Link>
       </div>
     );

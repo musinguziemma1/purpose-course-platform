@@ -12,7 +12,6 @@ import {
   enrollments,
   lessons,
   liveMessages,
-  liveRsvps,
   liveSessions,
   profiles,
 } from "@/db/schema";
@@ -25,7 +24,6 @@ import { changeLessonCompletion } from "@/db/lesson-progress";
 export type AcademyState = { ok?: boolean; error?: string; message?: string };
 
 const KINDS = ["video", "audio", "reading", "illustration", "download", "practice", "live"] as const;
-const TYPES = ["class", "group_work", "discussion", "office_hours"] as const;
 const STATUSES = ["draft", "published", "archived"] as const;
 
 function text(formData: FormData, key: string) {
@@ -372,92 +370,27 @@ export async function deleteLesson(formData: FormData) {
  * Live sessions — classes, group work, discussions
  * ------------------------------------------------------------------ */
 
-export async function saveLiveSession(_prev: AcademyState, formData: FormData): Promise<AcademyState> {
-  const user = await getSessionUser();
-  if (!user) return { error: "Sign in required." };
-  if (!canAuthorAcademy(user) && !isMentor(user)) return { error: "Only administrators and mentors can schedule live sessions." };
-
-  const title = text(formData, "title");
-  const type = text(formData, "type");
-  const startsAtRaw = text(formData, "startsAt");
-  const courseIdRaw = text(formData, "courseId");
-  if (title.length < 4) return { error: "Give the session a title." };
-  if (!(TYPES as readonly string[]).includes(type)) return { error: "Choose a session type." };
-
-  const startsAt = new Date(startsAtRaw);
-  if (!startsAtRaw || Number.isNaN(startsAt.getTime())) return { error: "Choose a valid start date and time." };
-
-  await db.insert(liveSessions).values({
-    title,
-    description: nullable(formData, "description"),
-    agenda: nullable(formData, "agenda"),
-    type: type as (typeof TYPES)[number],
-    status: "scheduled",
-    startsAt,
-    durationMinutes: Number(formData.get("durationMinutes") ?? 90) || 90,
-    meetingUrl: nullable(formData, "meetingUrl"),
-    groupSize: Number(formData.get("groupSize") ?? 0) || null,
-    courseId: courseIdRaw ? Number(courseIdRaw) : null,
-    hostId: canOverseeLearners(user) && text(formData, "hostId") ? text(formData, "hostId") : user.profileId,
-  });
-
-  await log(user.profileId, "academy.live_created", `Scheduled “${title}” (${type.replace("_", " ")}).`);
-  refreshAcademy();
-  revalidatePath("/mentor");
-  return { ok: true, message: `${title} scheduled. Students can now RSVP.` };
+export async function saveLiveSession(previous: AcademyState, formData: FormData): Promise<AcademyState> {
+  const { saveEvent } = await import("@/app/actions/live-events");
+  return saveEvent(previous, formData);
 }
-
 export async function setLiveStatus(formData: FormData) {
-  const user = await getSessionUser();
-  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return;
-  const sessionId = Number(formData.get("sessionId"));
-  const status = text(formData, "status");
-  if (!sessionId || !["scheduled", "live", "ended", "cancelled"].includes(status)) return;
-
-  const updated = await db
-    .update(liveSessions)
-    .set({ status: status as "scheduled" | "live" | "ended" | "cancelled" })
-    .where(and(eq(liveSessions.id, sessionId), liveHost(user))).returning({ id: liveSessions.id });
-  if (!updated.length) return;
-
-  if (status === "live") {
-    await db.insert(liveMessages).values({
-      liveSessionId: sessionId,
-      authorId: user.profileId,
-      authorName: user.fullName,
-      authorRole: "host",
-      kind: "system",
-      body: `${user.fullName} opened the room. Post your questions in the feed.`,
-    });
-  }
-
-  await log(user.profileId, `academy.live_${status}`, `Live session #${sessionId} marked ${status}.`);
-  refreshAcademy();
-  revalidatePath(`/learn/live/${sessionId}`);
-  revalidatePath(`/mentor/live/${sessionId}`);
+  const { changeEventStatus } = await import("@/app/actions/live-events");
+  await changeEventStatus({}, formData);
 }
 
-export async function saveRecording(_prev: AcademyState, formData: FormData): Promise<AcademyState> {
-  const user = await getSessionUser();
-  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return { error: "Host access required." };
-  const sessionId = Number(formData.get("sessionId"));
-  const recordingUrl = nullable(formData, "recordingUrl");
-  if (!sessionId || !recordingUrl) return { error: "Paste the recording link first." };
-  const updated = await db.update(liveSessions).set({ recordingUrl, status: "ended" }).where(and(eq(liveSessions.id, sessionId), liveHost(user))).returning({ id: liveSessions.id });
-  if (!updated.length) return { error: "Session not found or host access denied." };
-  revalidatePath(`/learn/live/${sessionId}`);
-  revalidatePath("/learn/live");
-  return { ok: true, message: "Recording attached and the session closed." };
+export async function saveRecording(_prev:AcademyState,formData:FormData):Promise<AcademyState>{
+ const {attachEventRecording}=await import("@/db/live-events");
+ const result=await attachEventRecording({id:Number(formData.get("sessionId")),version:text(formData,"version"),url:text(formData,"recordingUrl")},await getSessionUser());
+ if("ok"in result&&result.ok){const {refreshLiveEvents}=await import("@/app/actions/live-events");await refreshLiveEvents();revalidatePath("/mentor/live/"+formData.get("sessionId"));}
+ return result;
 }
 
 export async function deleteLiveSession(formData: FormData) {
-  const admin = await requireAdmin();
-  if (!admin) return;
-  const sessionId = Number(formData.get("sessionId"));
-  if (!sessionId) return;
-  await db.delete(liveSessions).where(eq(liveSessions.id, sessionId));
-  await log(admin.profileId, "academy.live_deleted", `Removed live session #${sessionId}.`);
-  refreshAcademy();
+  // Preserve the event and its attendance history; cancellation is announced.
+  formData.set("status", "cancelled");
+  const { changeEventStatus } = await import("@/app/actions/live-events");
+  await changeEventStatus({}, formData);
 }
 
 /* ------------------------------------------------------------------ *
@@ -465,29 +398,10 @@ export async function deleteLiveSession(formData: FormData) {
  * ------------------------------------------------------------------ */
 
 export async function toggleRsvp(formData: FormData) {
-  const user = await getSessionUser();
-  if (!user) return;
-  const sessionId = Number(formData.get("sessionId"));
-  if (!sessionId) return;
-
-  const [session] = await db.select({ id: liveSessions.id }).from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
-  if (!session) return;
-
-  const existing = await db
-    .select()
-    .from(liveRsvps)
-    .where(and(eq(liveRsvps.liveSessionId, sessionId), eq(liveRsvps.profileId, user.profileId)))
-    .limit(1);
-
-  if (existing[0]) {
-    await db.delete(liveRsvps).where(eq(liveRsvps.id, existing[0].id));
-  } else {
-    await db.insert(liveRsvps).values({ liveSessionId: sessionId, profileId: user.profileId, status: "going" }).onConflictDoNothing();
-  }
-
-  revalidatePath("/learn/live");
-  revalidatePath("/mentor/live");
-  revalidatePath(`/learn/live/${sessionId}`);
+  const { setEventRsvp } = await import("@/db/live-events");
+  await setEventRsvp(Number(formData.get("sessionId")), formData.get("going") !== "false", await getSessionUser());
+  const { refreshLiveEvents } = await import("@/app/actions/live-events");
+  await refreshLiveEvents();
 }
 
 export async function postLiveMessage(_prev: AcademyState, formData: FormData): Promise<AcademyState> {

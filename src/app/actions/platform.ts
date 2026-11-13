@@ -6,8 +6,6 @@ import { db } from "@/db";
 import {
   activityLogs,
   authSessions,
-  cohortMembers,
-  cohortWeeks,
   cohorts,
   communities,
   communityMembers,
@@ -341,89 +339,22 @@ export async function resolveReport(formData: FormData) {
  * Cohorts & attendance
  * ------------------------------------------------------------------ */
 
-export async function createCohort(_prev: PlatformState, formData: FormData): Promise<PlatformState> {
-  const user = await guard("cohort.manage");
-  if (!user) return { error: "Cohort management permission required." };
-  const name = String(formData.get("name") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const startsRaw = String(formData.get("startsAt") ?? "");
-  const endsRaw = String(formData.get("endsAt") ?? "");
-  const levelId = Number(formData.get("levelId") ?? 0) || null;
-  if (name.length < 6) return { error: "Give the cohort a name." };
-  if (description.length < 30) return { error: "Describe what the cohort will do." };
-  const startsAt = new Date(startsRaw);
-  const endsAt = new Date(endsRaw);
-  if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return { error: "Choose valid start and end dates." };
-
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || `cohort-${Date.now()}`;
-  const [cohort] = await db
-    .insert(cohorts)
-    .values({
-      slug,
-      name,
-      description,
-      levelId,
-      status: "draft",
-      capacity: Number(formData.get("capacity") ?? 50) || 50,
-      startsAt,
-      endsAt,
-      cadence: String(formData.get("cadence") ?? "Weekly live class + group work"),
-      coverImageUrl: String(formData.get("coverImageUrl") ?? "") || "/images/community.jpg",
-    })
-    .returning({ id: cohorts.id });
-
-  const weekTitles = String(formData.get("weeks") ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  if (weekTitles.length) {
-    await db.insert(cohortWeeks).values(
-      weekTitles.map((line, index) => {
-        const [title, theme] = line.split("|").map((part) => part.trim());
-        return {
-          cohortId: cohort.id,
-          weekNumber: index + 1,
-          title: title || `Week ${index + 1}`,
-          theme: theme || "Formation",
-          focus: `${title || `Week ${index + 1}`} — live class, group work and reflection.`,
-          assignmentBrief: "See the cohort workspace for this week's collaborative brief.",
-        };
-      }),
-    );
-  }
-
-  await log(user.profileId, "cohort.created", `Created cohort “${name}”.`);
-  refresh(["/admin/cohorts", "/learn/cohort"]);
-  return { ok: true, message: `Cohort “${name}” created with ${weekTitles.length} weeks.` };
+export async function createCohort(previous: PlatformState, formData: FormData): Promise<PlatformState> {
+  const { saveCohort } = await import("@/app/actions/cohort-enrolments");
+  return saveCohort(previous, formData);
 }
-
 export async function addCohortMember(formData: FormData) {
-  const user = await guard("cohort.manage");
-  if (!user) return;
-  const cohortId = Number(formData.get("cohortId"));
-  const profileId = String(formData.get("profileId") ?? "");
-  const role = String(formData.get("role") ?? "learner");
-  if (!cohortId || !profileId) return;
-  await db
-    .insert(cohortMembers)
-    .values({ cohortId, profileId, role: ["learner", "mentor", "facilitator"].includes(role) ? role : "learner" })
-    .onConflictDoNothing();
-  await log(user.profileId, "cohort.member_added", `Added ${profileId} to cohort #${cohortId} as ${role}.`);
-  refresh(["/admin/cohorts", "/learn/cohort"]);
+  const { saveCohortMember } = await import("@/app/actions/cohort-enrolments");
+  await saveCohortMember({}, formData);
 }
-
 export async function setCohortStatus(formData: FormData) {
   const user = await guard("cohort.manage");
   if (!user) return;
-  const cohortId = Number(formData.get("cohortId"));
-  const status = String(formData.get("status") ?? "draft");
-  if (!cohortId) return;
-  await db
-    .update(cohorts)
-    .set({ status: ["draft", "active", "completed", "cancelled"].includes(status) ? status : "draft" })
-    .where(eq(cohorts.id, cohortId));
-  await log(user.profileId, "cohort.status", `Cohort #${cohortId} set to ${status}.`);
-  refresh(["/admin/cohorts", "/learn/cohort"]);
+  const [record] = await db.select().from(cohorts).where(eq(cohorts.id, Number(formData.get("cohortId")))).limit(1);
+  if (!record) return;
+  const { saveCohortSetup } = await import("@/db/cohort-enrolments");
+  await saveCohortSetup({ ...record, levelId: record.levelId ?? 0, version: record.updatedAt.toISOString(), startsAt: record.startsAt.toISOString(), endsAt: record.endsAt.toISOString(), status: String(formData.get("status")), weeks: "" }, user);
+  refresh(["/admin/cohorts", "/learn/cohort", "/events", "/mentor/live", "/learn/live"]);
 }
 
 export async function markAttendance(_prev: PlatformState, formData: FormData): Promise<PlatformState> {

@@ -4,10 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, max } from "drizzle-orm";
 import { db } from "@/db";
-import { courseModules, courses, lessons, liveSessions } from "@/db/schema";
-import { canAuthorAcademy, getSessionUser, isMentor } from "@/lib/auth";
+import { courseModules, courses, lessons } from "@/db/schema";
+import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
-import { makeRoomCode } from "@/db/conference";
 
 async function requireAdmin() {
   const user = await getSessionUser();
@@ -157,30 +156,7 @@ export async function saveLessonForm(formData: FormData) {
 }
 
 export async function createLiveSessionForm(formData: FormData) {
-  const user = await getSessionUser();
-  if (!user || (!canAuthorAcademy(user) && !isMentor(user))) return;
-  const title = t(formData, "title");
-  const startsAt = new Date(t(formData, "startsAt"));
-  const type = t(formData, "type");
-  if (title.length < 4 || Number.isNaN(startsAt.getTime())) return;
-
-  await db.insert(liveSessions).values({
-    title,
-    description: n(formData, "description"),
-    agenda: n(formData, "agenda"),
-    type: (["class", "group_work", "discussion", "office_hours"].includes(type) ? type : "class") as
-      | "class"
-      | "group_work"
-      | "discussion"
-      | "office_hours",
-    startsAt,
-    durationMinutes: Number(formData.get("durationMinutes") ?? 90) || 90,
-    meetingUrl: n(formData, "meetingUrl"),
-    groupSize: Number(formData.get("groupSize") ?? 0) || null,
-    courseId: t(formData, "courseId") ? Number(formData.get("courseId")) : null,
-    hostId: canAuthorAcademy(user) && t(formData, "hostId") ? t(formData, "hostId") : user.profileId,
-    roomCode: makeRoomCode(),
-  });
-  refresh();
-  redirect("/admin/academy/live");
+  const { saveEvent } = await import("@/app/actions/live-events");
+  const result = await saveEvent({}, formData);
+  if (result.ok) redirect("/admin/academy/live");
 }

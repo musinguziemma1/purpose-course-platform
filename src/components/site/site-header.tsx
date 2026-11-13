@@ -13,6 +13,7 @@ import { CommandPalette } from "@/components/platform/command-palette";
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/course", label: "The Program" },
+  { href: "/events", label: "Live events" },
   { href: "/blog", label: "Journal" },
   { href: "/resources", label: "Resources" },
   { href: "/community", label: "Community" },

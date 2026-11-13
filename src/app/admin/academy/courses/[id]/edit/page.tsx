@@ -1,5 +1,7 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
+import { MediaEditor } from "@/components/media/media-editor";
+import { MediaField } from "@/components/media/media-field";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Plus, Save } from "lucide-react";
 import { getAcademyTree } from "@/db/courses";
@@ -68,45 +70,45 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
           <form action={saveCourseForm} className="space-y-3">
             <input type="hidden" name="courseId" value={course.id} />
             <div>
-              <label className={label}>Title</label>
-              <input name="title" defaultValue={course.title} className={input} required />
+              <label className={label} htmlFor="course-edit-title">Title</label>
+              <input id="course-edit-title" name="title" defaultValue={course.title} className={input} required />
             </div>
             <div>
-              <label className={label}>Subtitle</label>
-              <input name="subtitle" defaultValue={course.subtitle ?? ""} className={input} />
+              <label className={label} htmlFor="course-edit-subtitle">Subtitle</label>
+              <input id="course-edit-subtitle" name="subtitle" defaultValue={course.subtitle ?? ""} className={input} />
             </div>
             <div>
-              <label className={label}>Summary</label>
-              <textarea name="summary" rows={3} defaultValue={course.summary} className={area} />
+              <label className={label} htmlFor="course-edit-summary">Summary</label>
+              <textarea id="course-edit-summary" name="summary" rows={3} defaultValue={course.summary} className={area} />
             </div>
             <div>
-              <label className={label}>Description</label>
-              <textarea name="description" rows={3} defaultValue={course.description ?? ""} className={area} />
+              <label className={label} htmlFor="course-edit-description">Description</label>
+              <MediaEditor id="course-edit-description" name="description" rows={6} defaultValue={course.description ?? ""} />
             </div>
             <div>
-              <label className={label}>Cover image URL</label>
-              <input name="coverImageUrl" defaultValue={course.coverImageUrl ?? ""} className={input} />
+              <label className={label} htmlFor="course-edit-coverImageUrl">Cover image URL</label>
+              <input id="course-edit-coverImageUrl" name="coverImageUrl" defaultValue={course.coverImageUrl ?? ""} className={input} />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className={label}>Accent</label>
-                <select name="accent" defaultValue={course.accent} className={input}>
+                <label className={label} htmlFor="course-edit-accent">Accent</label>
+                <select id="course-edit-accent" name="accent" defaultValue={course.accent} className={input}>
                   {["navy", "green", "gold", "purple", "teal"].map((accent) => (
                     <option key={accent} value={accent}>{accent}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className={label}>Status</label>
-                <select name="status" defaultValue={course.status} className={input}>
+                <label className={label} htmlFor="course-edit-status">Status</label>
+                <select id="course-edit-status" name="status" defaultValue={course.status} className={input}>
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
                   <option value="archived">Archived</option>
                 </select>
               </div>
               <div>
-                <label className={label}>Estimated hours</label>
-                <input name="estimatedHours" type="number" min={1} defaultValue={course.estimatedHours} className={input} />
+                <label className={label} htmlFor="course-edit-estimatedHours">Estimated hours</label>
+                <input id="course-edit-estimatedHours" name="estimatedHours" type="number" min={1} defaultValue={course.estimatedHours} className={input} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-[12px] text-navy">
@@ -121,22 +123,22 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
           <form action={saveModuleForm} className="space-y-3">
             <input type="hidden" name="courseId" value={course.id} />
             <div>
-              <label className={label}>Module title</label>
-              <input name="title" className={input} required placeholder="Discovering Your Purpose" />
+              <label className={label} htmlFor="course-edit-title">Module title</label>
+              <input id="course-edit-title" name="title" className={input} required placeholder="Discovering Your Purpose" />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Session code</label>
-                <input name="sessionCode" className={input} placeholder="PURP 201" />
+                <label className={label} htmlFor="course-edit-sessionCode">Session code</label>
+                <input id="course-edit-sessionCode" name="sessionCode" className={input} placeholder="PURP 201" />
               </div>
               <div>
-                <label className={label}>Estimated minutes</label>
-                <input name="estimatedMinutes" type="number" min={5} defaultValue={45} className={input} />
+                <label className={label} htmlFor="course-edit-estimatedMinutes">Estimated minutes</label>
+                <input id="course-edit-estimatedMinutes" name="estimatedMinutes" type="number" min={5} defaultValue={45} className={input} />
               </div>
             </div>
             <div>
-              <label className={label}>Summary</label>
-              <textarea name="summary" rows={2} className={area} />
+              <label className={label} htmlFor="course-edit-summary">Summary</label>
+              <textarea id="course-edit-summary" name="summary" rows={2} className={area} />
             </div>
             <label className="flex items-center gap-2 text-[12px] text-navy">
               <input type="checkbox" name="isPreview" className="h-4 w-4 rounded border-navy/30" /> Free preview module
@@ -150,22 +152,22 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
             <input type="hidden" name="courseId" value={course.id} />
             <input type="hidden" name="moduleId" value={settingsModule.id} />
             <div>
-              <label className={label}>Module title</label>
-              <input name="title" defaultValue={settingsModule.title} className={input} required />
+              <label className={label} htmlFor="course-edit-title">Module title</label>
+              <input id="course-edit-title" name="title" defaultValue={settingsModule.title} className={input} required />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Session code</label>
-                <input name="sessionCode" defaultValue={settingsModule.sessionCode ?? ""} className={input} />
+                <label className={label} htmlFor="course-edit-sessionCode">Session code</label>
+                <input id="course-edit-sessionCode" name="sessionCode" defaultValue={settingsModule.sessionCode ?? ""} className={input} />
               </div>
               <div>
-                <label className={label}>Estimated minutes</label>
-                <input name="estimatedMinutes" type="number" min={5} defaultValue={settingsModule.estimatedMinutes} className={input} />
+                <label className={label} htmlFor="course-edit-estimatedMinutes">Estimated minutes</label>
+                <input id="course-edit-estimatedMinutes" name="estimatedMinutes" type="number" min={5} defaultValue={settingsModule.estimatedMinutes} className={input} />
               </div>
             </div>
             <div>
-              <label className={label}>Summary</label>
-              <textarea name="summary" rows={2} defaultValue={settingsModule.summary ?? ""} className={area} />
+              <label className={label} htmlFor="course-edit-summary">Summary</label>
+              <textarea id="course-edit-summary" name="summary" rows={2} defaultValue={settingsModule.summary ?? ""} className={area} />
             </div>
             <label className="flex items-center gap-2 text-[12px] text-navy">
               <input type="checkbox" name="isPreview" defaultChecked={settingsModule.isPreview} className="h-4 w-4 rounded border-navy/30" /> Free preview module
@@ -181,12 +183,12 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
             {editingLesson ? <input type="hidden" name="lessonId" value={editingLesson.id} /> : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Lesson title</label>
-                <input name="title" defaultValue={editingLesson?.title ?? ""} className={input} required />
+                <label className={label} htmlFor="course-edit-title">Lesson title</label>
+                <input id="course-edit-title" name="title" defaultValue={editingLesson?.title ?? ""} className={input} required />
               </div>
               <div>
-                <label className={label}>Format</label>
-                <select name="kind" defaultValue={editingLesson?.kind ?? "reading"} className={input}>
+                <label className={label} htmlFor="course-edit-kind">Format</label>
+                <select id="course-edit-kind" name="kind" defaultValue={editingLesson?.kind ?? "reading"} className={input}>
                   {["video", "audio", "reading", "illustration", "download", "practice", "live"].map((kind) => (
                     <option key={kind} value={kind}>{kind}</option>
                   ))}
@@ -194,55 +196,55 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
               </div>
             </div>
             <div>
-              <label className={label}>Summary</label>
-              <input name="summary" defaultValue={editingLesson?.summary ?? ""} className={input} placeholder="One line shown in the outline" />
+              <label className={label} htmlFor="course-edit-summary">Summary</label>
+              <input id="course-edit-summary" name="summary" defaultValue={editingLesson?.summary ?? ""} className={input} placeholder="One line shown in the outline" />
             </div>
             <div>
-              <label className={label}>Structured content (markdown: ## headings, lists, :::callout)</label>
-              <textarea name="body" rows={8} defaultValue={editingLesson?.body ?? ""} className={area} required />
+              <label className={label} htmlFor="course-edit-body">Structured content (markdown: ## headings, lists, :::callout)</label>
+              <MediaEditor id="course-edit-body" name="body" rows={12} defaultValue={editingLesson?.body ?? ""} required />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={label}>Video URL</label>
-                <input name="videoUrl" defaultValue={editingLesson?.videoUrl ?? ""} className={input} placeholder="https://…mp4" />
+                <label className={label} htmlFor="course-edit-videoUrl">Video URL</label>
+                <MediaField id="course-edit-videoUrl" name="videoUrl" kind="video" defaultValue={editingLesson?.videoUrl ?? ""} />
               </div>
               <div>
-                <label className={label}>Audio URL</label>
-                <input name="audioUrl" defaultValue={editingLesson?.audioUrl ?? ""} className={input} placeholder="https://…mp3" />
+                <label className={label} htmlFor="course-edit-audioUrl">Audio URL</label>
+                <MediaField id="course-edit-audioUrl" name="audioUrl" kind="audio" defaultValue={editingLesson?.audioUrl ?? ""} />
               </div>
               <div>
-                <label className={label}>Illustration URL</label>
-                <input name="imageUrl" defaultValue={editingLesson?.imageUrl ?? ""} className={input} />
+                <label className={label} htmlFor="course-edit-imageUrl">Illustration URL</label>
+                <MediaField id="course-edit-imageUrl" name="imageUrl" kind="image" defaultValue={editingLesson?.imageUrl ?? ""} />
               </div>
               <div>
-                <label className={label}>Image alt text</label>
-                <input name="imageAlt" defaultValue={editingLesson?.imageAlt ?? ""} className={input} />
+                <label className={label} htmlFor="course-edit-imageAlt">Image alt text</label>
+                <input id="course-edit-imageAlt" name="imageAlt" defaultValue={editingLesson?.imageAlt ?? ""} className={input} />
               </div>
               <div>
-                <label className={label}>Download URL</label>
-                <input name="downloadUrl" defaultValue={editingLesson?.downloadUrl ?? ""} className={input} placeholder="/api/resources/…/download" />
+                <label className={label} htmlFor="course-edit-downloadUrl">Download URL</label>
+                <MediaField id="course-edit-downloadUrl" name="downloadUrl" kind="document" defaultValue={editingLesson?.downloadUrl ?? ""} />
               </div>
               <div>
-                <label className={label}>Download label</label>
-                <input name="downloadLabel" defaultValue={editingLesson?.downloadLabel ?? ""} className={input} />
+                <label className={label} htmlFor="course-edit-downloadLabel">Download label</label>
+                <input id="course-edit-downloadLabel" name="downloadLabel" defaultValue={editingLesson?.downloadLabel ?? ""} className={input} />
               </div>
             </div>
             <div>
-              <label className={label}>Practice prompt</label>
-              <textarea name="practicePrompt" rows={2} defaultValue={editingLesson?.practicePrompt ?? ""} className={area} />
+              <label className={label} htmlFor="course-edit-practicePrompt">Practice prompt</label>
+              <textarea id="course-edit-practicePrompt" name="practicePrompt" rows={2} defaultValue={editingLesson?.practicePrompt ?? ""} className={area} />
             </div>
             <div>
-              <label className={label}>Transcript / teaching notes</label>
-              <textarea name="transcript" rows={2} defaultValue={editingLesson?.transcript ?? ""} className={area} />
+              <label className={label} htmlFor="course-edit-transcript">Transcript / teaching notes</label>
+              <textarea id="course-edit-transcript" name="transcript" rows={2} defaultValue={editingLesson?.transcript ?? ""} className={area} />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
-                <label className={label}>Minutes</label>
-                <input name="durationMinutes" type="number" min={1} defaultValue={editingLesson?.durationMinutes ?? 10} className={input} />
+                <label className={label} htmlFor="course-edit-durationMinutes">Minutes</label>
+                <input id="course-edit-durationMinutes" name="durationMinutes" type="number" min={1} defaultValue={editingLesson?.durationMinutes ?? 10} className={input} />
               </div>
               <div>
-                <label className={label}>Status</label>
-                <select name="status" defaultValue={editingLesson?.status ?? "published"} className={input}>
+                <label className={label} htmlFor="course-edit-status">Status</label>
+                <select id="course-edit-status" name="status" defaultValue={editingLesson?.status ?? "published"} className={input}>
                   <option value="published">Published</option>
                   <option value="draft">Draft</option>
                   <option value="archived">Archived</option>

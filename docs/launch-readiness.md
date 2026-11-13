@@ -63,6 +63,16 @@ based on placeholder configuration.
 
 ## Verification log
 
+13 November live teaching and enrolment update: scheduled sessions now have a
+shared account calendar, public event pages, in-app announcements and mentor
+request approval. Cohort setup includes capacity, faculty membership, learner
+placement and transfers; enrolment changes preserve learning records. Article,
+course-description and lesson editors support embedded library media. The full
+security suite passes 142 tests, including atomic scheduling, private joining
+links, capacity races, pauses and embedded-content access. Browser verification
+covers the complete request, approval, public discovery, joining, cohort,
+enrolment and editor journeys. See [live events and cohorts](live-events-and-cohorts.md).
+
 13 November dashboard workflows: shared private media, mandatory personal
 profiles, staff-approved student applications, mentor-authored assignments with
 private drafts and scored reviews, and certificate-based next-level enrolment

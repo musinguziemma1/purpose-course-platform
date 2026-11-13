@@ -1,3 +1,4 @@
+import { UpcomingEvents } from "@/components/academy/upcoming-events";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -43,6 +44,7 @@ export default async function MentorOverviewPage() {
 
   return (
     <div className="space-y-6">
+      <UpcomingEvents />
       <PageHeader
         eyebrow={<span className="text-[#155e63]">Mentorship workspace</span>}
         title="Walk with your mentees, not above them."

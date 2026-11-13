@@ -53,7 +53,7 @@ export async function awardEarnedCertificates(tx: Transaction, profileId: string
     const level = levelCourses[0].level;
     const result = await award(tx, profileId, { kind: "level", levelId: level.id, title: `${level.name} Level — Completed`, levelName: level.name, score: scoreFor(exams.map((exam) => exam.id)), hours: levelCourses.reduce((sum, row) => sum + row.course.estimatedHours, 0) });
     if (result.certificate) awards.push(result.certificate);
-    if (result.certificate) await tx.update(enrollments).set({ status: "completed" }).where(and(eq(enrollments.profileId, profileId), eq(enrollments.levelId, level.id), eq(enrollments.status, "enrolled")));
+    if (result.certificate) await tx.update(enrollments).set({ status: "completed", updatedAt: new Date() }).where(and(eq(enrollments.profileId, profileId), eq(enrollments.levelId, level.id), eq(enrollments.status, "enrolled")));
     if (result.created) newlyIssued.push(result.certificate!.code);
   }
   return { awards, newlyIssued };

@@ -249,6 +249,7 @@ export async function reviewAdmission(
             profileId: profile.id,
             fullName: request.fullName,
             status: "enrolled",
+            updatedAt: new Date(),
           })
           .where(eq(enrollments.id, interest.id));
       else

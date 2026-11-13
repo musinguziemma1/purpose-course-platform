@@ -246,7 +246,7 @@ export async function getLiveSessions(options: { limit?: number; profileId?: str
     .leftJoin(profiles, eq(liveSessions.hostId, profiles.id))
     .leftJoin(courses, eq(liveSessions.courseId, courses.id))
     .where(liveReadable(viewer))
-    .orderBy(asc(liveSessions.startsAt))
+    .orderBy(sql`case when ${liveSessions.status}='live' then 0 when ${liveSessions.status}='scheduled' and ${liveSessions.startsAt}+make_interval(mins => ${liveSessions.durationMinutes})>=now() then 1 else 2 end`, asc(liveSessions.startsAt))
     .limit(limit);
   return rows;
 }

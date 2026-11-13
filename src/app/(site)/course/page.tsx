@@ -1,3 +1,4 @@
+import { UpcomingEvents } from "@/components/academy/upcoming-events";
 import { publicUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -260,6 +261,7 @@ export default async function CoursePage() {
           </Reveal>
         </div>
       </section>
-    </>
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8"><UpcomingEvents /></div>
+</>
   );
 }

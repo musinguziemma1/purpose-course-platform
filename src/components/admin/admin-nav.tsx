@@ -27,6 +27,9 @@ const ITEMS = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/articles", label: "Articles", icon: BookOpen },
   { href: "/admin/media", label: "Media library", icon: BookOpen },
+  { href: "/admin/cohorts", label: "Cohorts", icon: Users },
+  { href: "/admin/enrollments", label: "Enrolments", icon: Users },
+  { href: "/events", label: "Event calendar", icon: CalendarDays },
   { href: "/admin/admissions", label: "Student applications", icon: UserRound },
   { href: "/admin/assignments", label: "Assignments", icon: FileCheck2 },
   { href: "/admin/academy", label: "Academy builder", icon: GraduationCap },
@@ -61,7 +64,7 @@ export function AdminNav({
   reviewMode?: boolean;
 }) {
   const pathname = usePathname();
-  const visibleItems = ITEMS.filter((item) => item.href === "/account" || canAccessAdminPath(user, item.href));
+  const visibleItems = ITEMS.filter((item) => item.href === "/account" || item.href === "/events" || canAccessAdminPath(user, item.href));
   const activeHref = visibleItems
     .filter((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;

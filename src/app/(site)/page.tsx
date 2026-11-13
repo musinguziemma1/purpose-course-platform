@@ -1,3 +1,4 @@
+import { UpcomingEvents } from "@/components/academy/upcoming-events";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -422,6 +423,7 @@ export default async function HomePage() {
           </Reveal>
         </div>
       </section>
-    </>
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8"><UpcomingEvents /></div>
+</>
   );
 }

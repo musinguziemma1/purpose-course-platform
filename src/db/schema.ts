@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -384,11 +385,13 @@ export const enrollments = pgTable(
       onDelete: "set null",
     }),
     cohort: varchar("cohort", { length: 80 }),
+    cohortId: integer("cohort_id").references((): AnyPgColumn => cohorts.id, { onDelete: "set null" }),
     status: enrollmentStatusEnum("status").notNull().default("waitlist"),
     notes: text("notes"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("enrollments_email_level_idx").on(table.email, table.levelId)],
+  (table) => [uniqueIndex("enrollments_email_level_idx").on(table.email, table.levelId), index("enrollments_cohort_idx").on(table.cohortId)],
 );
 
 export const learningProgress = pgTable(
@@ -791,7 +794,7 @@ export const liveSessions = pgTable(
     id: serial("id").primaryKey(),
     courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
     moduleId: integer("module_id").references(() => courseModules.id, { onDelete: "set null" }),
-    cohortId: integer("cohort_id"),
+    cohortId: integer("cohort_id").references((): AnyPgColumn => cohorts.id, { onDelete: "set null" }),
     hostId: uuid("host_id").references(() => profiles.id, { onDelete: "set null" }),
     title: varchar("title", { length: 220 }).notNull(),
     description: text("description"),
@@ -804,9 +807,14 @@ export const liveSessions = pgTable(
     agenda: text("agenda"),
     groupSize: integer("group_size"),
     recordingUrl: text("recording_url"),
+    timezone: varchar("timezone", { length: 80 }).notNull().default("Africa/Kampala"),
+    isPublic: boolean("is_public").notNull().default(true),
+    createdById: uuid("created_by_id").references(() => profiles.id, { onDelete: "set null" }),
+    scheduleKey: uuid("schedule_key").unique(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("live_sessions_starts_idx").on(table.startsAt)],
+  (table) => [index("live_sessions_starts_idx").on(table.startsAt), index("live_sessions_calendar_idx").on(table.status, table.startsAt), index("live_sessions_cohort_idx").on(table.cohortId)],
 );
 
 export const liveRsvps = pgTable(
@@ -1433,8 +1441,31 @@ export const cohorts = pgTable("cohorts", {
   endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
   cadence: varchar("cadence", { length: 120 }).notNull().default("Weekly live class + group work"),
   coverImageUrl: text("cover_image_url"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const liveSessionRequests = pgTable("live_session_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requestedById: uuid("requested_by_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+  requestKey: uuid("request_key").notNull().unique(),
+  title: varchar("title", { length: 220 }).notNull(),
+  description: text("description").notNull(),
+  agenda: text("agenda"),
+  type: liveSessionTypeEnum("type").notNull().default("class"),
+  courseId: integer("course_id").references(() => courses.id, { onDelete: "set null" }),
+  cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "set null" }),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  timezone: varchar("timezone", { length: 80 }).notNull().default("Africa/Kampala"),
+  durationMinutes: integer("duration_minutes").notNull().default(60),
+  status: varchar("status", { length: 24 }).notNull().default("pending"),
+  scheduledSessionId: integer("scheduled_session_id").unique().references(() => liveSessions.id, { onDelete: "set null" }),
+  reviewedById: uuid("reviewed_by_id").references(() => profiles.id, { onDelete: "set null" }),
+  reviewNote: text("review_note"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => [index("live_session_requests_status_idx").on(table.status, table.createdAt), index("live_session_requests_author_idx").on(table.requestedById, table.createdAt), check("live_session_requests_status_check", sql`${table.status} in ('pending','approved','declined','withdrawn')`)]).enableRLS();
 
 export const cohortMembers = pgTable(
   "cohort_members",
@@ -1450,7 +1481,7 @@ export const cohortMembers = pgTable(
     status: varchar("status", { length: 24 }).notNull().default("active"),
     joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("cohort_members_unique_idx").on(table.cohortId, table.profileId)],
+  (table) => [uniqueIndex("cohort_members_unique_idx").on(table.cohortId, table.profileId), index("cohort_members_profile_status_idx").on(table.profileId, table.status)],
 );
 
 export const cohortWeeks = pgTable(
