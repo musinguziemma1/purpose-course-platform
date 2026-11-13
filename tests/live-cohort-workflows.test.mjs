@@ -86,6 +86,7 @@ before(async () => {
     ["student", "student"],
     ["otherStudent", "student"],
     ["guest", "guest"],
+    ["inactiveStudent", "student"],
   ]) {
     const email = key + "-" + name + "@example.invalid",
       user = (
@@ -111,6 +112,9 @@ before(async () => {
       roleName: role,
     };
   }
+  await client.query("update users set is_active=false where id=$1", [
+    actors.inactiveStudent.userId,
+  ]);
   const prior = (
     await client.query(
       "select id from course_levels order by level_number desc,id desc limit 1",
@@ -438,19 +442,17 @@ test("mentors request teaching sessions; approval schedules exactly once and not
   const reviewed = await row("live_session_requests", request.id);
   ids.session = reviewed.scheduled_session_id;
   assert.equal(reviewed.status, "approved");
-  const total = (
-    await client.query(
-      "select count(*)::int as count from profiles p join users u on u.id=p.user_id where u.is_active",
-    )
-  ).rows[0].count;
-  assert.equal(
+  // Other test files create and delete accounts concurrently. Assert delivery
+  // against this file's stable recipients instead of the changing global count.
+  const recipients = Object.values(actors).map((actor) => actor.profileId);
+  assert.deepEqual(
     (
       await client.query(
-        "select count(*)::int as count from notifications where href=$1 and title='New live event'",
-        ["/events/" + ids.session],
+        "select recipient_id from notifications where href=$1 and title='New live event' and recipient_id=any($2::uuid[])",
+        ["/events/" + ids.session, recipients],
       )
-    ).rows[0].count,
-    total,
+    ).rows.map((notification) => notification.recipient_id).sort(),
+    recipients.filter((id) => id !== actors.inactiveStudent.profileId).sort(),
   );
 });
 test("public discovery and all account calendars expose event metadata while room access remains scoped", async () => {
