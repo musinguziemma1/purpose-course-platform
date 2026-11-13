@@ -6,6 +6,19 @@ import { db } from "@/db";
 import { activityLogs, authSessions, users } from "@/db/schema";
 import { destroySession, getSessionUser, hashPassword, verifyPassword } from "@/lib/auth";
 import { passwordError } from "../../../scripts/password-security.mjs";
+import { revalidatePath } from "next/cache";
+import { saveOwnProfile } from "@/db/profile-settings";
+import type { ProfileInput } from "@/lib/profile";
+
+export type ProfileState = { ok?: boolean; error?: string; message?: string };
+
+export async function updateOwnProfile(_previous: ProfileState, formData: FormData): Promise<ProfileState> {
+  const keys = ["fullName", "title", "bio", "phone", "location", "timezone", "avatarUrl"] as const;
+  const input = Object.fromEntries(keys.map(key => [key, String(formData.get(key) ?? "")])) as ProfileInput;
+  const result = await saveOwnProfile(input, await getSessionUser());
+  if ("ok" in result && result.ok) revalidatePath("/", "layout");
+  return result;
+}
 
 export type PasswordState = { error?: string };
 

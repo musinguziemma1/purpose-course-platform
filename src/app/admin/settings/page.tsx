@@ -5,6 +5,10 @@ import { getSessionUser, canManageSettings } from "@/lib/auth";
 import { updateSettings } from "@/app/actions/site";
 import { Field, Input } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
+import { AccountSettings } from "@/components/auth/account-settings";
+import { db } from "@/db";
+import { profiles, users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +53,13 @@ export default async function AdminSettingsPage() {
   await requireAdminPage("/admin/settings");
   const [settings, user, team] = await Promise.all([getSiteSettings(), getSessionUser(), getTeam()]);
   const canEdit = canManageSettings(user);
+  const activeProfiles = await db.select({ id: profiles.id, completedAt: profiles.profileCompletedAt }).from(profiles).innerJoin(users, eq(profiles.userId, users.id)).where(eq(users.isActive, true));
+  const incompleteIds = new Set(activeProfiles.filter(row => !row.completedAt).map(row => row.id));
 
   return (
     <div className="space-y-5">
+      {user ? <AccountSettings user={user} /> : null}
+      <section className="admin-card p-5"><h2 className="font-serif text-xl text-navy">Profile completion reminders</h2><p className="mt-2 text-sm text-stone-600">{team.filter(member => incompleteIds.has(member.id)).length} of {activeProfiles.length} active people still need to complete their profile. They receive a required reminder when they sign in.</p><ul className="mt-3 space-y-1 text-sm text-stone-600">{team.filter(member => incompleteIds.has(member.id)).map(member => <li key={member.id}>{member.fullName} · {member.roleName}</li>)}</ul></section>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-serif text-2xl text-navy">Site settings</h1>

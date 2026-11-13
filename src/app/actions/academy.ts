@@ -538,6 +538,13 @@ export async function enrollInCourse(formData: FormData) {
   if (!Number.isSafeInteger(levelId) || levelId < 1) return;
   const [available] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.levelId, levelId), eq(courses.status, "published"))).limit(1);
   if (!available) return;
+  const [firstLevel] = await db.select({ id: courseLevels.id }).from(courseLevels).orderBy(courseLevels.levelNumber, courseLevels.id).limit(1);
+  if (firstLevel && firstLevel.id !== levelId) {
+    const { enrollInNextLevel } = await import("@/db/level-progression");
+    await enrollInNextLevel(levelId, user);
+    revalidatePath("/learn", "layout");
+    return;
+  }
   // Self-service requests join the waitlist. They cannot reactivate a paused
   // enrolment, overwrite another level, or approve their own admission.
   const inserted = await db.insert(enrollments).values({ profileId: user.profileId, email: user.email, fullName: user.fullName, levelId, status: "waitlist" }).onConflictDoNothing().returning({ id: enrollments.id });

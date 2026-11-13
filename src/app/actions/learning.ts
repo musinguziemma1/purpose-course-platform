@@ -5,8 +5,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   activityLogs,
-  assignmentSubmissions,
-  assignments,
   coachingSessions,
   courseSessions,
   enrollments,
@@ -109,75 +107,9 @@ export async function saveReflection(_prev: LearningState, formData: FormData): 
   return { ok: true, message: "Reflection saved. It is now part of your learning record." };
 }
 
-export async function submitAssignment(_prev: LearningState, formData: FormData): Promise<LearningState> {
-  const user = await requireStudent();
-  if (!user) return { error: "Sign in with a student account to submit work." };
-
-  const assignmentId = Number(formData.get("assignmentId"));
-  const body = String(formData.get("body") ?? "").trim();
-  const asDraft = String(formData.get("intent") ?? "submit") === "draft";
-
-  if (!assignmentId) return { error: "Missing assignment." };
-  if (body.length < 30) return { error: "Add a little more detail before saving (at least 30 characters)." };
-
-  const assignmentRows = await db.select().from(assignments).where(and(eq(assignments.id, assignmentId), levelEnrolled(assignments.levelId, user))).limit(1);
-  const assignment = assignmentRows[0];
-  if (!assignment) return { error: "That assignment is no longer available." };
-
-  await db
-    .insert(assignmentSubmissions)
-    .values({
-      assignmentId,
-      profileId: user.profileId,
-      body: body.slice(0, 6000),
-      status: asDraft ? "draft" : "submitted",
-      submittedAt: asDraft ? null : new Date(),
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [assignmentSubmissions.assignmentId, assignmentSubmissions.profileId],
-      set: {
-        body: body.slice(0, 6000),
-        status: asDraft ? "draft" : "submitted",
-        submittedAt: asDraft ? null : new Date(),
-        feedback: asDraft ? undefined : null,
-        reviewedAt: null,
-        updatedAt: new Date(),
-      },
-    });
-
-  await db.insert(activityLogs).values({
-    actorId: user.profileId,
-    action: asDraft ? "learning.assignment_drafted" : "learning.assignment_submitted",
-    entityType: "assignment",
-    entityId: String(assignmentId),
-    description: `${asDraft ? "Drafted" : "Submitted"} “${assignment.title}”.`,
-  });
-
-  if (!asDraft) {
-    const mentors = await db
-      .select({ id: mentorAssignments.mentorId })
-      .from(mentorAssignments)
-      .innerJoin(profiles, eq(mentorAssignments.mentorId, profiles.id))
-      .innerJoin(users, eq(profiles.userId, users.id))
-      .where(and(eq(mentorAssignments.studentId, user.profileId), eq(mentorAssignments.status, "active"), eq(users.isActive, true)));
-    if (mentors.length) {
-      await db.insert(notifications).values(
-        mentors.map((mentor) => ({
-          recipientId: mentor.id,
-          type: "review" as const,
-          title: "Assignment ready for review",
-          body: `${user.fullName} submitted “${assignment.title}”.`,
-          href: "/mentor/submissions",
-        })),
-      );
-    }
-  }
-
-  revalidatePath("/learn");
-  revalidatePath("/learn/assignments");
-  revalidatePath("/mentor/submissions");
-  return { ok: true, message: asDraft ? "Draft saved." : "Submitted. Your mentor has been notified." };
+export async function submitAssignment(previous: LearningState, formData: FormData): Promise<LearningState> {
+  const { saveResponse } = await import("@/app/actions/assignments");
+  return saveResponse(previous, formData);
 }
 
 export async function requestCoaching(_prev: LearningState, formData: FormData): Promise<LearningState> {

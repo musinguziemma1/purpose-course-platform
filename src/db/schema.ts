@@ -91,6 +91,24 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const admissionRequests = pgTable("admission_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  fullName: varchar("full_name", { length: 160 }).notNull(),
+  passwordHash: text("password_hash"),
+  notes: text("notes"),
+  rateKey: varchar("rate_key", { length: 64 }).notNull(),
+  status: varchar("status", { length: 24 }).notNull().default("pending"),
+  reviewedById: uuid("reviewed_by_id").references(() => profiles.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, table => [
+  index("admission_requests_rate_idx").on(table.rateKey, table.createdAt),
+  index("admission_requests_pending_idx").on(table.status, table.createdAt),
+  check("admission_requests_status_check", sql`${table.status} in ('pending','approved','declined')`),
+  check("admission_requests_pending_hash_check", sql`${table.status} <> 'pending' or ${table.passwordHash} is not null`),
+]).enableRLS();
+
 export const profiles = pgTable(
   "profiles",
   {
@@ -109,6 +127,9 @@ export const profiles = pgTable(
     organizationId: integer("organization_id"),
     headline: varchar("headline", { length: 200 }),
     timezone: varchar("timezone", { length: 64 }).notNull().default("Africa/Kampala"),
+    phone: varchar("phone", { length: 32 }),
+    location: varchar("location", { length: 160 }),
+    profileCompletedAt: timestamp("profile_completed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -273,8 +294,22 @@ export const mediaAssets = pgTable("media_assets", {
   width: integer("width"),
   height: integer("height"),
   uploadedBy: uuid("uploaded_by").references(() => profiles.id, { onDelete: "set null" }),
+  fileName: varchar("file_name", { length: 240 }),
+  mimeType: varchar("mime_type", { length: 120 }),
+  byteSize: integer("byte_size"),
+  storageBucket: varchar("storage_bucket", { length: 80 }),
+  storagePath: text("storage_path"),
+  purpose: varchar("purpose", { length: 24 }).notNull().default("library"),
+  state: varchar("state", { length: 24 }).notNull().default("ready"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, table => [
+  uniqueIndex("media_assets_storage_path_idx").on(table.storageBucket, table.storagePath).where(sql`${table.storagePath} is not null`),
+  index("media_assets_library_idx").on(table.purpose, table.state, table.createdAt),
+  index("media_assets_uploader_idx").on(table.uploadedBy, table.createdAt),
+  check("media_assets_size_check", sql`${table.byteSize} is null or ${table.byteSize} between 1 and 52428800`),
+  check("media_assets_purpose_check", sql`${table.purpose} in ('library','submission')`),
+  check("media_assets_state_check", sql`${table.state} in ('pending','ready','failed')`),
+]);
 
 export const resources = pgTable("resources", {
   id: serial("id").primaryKey(),
@@ -582,11 +617,14 @@ export const assignments = pgTable("assignments", {
   sessionId: integer("session_id").references(() => courseSessions.id, { onDelete: "set null" }),
   title: varchar("title", { length: 220 }).notNull(),
   brief: text("brief").notNull(),
+  createdById: uuid("created_by_id").references(() => profiles.id, { onDelete: "set null" }),
+  assigneeId: uuid("assignee_id").references(() => profiles.id, { onDelete: "cascade" }),
+  attachmentId: uuid("attachment_id").references(() => mediaAssets.id, { onDelete: "restrict" }),
   isCollaborative: boolean("is_collaborative").notNull().default(false),
   dueAt: timestamp("due_at", { withTimezone: true }),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [index("assignments_assignee_idx").on(table.assigneeId, table.levelId)]);
 
 export const assignmentSubmissions = pgTable(
   "assignment_submissions",
@@ -601,6 +639,8 @@ export const assignmentSubmissions = pgTable(
     status: submissionStatusEnum("status").notNull().default("draft"),
     body: text("body").notNull().default(""),
     feedback: text("feedback"),
+    score: integer("score"),
+    attachmentId: uuid("attachment_id").references(() => mediaAssets.id, { onDelete: "restrict" }),
     reviewedById: uuid("reviewed_by_id").references(() => profiles.id, { onDelete: "set null" }),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -609,6 +649,7 @@ export const assignmentSubmissions = pgTable(
   (table) => [
     uniqueIndex("assignment_submissions_unique_idx").on(table.assignmentId, table.profileId),
     index("assignment_submissions_profile_idx").on(table.profileId),
+    check("assignment_submissions_score_check", sql`${table.score} between 0 and 100`),
   ],
 );
 

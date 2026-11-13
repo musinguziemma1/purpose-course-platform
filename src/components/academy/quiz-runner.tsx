@@ -143,6 +143,7 @@ export function QuizRunner({
             >
               Review answers
             </Link>
+            {result.passed ? <Link href="/learn/courses" className="inline-flex h-9 items-center rounded-full bg-source px-4 text-[11.5px] font-semibold text-paper">Continue learning →</Link> : null}
             {result.passed ? (
               <Link
                 href="/learn/certificates"

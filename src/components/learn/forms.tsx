@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { FileUpload } from "@/components/media/file-upload";
 
 function StateNote({ state }: { state: LearningState }) {
   if (state.error) {
@@ -75,38 +76,54 @@ export function AssignmentForm({
   assignmentId,
   existingBody,
   status,
+  version,
+  existingAttachmentId,
 }: {
   assignmentId: number;
   existingBody: string | null;
   status: string | null;
+  version: string;
+  existingAttachmentId: string | null;
 }) {
   const [state, formAction] = useActionState<LearningState, FormData>(submitAssignment, {});
+  const [attachmentId, setAttachmentId] = useState(existingAttachmentId ?? "");
+  const [uploading, setUploading] = useState(false);
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="assignmentId" value={assignmentId} />
+      <input type="hidden" name="version" value={version} />
+      <input type="hidden" name="attachmentId" value={attachmentId} />
       <Field label="Assignment response">
       <Textarea
         name="body"
+        required
+        minLength={30}
+        maxLength={20000}
+        readOnly={status === "reviewed"}
         rows={4}
         defaultValue={existingBody ?? ""}
         placeholder="Write your response. Be concrete — evidence beats adjectives."
         className="text-[12.5px]"
       />
       </Field>
+      {status !== "reviewed" ? <FileUpload purpose="submission" onUploaded={asset => setAttachmentId(asset.id)} onBusyChange={setUploading} /> : null}
+      {attachmentId ? <div className="flex gap-4 text-xs"><a href={`/api/media/${attachmentId}?download=1`} className="font-semibold text-gold-dark">Download attached file</a>{status !== "reviewed" ? <button type="button" onClick={() => setAttachmentId("")} className="text-stone-500">Remove attachment</button> : null}</div> : null}
       <StateNote state={state} />
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
           name="intent"
           value="submit"
+          disabled={status === "reviewed" || uploading}
           className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-4 text-[11.5px] font-semibold text-paper hover:bg-navy-700"
         >
-          <Send className="h-3.5 w-3.5" /> {status === "reviewed" ? "Resubmit" : "Submit for review"}
+          <Send className="h-3.5 w-3.5" /> {status === "reviewed" ? "Graded response" : "Submit for review"}
         </button>
         <button
           type="submit"
           name="intent"
           value="draft"
+          disabled={status === "reviewed" || uploading}
           className="inline-flex h-9 items-center rounded-full border border-navy/15 px-4 text-[11.5px] font-medium text-navy hover:bg-cream"
         >
           Save draft

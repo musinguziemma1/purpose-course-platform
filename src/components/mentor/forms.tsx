@@ -56,13 +56,15 @@ export function CompleteSessionForm({ sessionId, existingNotes }: { sessionId: n
   );
 }
 
-export function ReviewSubmissionForm({ submissionId }: { submissionId: number }) {
+export function ReviewSubmissionForm({ submissionId, version }: { submissionId: number; version: string }) {
   const [state, formAction] = useActionState<MentorState, FormData>(reviewSubmission, {});
   return (
     <form action={formAction} className="mt-3 space-y-2">
       <input type="hidden" name="submissionId" value={submissionId} />
+      <input type="hidden" name="version" value={version} />
+      <Field label="Score out of 100"><Input name="score" type="number" required min={0} max={100} step={1} /></Field>
       <Field label="Feedback" hint="be specific">
-      <Textarea name="feedback" rows={3} placeholder="One strength, one gap, one next action." className="text-[12.5px]" />
+      <Textarea name="feedback" rows={3} required minLength={20} maxLength={10000} placeholder="One strength, one gap, one next action." className="text-[12.5px]" />
       </Field>
       <StateNote state={state} />
       <Submit label="Share feedback" pendingLabel="Sending…" />

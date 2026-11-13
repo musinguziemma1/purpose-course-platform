@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { getSessionUser } from "@/lib/auth";
 import { canReadLearner, coachingReadable, learnerReadable } from "@/db/learner-access";
@@ -67,7 +67,7 @@ export async function getStudentWorkspace(profileId: string) {
         assignmentSubmissions,
         and(eq(assignmentSubmissions.assignmentId, assignments.id), eq(assignmentSubmissions.profileId, profileId)),
       )
-      .where(level ? eq(assignments.levelId, level.id) : sql`false`)
+      .where(and(level ? eq(assignments.levelId, level.id) : sql`false`, or(isNull(assignments.assigneeId), eq(assignments.assigneeId, profileId))))
       .orderBy(asc(assignments.sortOrder)),
     db
       .select()
@@ -162,8 +162,8 @@ export async function getMentorWorkspace(mentorId: string) {
       .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
       .innerJoin(profiles, eq(assignmentSubmissions.profileId, profiles.id))
       .where(and(inArray(assignmentSubmissions.status, ["submitted", "reviewed"]), learnerReadable(assignmentSubmissions.profileId, viewer)))
-      .orderBy(desc(assignmentSubmissions.submittedAt))
-      .limit(20),
+      .orderBy(sql`case when ${assignmentSubmissions.status} = 'submitted' then 0 else 1 end`, desc(assignmentSubmissions.submittedAt))
+      .limit(100),
     db
       .select({
         studentId: mentorAssignments.studentId,

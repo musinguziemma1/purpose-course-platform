@@ -5,8 +5,6 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import {
   activityLogs,
-  assignmentSubmissions,
-  assignments,
   coachingSessions,
   notifications,
   profiles,
@@ -115,52 +113,9 @@ export async function completeCoachingSession(_prev: MentorState, formData: Form
   return { ok: true, message: "Session marked complete and notes shared with the student." };
 }
 
-export async function reviewSubmission(_prev: MentorState, formData: FormData): Promise<MentorState> {
-  const user = await requireMentor();
-  if (!user) return { error: "Mentor access required." };
-
-  const submissionId = Number(formData.get("submissionId"));
-  const feedback = String(formData.get("feedback") ?? "").trim();
-  if (!submissionId) return { error: "Missing submission." };
-  if (feedback.length < 20) return { error: "Write at least 20 characters of feedback — specificity is the point." };
-
-  const rows = await db
-    .select({ submission: assignmentSubmissions, assignment: assignments })
-    .from(assignmentSubmissions)
-    .innerJoin(assignments, eq(assignmentSubmissions.assignmentId, assignments.id))
-    .where(and(eq(assignmentSubmissions.id, submissionId), learnerReadable(assignmentSubmissions.profileId, user)))
-    .limit(1);
-  const record = rows[0];
-  if (!record) return { error: "That submission no longer exists." };
-
-  await db
-    .update(assignmentSubmissions)
-    .set({
-      status: "reviewed",
-      feedback: feedback.slice(0, 4000),
-      reviewedById: user.profileId,
-      reviewedAt: new Date(),
-    })
-    .where(eq(assignmentSubmissions.id, submissionId));
-
-  await db.insert(notifications).values({
-    recipientId: record.submission.profileId,
-    type: "review",
-    title: "Feedback on your assignment",
-    body: `Your mentor reviewed “${record.assignment.title}”.`,
-    href: "/learn/assignments",
-  });
-
-  await db.insert(activityLogs).values({
-    actorId: user.profileId,
-    action: "mentorship.submission_reviewed",
-    entityType: "assignment",
-    entityId: String(record.assignment.id),
-    description: `Reviewed “${record.assignment.title}” and left feedback.`,
-  });
-
-  revalidateMentorAreas();
-  return { ok: true, message: "Feedback shared with the student." };
+export async function reviewSubmission(previous: MentorState, formData: FormData): Promise<MentorState> {
+  const { reviewResponse } = await import("@/app/actions/assignments");
+  return reviewResponse(previous, formData);
 }
 
 export async function scheduleFollowUp(_prev: MentorState, formData: FormData): Promise<MentorState> {

@@ -11,6 +11,7 @@ import { CommandPalette } from "@/components/platform/command-palette";
 import { logoutAction } from "@/app/actions/auth";
 import { canAccessAdminPath, hasAdminWorkspace } from "@/lib/admin-access";
 import { can } from "@/lib/rbac";
+import { profileIsComplete } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/admin");
   if (!hasAdminWorkspace(user)) redirect(homePathForRole(user.roleSlug));
+  if (!user.isDemo && !profileIsComplete(user)) redirect("/account?complete=1");
 
   const pending = can(user, "content.review") ? await db
     .select({ value: count() })

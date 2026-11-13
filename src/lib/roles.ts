@@ -93,8 +93,9 @@ export function homePathForRole(roleSlug: string | null | undefined) {
     case "program_manager":
       return "/admin/academy";
     case "student":
-    case "guest":
       return "/learn";
+    case "guest":
+      return "/";
     case "mentor":
     case "instructor":
       return "/mentor";

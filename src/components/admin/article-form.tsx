@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react";
 import { saveArticle, type ActionState } from "@/app/actions/publishing";
 import { Field, Input, Label, Select, Textarea } from "@/components/ui/field";
+import { MediaPickerButton } from "@/components/media/media-picker-button";
 
 type Option = { id: number; name: string };
 type AuthorOption = { id: string; fullName: string };
@@ -132,6 +133,7 @@ export function ArticleForm({
               placeholder="https://…"
               className="text-[12px]"
             />
+            <MediaPickerButton inputName="coverImageUrl" kind="image" />
             <div className="mt-2 flex flex-wrap gap-1.5">
               {IMAGE_PRESETS.map(([label, url]) => (
                 <button

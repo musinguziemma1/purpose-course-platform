@@ -23,6 +23,10 @@ export type SessionUser = {
   title: string | null;
   bio: string | null;
   avatarUrl: string | null;
+  phone?: string | null;
+  location?: string | null;
+  timezone?: string;
+  profileCompletedAt?: Date | null;
   roleSlug: string;
   roleName: string;
   roleLevel: number;
@@ -73,6 +77,10 @@ const sessionSelection = {
   title: profiles.title,
   bio: profiles.bio,
   avatarUrl: profiles.avatarUrl,
+  phone: profiles.phone,
+  location: profiles.location,
+  timezone: profiles.timezone,
+  profileCompletedAt: profiles.profileCompletedAt,
   roleSlug: roles.slug,
   roleName: roles.name,
   roleLevel: roles.level,

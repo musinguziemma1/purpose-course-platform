@@ -63,6 +63,13 @@ based on placeholder configuration.
 
 ## Verification log
 
+13 November dashboard workflows: shared private media, mandatory personal
+profiles, staff-approved student applications, mentor-authored assignments with
+private drafts and scored reviews, and certificate-based next-level enrolment
+are implemented. See [workflow and hosting details](dashboard-workflows.md).
+These additions do not close the external email, curriculum or launch-operation
+items above.
+
 Vercel build configuration: database imports no longer validate credentials or
 create a connection pool during route configuration collection. The first
 database API call still validates the URI, verified remote CA and pool limits,

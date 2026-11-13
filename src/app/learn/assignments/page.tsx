@@ -62,7 +62,11 @@ export default async function StudentAssignmentsPage() {
                 assignmentId={row.assignment.id}
                 existingBody={submission?.body ?? null}
                 status={submission?.status ?? null}
+                version={submission?.updatedAt.toISOString() ?? ""}
+                existingAttachmentId={submission?.attachmentId ?? null}
               />
+              {row.assignment.attachmentId ? <a href={`/api/media/${row.assignment.attachmentId}?download=1`} className="mt-3 inline-block text-sm font-semibold text-gold-dark">Download assignment material</a> : null}
+              {submission?.score !== null && submission?.score !== undefined ? <p className="mt-3 text-sm font-semibold text-source">Score: {submission.score}/100</p> : null}
             </div>
           );
         })}

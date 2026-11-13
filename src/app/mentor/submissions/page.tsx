@@ -56,7 +56,8 @@ export default async function MentorSubmissionsPage() {
                 <p className="mt-2 whitespace-pre-line rounded-lg border border-navy/10 bg-cream/50 px-3 py-2.5 text-[12.5px] leading-relaxed text-stone-700">
                   {row.submission.body}
                 </p>
-                <ReviewSubmissionForm submissionId={row.submission.id} />
+                {row.submission.attachmentId ? <a href={`/api/media/${row.submission.attachmentId}?download=1`} className="mt-3 inline-block text-sm font-semibold text-gold-dark">Download submitted file</a> : null}
+                <ReviewSubmissionForm submissionId={row.submission.id} version={row.submission.updatedAt.toISOString()} />
               </li>
             ))
           )}
@@ -84,6 +85,7 @@ export default async function MentorSubmissionsPage() {
                     {row.submission.feedback}
                   </p>
                 ) : null}
+                {row.submission.score !== null ? <p className="mt-2 text-sm font-semibold text-source">Score: {row.submission.score}/100</p> : null}
               </li>
             ))
           )}

@@ -6,6 +6,7 @@ import { assignmentSubmissions, coachingSessions } from "@/db/schema";
 import { getSessionUser, homePathForRole, isMentor } from "@/lib/auth";
 import { WorkspaceShell, type WorkspaceNavItem } from "@/components/workspace/workspace-shell";
 import { coachingReadable, learnerReadable } from "@/db/learner-access";
+import { profileIsComplete } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function MentorLayout({ children }: { children: ReactNode }
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/mentor");
   if (!isMentor(user)) redirect(homePathForRole(user.roleSlug));
+  if (!user.isDemo && !profileIsComplete(user)) redirect("/account?complete=1");
 
   const [requests, reviews] = await Promise.all([
     db
@@ -34,6 +36,8 @@ export default async function MentorLayout({ children }: { children: ReactNode }
 
   const nav: WorkspaceNavItem[] = [
     { href: "/mentor", label: "Overview", icon: "home" },
+    { href: "/mentor/assignments", label: "Set assignments", icon: "clipboard" },
+    { href: "/mentor/media", label: "Media library", icon: "book" },
     { href: "/mentor/sessions", label: "Coaching sessions", icon: "calendar", badge: Number(requests[0]?.value ?? 0) },
     { href: "/mentor/submissions", label: "Assignment review", icon: "clipboard", badge: Number(reviews[0]?.value ?? 0) },
     { href: "/mentor/assessments", label: "Assessment scores", icon: "target" },
@@ -42,6 +46,7 @@ export default async function MentorLayout({ children }: { children: ReactNode }
     { href: "/mentor/attendance", label: "Attendance", icon: "calendar" },
     { href: "/mentor/live", label: "Live teaching", icon: "calendar" },
     { href: "/community", label: "Community", icon: "message" },
+    { href: "/mentor/settings", label: "Profile & settings", icon: "user" },
   ];
 
   return (

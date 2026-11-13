@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth";
 
 export const PERMISSIONS = {
+  "media.access": "Upload and reuse shared media files",
   "org.manage": "Manage the organisation, billing and platform settings",
   "people.manage": "Invite people and assign roles",
   "people.view": "See the people directory",
@@ -141,7 +142,9 @@ export const PERMISSION_LIST = Object.entries(PERMISSIONS).map(([key, label]) =>
 
 export function permissionsForRole(roleSlug: string | null | undefined): Permission[] {
   if (!roleSlug) return [];
-  return ROLE_DEFINITIONS.find((role) => role.slug === roleSlug)?.permissions ?? [];
+  const definition = ROLE_DEFINITIONS.find((role) => role.slug === roleSlug);
+  if (!definition) return [];
+  return roleSlug === "student" || roleSlug === "guest" ? definition.permissions : [...new Set<Permission>([...definition.permissions, "media.access"])];
 }
 
 const ROLE_LEVEL = Object.fromEntries(ROLE_DEFINITIONS.map((role) => [role.slug, role.level]));
@@ -157,6 +160,7 @@ export function normalizeRole(roleSlug: string | null | undefined) {
 export function can(user: { roleSlug: string; permissions?: string[] } | null | undefined, permission: Permission) {
   if (!user) return false;
   const role = normalizeRole(user.roleSlug);
+  if (permission === "media.access") return ROLE_DEFINITIONS.some(definition => definition.slug === role) && role !== "student" && role !== "guest";
   if (role === "super_admin") return true;
   const rolePermissions = permissionsForRole(role);
   if (rolePermissions.includes(permission)) return true;

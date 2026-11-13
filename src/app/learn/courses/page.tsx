@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { courseLevels } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { LevelProgression } from "@/components/academy/level-progression";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function StudentCoursesPage() {
 
   return (
     <div className="space-y-6">
+      <LevelProgression user={user} />
       <div className="relative overflow-hidden rounded-2xl border border-navy/10">
         <img
           src="/images/student-study.jpg"

@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaField } from "@/components/media/media-field";
+
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, Loader2, Plus, Save as SaveIcon } from "lucide-react";
@@ -108,7 +110,7 @@ export function CourseForm({ levels }: { levels: { id: number; name: string }[] 
         </Field>
       </div>
       <Field label="Cover image URL" hint="optional">
-        <Input name="coverImageUrl" placeholder="https://…" className="text-[12px]" />
+        <MediaField name="coverImageUrl" kind="image" placeholder="https://…" />
       </Field>
       <label className="flex items-center gap-2 text-[12px] text-navy">
         <input type="checkbox" name="isSequential" defaultChecked className="h-4 w-4 rounded border-navy/30 text-gold" />
@@ -153,7 +155,7 @@ export function CourseSettingsForm({
         <Textarea name="description" rows={3} defaultValue={course.description ?? ""} className="text-[12.5px]" />
       </Field>
       <Field label="Cover image URL">
-        <Input name="coverImageUrl" defaultValue={course.coverImageUrl ?? ""} className="text-[12px]" />
+        <MediaField name="coverImageUrl" kind="image" defaultValue={course.coverImageUrl ?? ""} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Accent">
@@ -304,19 +306,19 @@ export function LessonForm({
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Video URL" hint="mp4 or YouTube/Vimeo">
-          <Input name="videoUrl" defaultValue={lesson?.videoUrl ?? ""} placeholder="https://…mp4" className="text-[12px]" />
+          <MediaField name="videoUrl" kind="video" defaultValue={lesson?.videoUrl ?? ""} placeholder="https://…mp4" />
         </Field>
         <Field label="Audio URL">
-          <Input name="audioUrl" defaultValue={lesson?.audioUrl ?? ""} placeholder="https://…mp3" className="text-[12px]" />
+          <MediaField name="audioUrl" kind="audio" defaultValue={lesson?.audioUrl ?? ""} placeholder="https://…mp3" />
         </Field>
         <Field label="Illustration image URL">
-          <Input name="imageUrl" defaultValue={lesson?.imageUrl ?? ""} placeholder="https://…jpg" className="text-[12px]" />
+          <MediaField name="imageUrl" kind="image" defaultValue={lesson?.imageUrl ?? ""} placeholder="https://…jpg" />
         </Field>
         <Field label="Image alt text">
           <Input name="imageAlt" defaultValue={lesson?.imageAlt ?? ""} className="text-[12px]" />
         </Field>
         <Field label="Download URL" hint="worksheet / PDF">
-          <Input name="downloadUrl" defaultValue={lesson?.downloadUrl ?? ""} placeholder="/api/resources/…/download" className="text-[12px]" />
+          <MediaField name="downloadUrl" defaultValue={lesson?.downloadUrl ?? ""} placeholder="/api/resources/…/download" />
         </Field>
         <Field label="Download label">
           <Input name="downloadLabel" defaultValue={lesson?.downloadLabel ?? ""} placeholder="Download the worksheet" className="text-[12px]" />

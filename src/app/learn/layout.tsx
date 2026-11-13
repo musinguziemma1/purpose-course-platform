@@ -5,7 +5,9 @@ import { db } from "@/db";
 import { assignments, coachingSessions, liveSessions } from "@/db/schema";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { WorkspaceShell, type WorkspaceNavItem } from "@/components/workspace/workspace-shell";
-import { levelEnrolled, liveReadable } from "@/db/learning-access";
+import { liveReadable } from "@/db/learning-access";
+import { profileIsComplete } from "@/lib/profile";
+import { assignmentReadable } from "@/db/assignment-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +20,10 @@ export default async function LearnLayout({ children }: { children: ReactNode })
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/learn");
   if (user.roleSlug !== "student") redirect(homePathForRole(user.roleSlug));
+  if (!user.isDemo && !profileIsComplete(user)) redirect("/account?complete=1");
 
   const [openAssignments, openSessions, upcomingLive] = await Promise.all([
-    db.select({ value: count() }).from(assignments).where(levelEnrolled(assignments.levelId, user)),
+    db.select({ value: count() }).from(assignments).where(assignmentReadable(user)),
     db
       .select({ value: count() })
       .from(coachingSessions)
@@ -47,6 +50,7 @@ export default async function LearnLayout({ children }: { children: ReactNode })
     { href: "/learn/mentor", label: "My mentor", icon: "user", badge: Number(openSessions[0]?.value ?? 0) },
     { href: "/learn/certificates", label: "Certificates", icon: "award" },
     { href: "/community", label: "Community", icon: "message" },
+    { href: "/learn/settings", label: "Profile & settings", icon: "user" },
   ];
 
   return (
