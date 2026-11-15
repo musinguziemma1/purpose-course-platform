@@ -532,6 +532,29 @@ export async function changeCohortMember(
     };
   });
 }
+/** An explicit staff request, followed by the normal eligibility/capacity-controlled activation. */
+export async function createLevelEnrolment(input: { profileId: string; levelId: number }, viewer: SessionUser | null) {
+  if (!isUuid(input.profileId) || !Number.isSafeInteger(input.levelId) || input.levelId < 1) return { error: "Choose an approved student and a valid level." };
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(725104,6)`);
+    const actor = await allowed(tx, viewer);
+    if (!actor) return { error: "Enrolment management permission required." };
+    const [person] = await tx.select({ id: profiles.id, name: profiles.fullName, email: users.email }).from(profiles)
+      .innerJoin(users, eq(users.id, profiles.userId)).innerJoin(roles, eq(roles.id, profiles.roleId))
+      .where(and(eq(profiles.id, input.profileId), eq(users.isActive, true), eq(roles.slug, "student")))
+      .for("update", { of: profiles }).limit(1);
+    if (!person) return { error: "Choose an active, approved Student account." };
+    const [course] = await tx.select({ id: courses.id }).from(courses).where(and(eq(courses.levelId, input.levelId), eq(courses.status, "published"))).limit(1);
+    if (!course) return { error: "Publish a course in this level before creating an enrolment." };
+    const [existing] = await tx.select({ id: enrollments.id }).from(enrollments).where(and(eq(enrollments.levelId, input.levelId), sql`(${enrollments.profileId}=${person.id} or lower(${enrollments.email})=lower(${person.email}))`)).limit(1);
+    if (existing) return { error: "An enrolment already exists for this person and level. Review the existing record instead." };
+    const [record] = await tx.insert(enrollments).values({ profileId: person.id, email: person.email, fullName: person.name, levelId: input.levelId, status: "waitlist" }).onConflictDoNothing().returning({ id: enrollments.id });
+    if (!record) return { error: "An enrolment was created concurrently. Refresh and review the existing record." };
+    await audit(tx, actor, "enrolment.created", record.id);
+    return { ok: true as const, message: "Level request created. Review it below to activate eligible access and select a cohort." };
+  });
+}
+
 export async function manageEnrolment(
   input: {
     id: string;

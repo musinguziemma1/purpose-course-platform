@@ -15,6 +15,8 @@ import {
 import { safeContentUrl } from "@/lib/content-media";
 import { can } from "@/lib/rbac";
 import { liveReadable } from "@/db/learning-access";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Live event" };
 export default async function EventPage({
@@ -34,9 +36,9 @@ export default async function EventPage({
         .where(and(eq(liveSessions.id, id), liveReadable(viewer)))
         .limit(1)
     : [];
-  const open = ["scheduled", "live"].includes(event.status),
+  const open = sessionStillOpen(event),
     code =
-      open && privateSession
+      open && privateSession && nativeConferenceAvailable()
         ? (privateSession.roomCode ?? (await ensureRoomCode(id)))
         : null;
   const manages = Boolean(
@@ -108,7 +110,7 @@ export default async function EventPage({
                     </Link>
                   ) : null}
                   <Link
-                    href={`${viewer?.roleSlug === "student" ? "/learn" : "/mentor"}/live/${id}`}
+                    href={viewer?.roleSlug === "student" ? `/learn/live/${id}` : viewer?.roleSlug === "mentor" ? `/mentor/live/${id}` : `/admin/academy/live`}
                     className="rounded-full border border-navy/20 px-5 py-2.5 text-sm font-semibold text-navy"
                   >
                     Session feed
@@ -121,7 +123,7 @@ export default async function EventPage({
                       rel="noopener noreferrer"
                       className="rounded-full border border-navy/20 px-5 py-2.5 text-sm font-semibold text-navy"
                     >
-                      External meeting ↗
+                      Join meeting ↗
                     </a>
                   ) : null}
                 </div>

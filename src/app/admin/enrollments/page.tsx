@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
-import { cohorts, courseLevels, enrollments } from "@/db/schema";
+import { cohorts, courseLevels, enrollments, profiles, roles, users } from "@/db/schema";
 import { requireAdminPage } from "@/lib/page-access";
-import { EnrolmentForm } from "@/components/academy/cohort-forms";
+import { EnrolmentForm, NewEnrolmentForm } from "@/components/academy/cohort-forms";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Enrolment management" };
 export default async function EnrolmentPage({
@@ -20,7 +20,7 @@ export default async function EnrolmentPage({
       ? params.status
       : undefined,
     offset = Math.max(0, Math.min(100000, Number(params.offset) || 0));
-  const [rows, available] = await Promise.all([
+  const [rows, available, students, levels] = await Promise.all([
     db
       .select({ record: enrollments, levelName: courseLevels.name })
       .from(enrollments)
@@ -49,6 +49,8 @@ export default async function EnrolmentPage({
       .from(cohorts)
       .where(inArray(cohorts.status, ["draft", "active", "completed"]))
       .orderBy(cohorts.name),
+    db.select({ id: profiles.id, name: profiles.fullName, email: users.email }).from(profiles).innerJoin(users, eq(users.id, profiles.userId)).innerJoin(roles, eq(roles.id, profiles.roleId)).where(and(eq(users.isActive, true), eq(roles.slug, "student"))).orderBy(profiles.fullName).limit(250),
+    db.select({ id: courseLevels.id, name: courseLevels.name }).from(courseLevels).orderBy(courseLevels.levelNumber),
   ]);
   const page = (next: number) =>
     "/admin/enrollments?" +
@@ -71,6 +73,7 @@ export default async function EnrolmentPage({
           </Link>
         </div>
       </div>
+      <NewEnrolmentForm students={students} levels={levels} />
       <form className="flex flex-wrap gap-3" action="/admin/enrollments">
         <input
           name="q"

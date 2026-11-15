@@ -79,6 +79,7 @@ export async function reviewEventRequest(
       version: text(form, "version"),
       decision: text(form, "decision"),
       note: text(form, "note"),
+      meetingUrl: text(form, "meetingUrl"),
     },
     await getSessionUser(),
   );

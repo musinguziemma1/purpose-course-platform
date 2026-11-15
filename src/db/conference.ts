@@ -6,6 +6,8 @@ import { liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
 import { can } from "@/lib/rbac";
 import type { SessionUser } from "@/lib/auth";
+import { conferenceConfiguration, nativeConferenceAvailable } from "@/lib/conference-config";
+import { sessionOpen } from "@/db/live-lifecycle";
 
 const configuredSeats = Number(process.env.CONFERENCE_MAX_SEATS ?? 8);
 export const MESH_SEAT_LIMIT = Number.isInteger(configuredSeats) && configuredSeats >= 2 && configuredSeats <= 12 ? configuredSeats : 8;
@@ -19,7 +21,8 @@ export function iceServers(): { urls: string | string[]; username?: string; cred
   const servers: { urls: string | string[]; username?: string; credential?: string }[] = [
     { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
   ];
-  if (process.env.TURN_URL) servers.push({ urls: process.env.TURN_URL, username: process.env.TURN_USERNAME, credential: process.env.TURN_CREDENTIAL });
+  const { relay } = conferenceConfiguration();
+  if (relay) servers.push(relay);
   return servers;
 }
 
@@ -51,12 +54,13 @@ function ownsPeer(code: string, peerId: string, viewer: SessionUser) {
   return and(eq(conferenceParticipants.roomCode, code), eq(conferenceParticipants.peerId, peerId), eq(conferenceParticipants.profileId, viewer.profileId))!;
 }
 
-async function lockOpenRoom(code: string, viewer: SessionUser, tx: Transaction) {
-  const [room] = await tx.select().from(liveSessions).where(and(eq(liveSessions.roomCode, code), liveReadable(viewer), sql`${liveSessions.status} in ('scheduled', 'live')`)).for("update").limit(1);
+async function lockOpenRoom(code: string, viewer: SessionUser, tx: Transaction, mode: "update" | "share" = "update") {
+  const [room] = await tx.select().from(liveSessions).where(and(eq(liveSessions.roomCode, code), liveReadable(viewer), sessionOpen())).for(mode).limit(1);
   return room;
 }
 
 export async function joinRoom(input: { code: string; peerId: string; viewer: SessionUser }) {
+  if (!nativeConferenceAvailable()) return null;
   return db.transaction(async (tx) => {
     const session = await lockOpenRoom(input.code, input.viewer, tx);
     if (!session) return null;
@@ -90,14 +94,13 @@ async function listPeers(code: string, selfPeerId: string, database: Database) {
     role: conferenceParticipants.role, mode: conferenceParticipants.mode,
     audioEnabled: conferenceParticipants.audioEnabled, videoEnabled: conferenceParticipants.videoEnabled,
     sharingScreen: conferenceParticipants.sharingScreen, handRaised: conferenceParticipants.handRaised,
-  }).from(conferenceParticipants).where(and(eq(conferenceParticipants.roomCode, code), ne(conferenceParticipants.peerId, selfPeerId)));
+  }).from(conferenceParticipants).where(and(eq(conferenceParticipants.roomCode, code), ne(conferenceParticipants.peerId, selfPeerId), sql`${conferenceParticipants.lastSeenAt} >= now() - make_interval(secs => ${PRESENCE_TIMEOUT_SECONDS})`));
 }
 
 export async function heartbeatRoom(input: { code: string; peerId: string; viewer: SessionUser; audioEnabled: boolean; videoEnabled: boolean; sharingScreen: boolean; handRaised: boolean }) {
   return db.transaction(async (tx) => {
-    const room = await lockOpenRoom(input.code, input.viewer, tx);
+    const room = await lockOpenRoom(input.code, input.viewer, tx, "share");
     if (!room) return null;
-    await prune(input.code, tx);
     const [self] = await tx.update(conferenceParticipants).set({ lastSeenAt: new Date(), audioEnabled: input.audioEnabled, videoEnabled: input.videoEnabled,
       sharingScreen: input.sharingScreen, handRaised: input.handRaised, role: isRoomHost(room.hostId, input.viewer) ? "host" : "student",
     }).where(ownsPeer(input.code, input.peerId, input.viewer)).returning({ mode: conferenceParticipants.mode, role: conferenceParticipants.role });
@@ -112,8 +115,7 @@ export async function heartbeatRoom(input: { code: string; peerId: string; viewe
 export async function sendSignal(input: { code: string; fromPeer: string; toPeer: string; viewer: SessionUser; kind: string; payload: Record<string, unknown> }) {
   if (!["offer", "answer", "ice", "bye"].includes(input.kind) || input.fromPeer === input.toPeer) return false;
   return db.transaction(async (tx) => {
-    if (!(await lockOpenRoom(input.code, input.viewer, tx))) return false;
-    await prune(input.code, tx);
+    if (!(await lockOpenRoom(input.code, input.viewer, tx, "share"))) return false;
     const [sender] = await tx.select({ id: conferenceParticipants.peerId }).from(conferenceParticipants).where(ownsPeer(input.code, input.fromPeer, input.viewer)).limit(1);
     const [target] = await tx.select({ id: conferenceParticipants.peerId }).from(conferenceParticipants).where(and(eq(conferenceParticipants.roomCode, input.code), eq(conferenceParticipants.peerId, input.toPeer))).limit(1);
     if (!sender || !target) return false;

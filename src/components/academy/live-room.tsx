@@ -28,7 +28,6 @@ export function LiveRoom({
   recordingUrl,
   defaultName,
   canPost = true,
-  isLive = false,
 }: {
   sessionId: number;
   initialMessages: Message[];
@@ -104,7 +103,7 @@ export function LiveRoom({
     }
   }
 
-  const live = status === "live" || isLive;
+  const live = status === "live";
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-navy/10 bg-paper">
@@ -114,7 +113,7 @@ export function LiveRoom({
           {live ? "Live feed" : `Feed · ${status}`}
         </p>
         <div className="flex items-center gap-2">
-          {meetingUrl && status !== "ended" ? (
+          {meetingUrl && ["scheduled", "live"].includes(status) ? (
             <a
               href={meetingUrl}
               target="_blank"

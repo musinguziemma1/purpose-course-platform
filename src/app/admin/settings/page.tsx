@@ -1,4 +1,5 @@
 import { requireAdminPage } from "@/lib/page-access";
+import Link from "next/link";
 import { Lock, ShieldCheck } from "lucide-react";
 import { getSiteSettings, getTeam } from "@/db/queries";
 import { getSessionUser, canManageSettings } from "@/lib/auth";
@@ -58,6 +59,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="space-y-5">
+      <Link href="/admin/operations" className="inline-block text-sm font-semibold text-gold-dark underline">Service health and operational exceptions →</Link>
       {user ? <AccountSettings user={user} /> : null}
       <section className="admin-card p-5"><h2 className="font-serif text-xl text-navy">Profile completion reminders</h2><p className="mt-2 text-sm text-stone-600">{team.filter(member => incompleteIds.has(member.id)).length} of {activeProfiles.length} active people still need to complete their profile. They receive a required reminder when they sign in.</p><ul className="mt-3 space-y-1 text-sm text-stone-600">{team.filter(member => incompleteIds.has(member.id)).map(member => <li key={member.id}>{member.fullName} · {member.roleName}</li>)}</ul></section>
       <div className="flex flex-wrap items-start justify-between gap-3">

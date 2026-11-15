@@ -1,8 +1,9 @@
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { getSessionUser } from "@/lib/auth";
+import type { SessionUser } from "@/lib/auth";
 import { threadReadable } from "@/db/community-access";
-import { cohortReadable, liveReadable } from "@/db/learning-access";
+import { cohortReadable } from "@/db/learning-access";
+import { calendarDiscovery } from "@/db/live-lifecycle";
 import {
   articles,
   cohorts,
@@ -45,11 +46,15 @@ function clip(value: string | null | undefined, length = 150) {
 }
 
 export async function searchPlatform(query: string, options: { types?: SearchType[]; limit?: number } = {}) {
+  const { getSessionUser } = await import("@/lib/auth");
+  return searchForViewer(query, await getSessionUser(), options);
+}
+
+export async function searchForViewer(query: string, viewer: SessionUser | null, options: { types?: SearchType[]; limit?: number } = {}) {
   const term = query.trim();
   if (term.length < 2) return { query: term, groups: GROUPS.map((group) => ({ ...group, hits: [] })), total: 0 };
 
   const needle = `%${term}%`;
-  const viewer = await getSessionUser();
   const limit = options.limit ?? 6;
   const include = (type: SearchType) => !options.types || options.types.length === 0 || options.types.includes(type);
 
@@ -116,7 +121,7 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
       ? db
           .select({ id: liveSessions.id, title: liveSessions.title, description: liveSessions.description, type: liveSessions.type, startsAt: liveSessions.startsAt })
           .from(liveSessions)
-          .where(and(liveReadable(viewer), or(ilike(liveSessions.title, needle), ilike(liveSessions.description, needle))))
+          .where(and(calendarDiscovery(viewer), or(ilike(liveSessions.title, needle), ilike(liveSessions.description, needle))))
           .orderBy(desc(liveSessions.startsAt))
           .limit(limit)
       : Promise.resolve([]),
@@ -185,7 +190,7 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
         id: `session-${row.id}`,
         title: row.title,
         snippet: clip(row.description),
-        href: `/learn/live/${row.id}`,
+        href: `/events/${row.id}`,
         meta: `${row.type.replace("_", " ")} · ${row.startsAt.toISOString().slice(0, 10)}`,
       })),
     ],
@@ -201,6 +206,7 @@ export async function searchPlatform(query: string, options: { types?: SearchTyp
 }
 
 export async function getSearchFacets() {
+  const { getSessionUser } = await import("@/lib/auth");
   const viewer = await getSessionUser();
   const rows = await db.execute(sql`
     select 'article' as type, count(*)::int as value from articles where status = 'published'
@@ -209,7 +215,7 @@ export async function getSearchFacets() {
     union all select 'resource', count(*)::int from resources
     union all select 'discussion', count(*)::int from discussion_threads where ${threadReadable(viewer)}
     union all select 'person', count(*)::int from profiles where exists (select 1 from articles where articles.author_id = profiles.id and articles.status = 'published')
-    union all select 'event', (select count(*)::int from live_sessions where ${liveReadable(viewer)}) + (select count(*)::int from cohorts where ${cohortReadable(viewer)})
+    union all select 'event', (select count(*)::int from live_sessions where ${calendarDiscovery(viewer)}) + (select count(*)::int from cohorts where ${cohortReadable(viewer)})
   `);
   return (rows.rows as { type: SearchType; value: number }[]).map((row) => ({ ...row, value: Number(row.value) }));
 }

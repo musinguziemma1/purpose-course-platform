@@ -5,6 +5,7 @@ import {
   saveCohort,
   saveCohortMember,
   saveEnrolment,
+  createEnrolment,
   type CohortState,
 } from "@/app/actions/cohort-enrolments";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -265,6 +266,18 @@ export function CohortMembershipControl({
     </form>
   );
 }
+export function NewEnrolmentForm({ students, levels }: { students: { id: string; name: string; email: string }[]; levels: { id: number; name: string }[] }) {
+  const [state, action, pending] = useActionState<CohortState, FormData>(createEnrolment, {});
+  return <form action={action} className="admin-card space-y-4 p-5">
+    <div><h2 className="font-serif text-xl text-navy">Create a level enrolment request</h2><p className="mt-2 text-sm text-stone-600">Choose an approved student and level. The request starts on the waitlist; activate it below after checking eligibility and cohort placement.</p></div>
+    <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2">
+      <Field label="Approved student"><Select name="profileId" required defaultValue=""><option value="" disabled>Select a student</option>{students.map(person => <option key={person.id} value={person.id}>{person.name} · {person.email}</option>)}</Select></Field>
+      <Field label="Course level"><Select name="levelId" required defaultValue=""><option value="" disabled>Select a level</option>{levels.map(level => <option key={level.id} value={level.id}>{level.name}</option>)}</Select></Field>
+      <button disabled={pending || !students.length || !levels.length} className="rounded-full bg-navy px-4 py-2 text-sm font-semibold text-paper disabled:opacity-50">Create enrolment request</button>
+    </fieldset><Note state={state} />
+  </form>;
+}
+
 export function EnrolmentForm({
   record,
   cohorts,

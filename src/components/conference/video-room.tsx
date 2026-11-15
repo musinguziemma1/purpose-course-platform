@@ -41,7 +41,7 @@ type Connection = {
   polite: boolean;
 };
 
-const POLL_MS = 1200;
+const POLL_MS = 2500;
 
 class ConferenceError extends Error {
   constructor(message: string, public status: number) { super(message); }
@@ -192,6 +192,7 @@ export function VideoRoom({
 
   useEffect(() => {
     let cancelled = false;
+    let polling = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     peerIdRef.current = crypto.randomUUID();
 
@@ -238,7 +239,7 @@ export function VideoRoom({
 
         if (selfMode === "mesh") {
           for (const peer of existing) {
-            const shouldInitiate = peer.role === "viewer" ? false : peerIdRef.current < peer.peerId;
+            const shouldInitiate = peer.mode === "viewer" ? false : peerIdRef.current < peer.peerId;
             if (shouldInitiate) ensureConnection(peer.peerId, true);
           }
         } else if (hostPeerId) {
@@ -255,6 +256,8 @@ export function VideoRoom({
     }
 
     async function poll() {
+      if (cancelled || polling) return;
+      polling = true;
       try {
         const data = await post({
           action: "poll",
@@ -297,7 +300,7 @@ export function VideoRoom({
           await handleSignal(signal);
         }
       } catch (cause) {
-        if (cause instanceof ConferenceError && [401, 403, 404].includes(cause.status)) {
+        if (cause instanceof ConferenceError && [401, 403, 404, 503].includes(cause.status)) {
           cancelled = true;
           if (pollTimer) clearInterval(pollTimer);
           Array.from(connections.current.keys()).forEach(closeConnection);
@@ -306,7 +309,7 @@ export function VideoRoom({
           setError("This session ended or your room access was removed.");
           setStatus("error");
         }
-      }
+      } finally { polling = false; }
     }
 
     async function handleSignal(signal: SignalEnvelope) {

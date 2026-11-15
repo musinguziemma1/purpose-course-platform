@@ -450,6 +450,10 @@ test("embedded lesson and course materials and recordings follow publication and
       await media.readableMedia(asset.result.id, actors.student),
       /read-fixture/,
     );
+    await client.query("update live_sessions set status='live',starts_at=now() where id=$1", [recordingId]);
+    assert.equal(await media.readableMedia(asset.result.id, actors.student), null);
+    await client.query("update live_sessions set starts_at=now()-interval '2 days' where id=$1", [recordingId]);
+    assert.match(await media.readableMedia(asset.result.id, actors.student), /read-fixture/);
     assert.equal(await media.readableMedia(asset.result.id, null), null);
     await client.query(
       "update enrollments set status='paused' where profile_id=$1 and level_id=$2",

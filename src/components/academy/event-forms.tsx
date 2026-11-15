@@ -51,12 +51,14 @@ export function EventForm({
   hostId,
   timezone = "Africa/Kampala",
   existing,
+  nativeAvailable = false,
 }: {
   options: EventOptions;
   request?: boolean;
   hostId?: string;
   timezone?: string;
   existing?: Existing;
+  nativeAvailable?: boolean;
 }) {
   const [key] = useState(() => crypto.randomUUID()),
     [zone, setZone] = useState(existing?.timezone ?? timezone),
@@ -205,11 +207,12 @@ export function EventForm({
           <>
             <Field
               label="External meeting link"
-              hint="optional; otherwise use the built-in room"
+              hint={nativeAvailable ? "optional; otherwise use the built-in room" : "required to schedule this session"}
             >
               <Input
                 name="meetingUrl"
                 type="url"
+                required={!nativeAvailable}
                 placeholder="https://meet.google.com/…"
                 defaultValue={existing?.meetingUrl ?? ""}
               />
@@ -258,6 +261,11 @@ export function RequestReviewForm({
     <form action={action} className="mt-3 space-y-2">
       <input type="hidden" name="requestId" value={id} />
       <input type="hidden" name="version" value={version} />
+      {!own ? (
+        <Field label="Meeting link for approval" hint="Add the HTTPS meeting link before approving this request.">
+          <Input name="meetingUrl" type="url" placeholder="https://meet.google.com/…" />
+        </Field>
+      ) : null}
       {!own ? (
         <Field label="Scheduling decision note">
           <Textarea

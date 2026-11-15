@@ -23,6 +23,8 @@ import type { SessionUser } from "@/lib/auth";
 import { validTimeZone } from "@/lib/event-time";
 import { isUuid } from "@/lib/contact";
 import { safeContentUrl } from "@/lib/content-media";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { calendarDiscovery, effectiveSessionStatus, sessionOpen, sessionWithinEndWindow } from "@/db/live-lifecycle";
 
 export type LiveInput = {
   id?: number;
@@ -221,6 +223,7 @@ async function persistSchedule(
 ) {
   const error = validated(input);
   if (error) return { error };
+  if (!nativeConferenceAvailable() && !input.meetingUrl.trim()) return { error: "Add an HTTPS meeting link before scheduling this session. Native video rooms are not configured." };
   let old: typeof liveSessions.$inferSelect | undefined;
   if (input.id) {
     [old] = await tx
@@ -360,6 +363,10 @@ export async function changeLiveEventStatus(
     };
     if (!transitions[session.status]?.includes(input.status))
       return { error: "That session status change is unavailable." };
+    if (input.status === "live" && session.startsAt.getTime() + (session.durationMinutes + 15) * 60000 < Date.now())
+      return { error: "This session has expired. Schedule a new session with a future time." };
+    if (input.status === "live" && !nativeConferenceAvailable() && !session.meetingUrl)
+      return { error: "Add a meeting link to the schedule before starting this session." };
     await tx
       .update(liveSessions)
       .set({
@@ -493,7 +500,7 @@ export async function requestLiveEvent(
   });
 }
 export async function reviewLiveEventRequest(
-  input: { id: string; version: string; decision: string; note: string },
+  input: { id: string; version: string; decision: string; note: string; meetingUrl?: string },
   viewer: SessionUser | null,
 ) {
   if (
@@ -545,7 +552,7 @@ export async function reviewLiveEventRequest(
           hostId: request.requestedById,
           courseId: request.courseId,
           cohortId: request.cohortId,
-          meetingUrl: "",
+          meetingUrl: input.meetingUrl?.trim() ?? "",
           isPublic: true,
         },
         actor,
@@ -614,7 +621,7 @@ export async function setEventRsvp(
       .where(
         and(
           eq(liveSessions.id, id),
-          inArray(liveSessions.status, ["scheduled", "live"]),
+          sessionOpen(),
           liveReadable(actor),
         ),
       )
@@ -657,7 +664,7 @@ export async function getEventCalendar(
       title: liveSessions.title,
       description: liveSessions.description,
       type: liveSessions.type,
-      status: liveSessions.status,
+      status: effectiveSessionStatus(),
       startsAt: liveSessions.startsAt,
       durationMinutes: liveSessions.durationMinutes,
       timezone: liveSessions.timezone,
@@ -678,23 +685,18 @@ export async function getEventCalendar(
     .leftJoin(cohorts, eq(liveSessions.cohortId, cohorts.id))
     .where(
       and(
-        !viewer ? eq(liveSessions.isPublic, true) : undefined,
+        calendarDiscovery(viewer),
         options.id
           ? eq(liveSessions.id, options.id)
           : options.past
             ? or(
                 inArray(liveSessions.status, ["ended", "cancelled"]),
                 and(
-                  eq(liveSessions.status, "scheduled"),
-                  sql.raw(
-                    "live_sessions.starts_at + make_interval(mins => live_sessions.duration_minutes) < now()",
-                  ),
+                  inArray(liveSessions.status, ["scheduled", "live"]),
+                  sql`not (${sessionWithinEndWindow()})`,
                 ),
               )
-            : and(
-                inArray(liveSessions.status, ["scheduled", "live"]),
-                sql`(${liveSessions.status}='live' or ${liveSessions.startsAt}+make_interval(mins => ${liveSessions.durationMinutes}) >= now())`,
-              ),
+            : sessionOpen(),
       ),
     )
     .orderBy(

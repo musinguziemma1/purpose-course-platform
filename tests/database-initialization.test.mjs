@@ -31,7 +31,8 @@ test("runtime reads and transactions still reject missing database configuration
     assert.throws(() => db.transaction(async () => {}), /DATABASE_URL is required/);
     const { GET } = await import('./src/app/api/health/route.ts');
     const response = await GET();
-    assert.equal(response.status, 500);
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.deepEqual(await response.json(), { ok: false });
   `);
 });

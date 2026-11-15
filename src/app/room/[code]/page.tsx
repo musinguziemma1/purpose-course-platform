@@ -8,6 +8,8 @@ import { getRoomByCode, isRoomHost } from "@/db/conference";
 import { getLiveSessionRoom } from "@/db/courses";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ export default async function VideoRoomPage({ params }: Params) {
 
   const record = await getRoomByCode(code, user);
   if (!record) notFound();
+  if (!nativeConferenceAvailable() || !sessionStillOpen(record.session)) redirect(`/events/${record.session.id}`);
 
   const feed = await getLiveSessionRoom(record.session.id);
   const backHref =
@@ -77,10 +80,9 @@ export default async function VideoRoomPage({ params }: Params) {
               <Video className="h-3.5 w-3.5 text-gold-dark" /> How this room stays fast
             </p>
             <p className="mt-1">
-              Video and audio travel directly between participants over WebRTC, so there is no media server in the middle
-              and no upload bottleneck beyond your own connection. The first seats are interactive (camera and mic);
-              beyond that, joiners watch the host&apos;s stage stream, which keeps large classes light. The live feed on
-              the right is the shared backchannel for questions and group work.
+              Use a stable connection and headphones. Interactive seats support camera and microphone;
+              observers receive the host&apos;s stream. Call quality depends on participants&apos; connections and the host&apos;s
+              upload capacity. Use the session meeting link for larger classes. The live feed supports questions and group work.
             </p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-stone-500">
               <Lock className="h-3 w-3" /> Room code <span className="font-mono text-navy">{code}</span> · only signed-in

@@ -17,6 +17,7 @@ import { currentActor } from "@/db/actor";
 import { assignmentReadable } from "@/db/assignment-workflow";
 import { learnerReadable } from "@/db/learner-access";
 import { levelEnrolled, lessonAccessible, liveReadable } from "@/db/learning-access";
+import { sessionWithinEndWindow } from "@/db/live-lifecycle";
 import {
   canUseMediaLibrary,
   mediaFileError,
@@ -343,7 +344,7 @@ export async function readableMedia(
           : [],
       ]);
       const [courseDescription] = await db.select({id:courses.id}).from(courses).where(and(eq(courses.status,"published"), levelEnrolled(courses.levelId,viewer), sql`position(${asset.url} in coalesce(${courses.description},''))>0`)).limit(1);
-      const [recording] = await db.select({id:liveSessions.id}).from(liveSessions).where(and(eq(liveSessions.status,"ended"),eq(liveSessions.recordingUrl,asset.url),liveReadable(viewer))).limit(1);
+      const [recording] = await db.select({id:liveSessions.id}).from(liveSessions).where(and(or(eq(liveSessions.status,"ended"),and(eq(liveSessions.status,"live"),sql`not (${sessionWithinEndWindow()})`)),eq(liveSessions.recordingUrl,asset.url),liveReadable(viewer))).limit(1);
       allowed = Boolean(lesson.length || assignment.length || courseDescription || recording);
     }
   }

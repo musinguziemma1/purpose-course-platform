@@ -155,6 +155,11 @@ See [email recovery](email-delivery.md).
 
 ## Backups and restore rehearsal
 
+The implemented encrypted export/rehearsal tool, protected maintenance route,
+operations dashboard and GitHub availability checks are described in
+[launch operations](launch-operations.md). A successful synthetic-data rehearsal
+does not close the production recovery and off-site retention requirements below.
+
 The migration snapshots in `.local/backups` are checksummed application records
 for change verification. They are not complete PostgreSQL recovery backups.
 Before launch, confirm the project's actual backup plan and retention in the

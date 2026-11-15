@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth";
 import {
   changeCohortMember,
+  createLevelEnrolment,
   manageEnrolment,
   saveCohortSetup,
   type CohortInput,
@@ -15,6 +16,11 @@ export type CohortState = {
 };
 const text = (form: FormData, key: string) =>
   String(form.get(key) ?? "").trim();
+export async function createEnrolment(_prev: CohortState, form: FormData): Promise<CohortState> {
+  const result = await createLevelEnrolment({ profileId: text(form, "profileId"), levelId: Number(form.get("levelId")) }, await getSessionUser());
+  if ("ok" in result && result.ok) await refresh();
+  return result;
+}
 async function refresh() {
   for (const path of [
     "/admin/cohorts",

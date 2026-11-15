@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { getRoomByCode, heartbeatRoom, hostControl, joinRoom, leaveRoom, sendSignal } from "@/db/conference";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
 
 export const dynamic = "force-dynamic";
 const peerPattern = /^[a-zA-Z0-9_-]{1,64}$/;
@@ -29,6 +30,7 @@ export async function POST(request: Request, { params }: Context) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid body");
   } catch { return NextResponse.json({ error: "Invalid body." }, { status: 400 }); }
   const action = payload.action;
+  if (action !== "leave" && !nativeConferenceAvailable()) return NextResponse.json({ error: "Use the meeting link on the event page. Native video rooms are not configured." }, { status: 503 });
   const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
   if (!peerPattern.test(peerId)) return NextResponse.json({ error: "Invalid peer id." }, { status: 422 });
   if (action === "join") {

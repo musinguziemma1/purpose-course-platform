@@ -810,3 +810,77 @@ test("a late notification failure rolls back the event and audit instead of anno
     await client.query("drop function " + fn + "()");
   }
 });
+
+
+test("expired live events move to history and cannot be reopened or joined", async () => {
+  const made = await live.scheduleLiveEvent(sessionInput({startsAt:future(30)}), actors.admin);
+  assert.equal(made.ok, true, made.error);
+  await client.query("update live_sessions set status='live',starts_at=now()-interval '2 days' where id=$1", [made.id]);
+  const found = await live.getEventCalendar(null, {id:made.id});
+  assert.equal(found[0].status, "ended");
+  assert.equal((await live.getEventCalendar(null,{limit:100})).some(x=>x.id===made.id), false);
+  assert.equal((await live.getEventCalendar(null,{past:true,limit:100})).some(x=>x.id===made.id), true);
+  await client.query("update live_sessions set status='scheduled' where id=$1", [made.id]);
+  const current = await row("live_sessions",made.id);
+  assert.match((await live.changeLiveEventStatus({id:made.id,version:current.updated_at.toISOString(),status:"live"},actors.admin)).error,/expired/);
+  const conference = await import("../src/db/conference.ts");
+  assert.equal(await conference.joinRoom({code:current.room_code,peerId:randomUUID(),viewer:actors.student}), null);
+});
+
+test("external-only scheduling requires a meeting link while mentor proposals remain requestable", async () => {
+  const old=process.env.CONFERENCE_ENABLED;
+  process.env.CONFERENCE_ENABLED="false";
+  try {
+    const input=sessionInput({startsAt:future(31),meetingUrl:""});
+    assert.match((await live.scheduleLiveEvent(input,actors.admin)).error,/meeting link/);
+    assert.equal((await live.requestLiveEvent(input,actors.mentor)).ok,true);
+    const request=(await client.query("select * from live_session_requests where request_key=$1",[input.scheduleKey])).rows[0];
+    const decision={id:request.id,version:request.updated_at.toISOString(),decision:"approve",note:"Approved teaching session."};
+    assert.match((await live.reviewLiveEventRequest(decision,actors.admin)).error,/meeting link/);
+    const result=await live.reviewLiveEventRequest({...decision,meetingUrl:"https://meet.example.invalid/approved"},actors.admin);
+    assert.equal(result.ok,true,result.error);
+    const approved=(await client.query("select scheduled_session_id from live_session_requests where id=$1",[request.id])).rows[0];
+    assert.equal((await row("live_sessions",approved.scheduled_session_id)).meeting_url,"https://meet.example.invalid/approved");
+  } finally {if(old===undefined)delete process.env.CONFERENCE_ENABLED;else process.env.CONFERENCE_ENABLED=old;}
+});
+
+
+test("event search shares calendar discovery and uses a role-neutral event destination", async () => {
+  const publicEvent=await live.scheduleLiveEvent(sessionInput({startsAt:future(32)}),actors.admin);
+  const privateEvent=await live.scheduleLiveEvent(sessionInput({startsAt:future(33),isPublic:false}),actors.admin);
+  assert.equal(publicEvent.ok,true,publicEvent.error);assert.equal(privateEvent.ok,true,privateEvent.error);
+  const {searchForViewer}=await import("../src/db/search.ts");
+  const anonymous=await searchForViewer(key,null,{types:["event"],limit:100});
+  const hits=anonymous.groups.flatMap(group=>group.hits);
+  assert.ok(hits.some(hit=>hit.id==="session-"+publicEvent.id&&hit.href==="/events/"+publicEvent.id));
+  assert.ok(!hits.some(hit=>hit.id==="session-"+privateEvent.id));
+  const signedIn=await searchForViewer(key,actors.mentor,{types:["event"],limit:100});
+  assert.ok(signedIn.groups.flatMap(group=>group.hits).some(hit=>hit.id==="session-"+privateEvent.id&&hit.href==="/events/"+privateEvent.id));
+});
+
+test("maintenance ends expired live sessions once, preserves future sessions and exposes aggregate health", async () => {
+  const made=await live.scheduleLiveEvent(sessionInput({startsAt:future(34)}),actors.admin);
+  assert.equal(made.ok,true,made.error);
+  const {expireLiveSessions,getOperationsStatus}=await import("../src/db/operations.ts");
+  assert.equal((await expireLiveSessions([made.id])).ended,0);
+  await client.query("update live_sessions set status='live',starts_at=now()-interval '2 days' where id=$1",[made.id]);
+  assert.equal((await expireLiveSessions([made.id])).ended,1);
+  assert.equal((await expireLiveSessions([made.id])).ended,0);
+  assert.equal((await row("live_sessions",made.id)).status,"ended");
+  const status=await getOperationsStatus();
+  assert.equal(typeof status.counts.invalid_enrolments,"number");
+  assert.equal(typeof status.counts.overdue_publications,"number");
+  assert.equal(typeof status.emailConfigured,"boolean");
+});
+
+
+test("staff create explicit level requests with the actual Student identity and cannot duplicate or bypass approval", async () => {
+  await client.query("insert into courses(level_id,slug,title,status)values($1,$2,$3,'published')",[ids.levelB,key+"-next",key+" Next level"]);
+  const created=await cohort.createLevelEnrolment({profileId:actors.otherStudent.profileId,levelId:ids.levelB},actors.admin);
+  assert.equal(created.ok,true,created.error);
+  const record=(await client.query("select * from enrollments where profile_id=$1 and level_id=$2",[actors.otherStudent.profileId,ids.levelB])).rows[0];
+  assert.equal(record.email,actors.otherStudent.email);assert.equal(record.status,"waitlist");assert.equal(record.cohort_id,null);
+  assert.match((await cohort.createLevelEnrolment({profileId:actors.otherStudent.profileId,levelId:ids.levelB},actors.admin)).error,/already exists/);
+  assert.match((await cohort.createLevelEnrolment({profileId:actors.mentor.profileId,levelId:ids.levelB},actors.admin)).error,/approved Student/);
+  assert.match((await cohort.createLevelEnrolment({profileId:actors.otherStudent.profileId,levelId:ids.levelB},actors.mentor)).error,/permission/);
+});

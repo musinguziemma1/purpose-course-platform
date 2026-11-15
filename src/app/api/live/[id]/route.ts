@@ -5,6 +5,7 @@ import { liveMessages, liveSessions } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!sessionRows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const messages = await db.select().from(liveMessages).where(eq(liveMessages.liveSessionId, sessionId)).orderBy(asc(liveMessages.createdAt)).limit(200);
   return NextResponse.json({
-    status: sessionRows[0].status,
+    status: ["scheduled", "live"].includes(sessionRows[0].status) && !sessionStillOpen(sessionRows[0]) ? "ended" : sessionRows[0].status,
     recordingUrl: sessionRows[0].recordingUrl,
     messages,
     serverTime: new Date().toISOString(),
@@ -46,7 +47,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const sessionRows = await db.select().from(liveSessions).where(and(eq(liveSessions.id, sessionId), liveReadable(user))).limit(1);
   if (!sessionRows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!["scheduled", "live"].includes(sessionRows[0].status)) {
+  if (!sessionStillOpen(sessionRows[0])) {
     return NextResponse.json({ error: "This session is closed." }, { status: 409 });
   }
 

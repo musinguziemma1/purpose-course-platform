@@ -27,7 +27,10 @@
     "demo:manage": "node scripts/manage-demo-accounts.mjs",
     "curriculum:audit": "node scripts/audit-curriculum.mjs",
     "email:prepare": "node scripts/prepare-email.mjs",
-    "test:passwords": "node --test scripts/password-security.test.mjs"
+    "test:passwords": "node --test scripts/password-security.test.mjs",
+    "ops:enrolments": "node scripts/reconcile-enrolments.mjs",
+    "ops:recovery": "node scripts/recovery.mjs",
+    "ops:monitor": "node scripts/monitor-production.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

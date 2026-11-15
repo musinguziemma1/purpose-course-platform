@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 import {
   courseLevels,
   courseModules,
@@ -278,6 +279,7 @@ export async function getLiveSessionRoom(id: number) {
       .where(eq(liveRsvps.liveSessionId, id)),
   ]);
 
+  if (["scheduled", "live"].includes(record.session.status) && !sessionStillOpen(record.session)) record.session.status = "ended";
   return { ...record, messages, attendees };
 }
 

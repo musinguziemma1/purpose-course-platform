@@ -8,6 +8,8 @@ import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { EventStatusForm } from "@/components/academy/event-forms";
 import { ensureRoomCode, isRoomHost } from "@/db/conference";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function MentorLiveRoomPage({ params }: Params) {
   if (!user) return null;
   const room = await getLiveSessionRoom(Number(id));
   if (!room) notFound();
-  const roomCode = room.session.roomCode ?? (await ensureRoomCode(room.session.id));
+  const roomCode = nativeConferenceAvailable() && sessionStillOpen(room.session) ? room.session.roomCode ?? (await ensureRoomCode(room.session.id)) : null;
   const canHost = isRoomHost(room.session.hostId, user);
 
   return (

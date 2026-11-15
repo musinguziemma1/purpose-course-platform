@@ -7,6 +7,8 @@ import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { toggleRsvp } from "@/app/actions/academy";
 import { ensureRoomCode } from "@/db/conference";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { sessionStillOpen } from "@/db/live-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +29,7 @@ export default async function StudentLiveRoomPage({ params }: Params) {
   if (!room) notFound();
 
   const meta = await dbRsvpState(room.session.id, user.profileId);
-  const roomCode = room.session.roomCode ?? (await ensureRoomCode(room.session.id));
+  const roomCode = nativeConferenceAvailable() && sessionStillOpen(room.session) ? room.session.roomCode ?? (await ensureRoomCode(room.session.id)) : null;
 
   return (
     <div className="space-y-5">
