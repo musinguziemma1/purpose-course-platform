@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen, CalendarClock, FileAudio, FileText, ImageIcon, La
 import { db } from "@/db";
 import { courseLevels } from "@/db/schema";
 import { getAcademyAdminStats, getAcademyTree, getLessonMediaCounts, getLiveSessions } from "@/db/courses";
+import { getProgrammeOutlines } from "@/db/programmes";
 import { CourseForm, LevelForm } from "@/components/academy/admin-forms";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { formatDateTime, STATUS_META } from "@/lib/utils";
@@ -15,12 +16,13 @@ export const metadata = { title: "Academy builder" };
 export default async function AdminAcademyPage() {
   await requireAdminPage("/admin/academy");
   const user = await getSessionUser();
-  const [levels, tree, stats, media, live] = await Promise.all([
+  const [levels, tree, stats, media, live, programmeOutlines] = await Promise.all([
     db.select().from(courseLevels).orderBy(courseLevels.sortOrder),
     getAcademyTree({ includeDrafts: true }),
     getAcademyAdminStats(),
     getLessonMediaCounts(),
     getLiveSessions({ limit: 4 }),
+    getProgrammeOutlines(),
   ]);
   const canAuthor = canAuthorAcademy(user);
 
@@ -67,6 +69,58 @@ export default async function AdminAcademyPage() {
           </div>
         ))}
       </div>
+
+      <section className="admin-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-serif text-lg text-navy">Programme outlines</h2>
+            <p className="mt-1 max-w-3xl text-[11.5px] leading-relaxed text-stone-600">
+              Based on the supplied programme document. These draft records contain programme, level and module outlines only;
+              they do not create or publish learner-facing lessons.
+            </p>
+          </div>
+          <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-800">
+            {programmeOutlines.length} drafts
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {programmeOutlines.map((programme) => (
+            <details key={programme.id} className="rounded-xl border border-navy/10 bg-cream/30 p-4">
+              <summary className="cursor-pointer list-none">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-serif text-[15px] text-navy">{programme.name}</p>
+                    <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-stone-500">
+                      {programme.duration} · {programme.structure}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-800">
+                    {programme.status}
+                  </span>
+                </div>
+              </summary>
+              <p className="mt-3 border-t border-navy/10 pt-3 text-[11.5px] leading-relaxed text-stone-600">
+                {programme.description}
+              </p>
+              <div className="mt-3 space-y-3">
+                {programme.levels.map((level) => (
+                  <div key={level.id} className="rounded-lg border border-navy/8 bg-paper p-3">
+                    <p className="text-[11.5px] font-semibold text-navy">{level.name}</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-[11px] leading-relaxed text-stone-600">
+                      {level.modules.map((module) => (
+                        <li key={module.id}>{module.title}</li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
+          {programmeOutlines.length === 0 ? (
+            <p className="text-[11.5px] text-stone-500">No programme outline records are available.</p>
+          ) : null}
+        </div>
+      </section>
 
       <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr] xl:items-start">
         <div className="space-y-5">

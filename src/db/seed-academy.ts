@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./index";
+import { PROGRAMME_CATALOGUE } from "../lib/programme-catalogue";
 import {
   courseLevels,
   courseModules,
@@ -9,6 +10,9 @@ import {
   liveMessages,
   liveRsvps,
   liveSessions,
+  programmeLevels,
+  programmeModules,
+  programmes,
   profiles,
   roles,
 } from "./schema";
@@ -75,6 +79,73 @@ type CourseSeed = {
   isSequential: boolean;
   modules: ModuleSeed[];
 };
+
+async function seedProgrammeOutlines() {
+  for (const [programmeIndex, programmeSeed] of PROGRAMME_CATALOGUE.entries()) {
+    const [programme] = await db
+      .insert(programmes)
+      .values({
+        slug: programmeSeed.slug,
+        name: programmeSeed.name,
+        duration: programmeSeed.duration,
+        structure: programmeSeed.structure,
+        description: programmeSeed.description,
+        status: "draft",
+        sortOrder: programmeIndex + 1,
+      })
+      .onConflictDoUpdate({
+        target: programmes.slug,
+        set: {
+          name: sql`excluded.name`,
+          duration: sql`excluded.duration`,
+          structure: sql`excluded.structure`,
+          description: sql`excluded.description`,
+          sortOrder: sql`excluded.sort_order`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: programmes.id });
+
+    const levelRows = await db
+      .insert(programmeLevels)
+      .values(
+        programmeSeed.levels.map((level, index) => ({
+          programmeId: programme.id,
+          slug: level.slug,
+          name: level.name,
+          sortOrder: index + 1,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [programmeLevels.programmeId, programmeLevels.slug],
+        set: { name: sql`excluded.name`, sortOrder: sql`excluded.sort_order` },
+      })
+      .returning({ id: programmeLevels.id, slug: programmeLevels.slug });
+    const levelBySlug = new Map(levelRows.map((level) => [level.slug, level]));
+
+    for (const levelSeed of programmeSeed.levels) {
+      const level = levelBySlug.get(levelSeed.slug);
+      if (!level) throw new Error(`Failed to seed programme level ${programmeSeed.slug}/${levelSeed.slug}.`);
+
+      await db
+        .insert(programmeModules)
+        .values(
+          levelSeed.modules.map((title, index) => ({
+            programmeLevelId: level.id,
+            slug: `module-${index + 1}`,
+            title,
+            sortOrder: index + 1,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [programmeModules.programmeLevelId, programmeModules.slug],
+          set: { title: sql`excluded.title`, sortOrder: sql`excluded.sort_order` },
+        });
+    }
+  }
+
+  return PROGRAMME_CATALOGUE.length;
+}
 
 const COURSES: CourseSeed[] = [
   {
@@ -613,6 +684,7 @@ For each empty seat, name the one person you will invite this month — and what
 ];
 
 export async function seedAcademyContent() {
+  const programmeCount = await seedProgrammeOutlines();
   const levelRows = await db.select().from(courseLevels);
   const levelBySlug = new Map(levelRows.map((level) => [level.slug, level]));
   const profileRows = await db
@@ -843,5 +915,5 @@ export async function seedAcademyContent() {
     ]);
   }
 
-  return { courses: createdCourses.length, liveSessions: liveRows.length };
+  return { courses: createdCourses.length, liveSessions: liveRows.length, programmes: programmeCount };
 }

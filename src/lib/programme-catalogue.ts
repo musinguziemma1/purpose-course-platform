@@ -1,13 +1,15 @@
 export type ProgrammeCatalogue = {
+  slug: string;
   name: string;
   duration: string;
   structure: string;
   description: string;
-  levels: { name: string; modules: string[] }[];
+  levels: { slug: string; name: string; modules: string[] }[];
 };
 
 export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
   {
+    slug: "purpose-program-adults",
     name: "Purpose Program for Adults",
     duration: "15 weeks",
     structure: "3 levels · 15 modules",
@@ -15,6 +17,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
       "A progressive adult curriculum moving from foundational understanding to purpose discovery and purposeful influence.",
     levels: [
       {
+        slug: "foundation",
         name: "Foundation – Understanding Purpose",
         modules: [
           "PURP 101 – Understanding Purpose",
@@ -25,6 +28,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "intermediate",
         name: "Intermediate – Purpose Discovery and Clarity",
         modules: [
           "PURP 201 – Discovering Your Purpose",
@@ -35,6 +39,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "advanced",
         name: "Advanced – Influence and Impact",
         modules: [
           "PURP 301 – Vision Building (Part 1): Understanding Vision",
@@ -47,6 +52,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
     ],
   },
   {
+    slug: "purpose-program-students",
     name: "Purpose Program for Students",
     duration: "1 year",
     structure: "3 levels · 15 modules",
@@ -54,6 +60,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
       "A student curriculum focused on purposeful education, personal development, leadership, service and positive influence.",
     levels: [
       {
+        slug: "foundation",
         name: "Foundation – Understanding Purpose",
         modules: [
           "PURP 101 – Understanding Purpose",
@@ -64,6 +71,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "intermediate",
         name: "Intermediate – Purpose Discovery and Clarity",
         modules: [
           "PURP 201 – Purposeful Planning",
@@ -74,6 +82,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "advanced",
         name: "Advanced – Purpose, Leadership and Impact",
         modules: [
           "PURP 301 – Purpose and Leadership",
@@ -86,6 +95,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
     ],
   },
   {
+    slug: "youlead",
     name: "YouLead!",
     duration: "9 months",
     structure: "3 levels · 12 modules · 48 topics",
@@ -93,6 +103,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
       "Leadership formation through values, intentional actions and practical leadership for community contribution.",
     levels: [
       {
+        slug: "values-index",
         name: "Level 1 – Values Index",
         modules: [
           "Choices, Growth, Attitude and Commitment",
@@ -102,6 +113,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "actions-index",
         name: "Level 2 – Actions Index",
         modules: [
           "Questions, Values, Priorities and Thoughts Influence My Actions",
@@ -111,6 +123,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "leadership-index",
         name: "Level 3 – Leadership Index",
         modules: [
           "The Definition, Foundation, Heart and Motives of Leadership",
@@ -122,6 +135,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
     ],
   },
   {
+    slug: "purpose-to-peace",
     name: "Purpose-to-Peace",
     duration: "9 modules",
     structure: "3 competency areas · 3 levels of peace leadership",
@@ -129,6 +143,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
       "Peace leadership development across personal transformation, healthy relationships and constructive community engagement.",
     levels: [
       {
+        slug: "personal-peace-leadership",
         name: "Personal Peace Leadership – Leading Self",
         modules: [
           "P2P 101 – Knowing Myself: Identity, Self-awareness and Peace",
@@ -137,6 +152,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "relational-peace-leadership",
         name: "Relational Peace Leadership – Leading Relationships",
         modules: [
           "P2P 104 – Leading with Values",
@@ -145,6 +161,7 @@ export const PROGRAMME_CATALOGUE: ProgrammeCatalogue[] = [
         ],
       },
       {
+        slug: "community-peace-leadership",
         name: "Community Peace Leadership – Leading Communities",
         modules: [
           "P2P 202 – Diversity, Inclusion and Social Cohesion",
