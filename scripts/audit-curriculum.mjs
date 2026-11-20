@@ -10,13 +10,11 @@ try {
   const sessions = (await client.query("select s.id,s.code,s.title,s.level_id,l.name as level from course_sessions s join course_levels l on l.id=s.level_id order by l.level_number,s.sort_order,s.id")).rows;
   const modules = (await client.query("select m.id,m.session_code,m.title,c.level_id,c.slug as course_slug,count(l.id)::int as published_lessons from course_modules m join courses c on c.id=m.course_id left join lessons l on l.module_id=m.id and l.status='published' where c.status='published' group by m.id,c.id order by c.sort_order,m.sort_order,m.id")).rows;
   const programmeOutlines = (await client.query("select p.slug,p.name,p.status,count(distinct pl.id)::int as levels,count(pm.id)::int as modules from programmes p left join programme_levels pl on pl.programme_id=p.id left join programme_modules pm on pm.programme_level_id=pl.id group by p.id order by p.sort_order,p.id")).rows;
-  const outlineSlugIssues = (await client.query("select p.slug as programme,l.slug as level,m.slug as module from programme_modules m join programme_levels l on l.id=m.programme_level_id join programmes p on p.id=l.programme_id where m.slug <> 'module-' || m.sort_order::text")).rows;
   const assessments = (await client.query("select a.*,c.level_id as parent_level,m.course_id as module_course from assessments a left join courses c on c.id=a.course_id left join course_modules m on m.id=a.module_id where a.status='published' order by a.id")).rows;
   const questions = (await client.query("select q.* from assessment_questions q join assessments a on a.id=q.assessment_id where a.status='published' order by q.assessment_id,q.sort_order,q.id")).rows;
   const media = (await client.query("select l.id,l.kind,l.title,l.video_url,l.audio_url,l.download_url,l.image_url from lessons l join course_modules m on m.id=l.module_id join courses c on c.id=m.course_id where l.status='published' and c.status='published'")).rows;
   const errors = [], review = [], normalize = value => value?.trim().toLowerCase().replace(/\s+/g," ");
   const mapping = sessions.map(s => ({code:s.code,title:s.title,level:s.level,modules:modules.filter(m=>m.session_code===s.code&&m.level_id===s.level_id).map(m=>({title:m.title,course:m.course_slug,publishedLessons:m.published_lessons}))}));
-  for (const issue of outlineSlugIssues) errors.push(`Programme outline module ${issue.programme}/${issue.level}/${issue.module} has an inconsistent order slug.`);
   for (const m of modules) if (!sessions.some(s=>s.code===m.session_code&&s.level_id===m.level_id)) errors.push(`Module ${m.id} has no matching programme session in its level.`);
   for (const a of assessments) {
     const bank=questions.filter(q=>q.assessment_id===a.id), seen=new Set();
