@@ -93,7 +93,7 @@ const COURSES: CourseSeed[] = [
     isSequential: true,
     modules: [
       {
-        title: "What purpose actually is",
+        title: "PURP 101 – Understanding Purpose",
         summary: "Definitions before discovery — clearing the ground for the rest of the course.",
         sessionCode: "PURP 101",
         estimatedMinutes: 42,
@@ -168,7 +168,7 @@ Before each session, name which question the session is answering. After the ses
         ],
       },
       {
-        title: "Becoming a person of value",
+        title: "PURP 102 – Becoming a Person of Value",
         summary: "Character before platform — the interior life that carries an assignment.",
         sessionCode: "PURP 102",
         estimatedMinutes: 38,
@@ -230,7 +230,7 @@ Score each of the four rooms from one to five, then choose one practice you will
         ],
       },
       {
-        title: "Purpose and work",
+        title: "PURP 103 – Purpose and Career: Understanding the Concept of Work",
         summary: "What to do on Monday when assignment and ambition disagree.",
         sessionCode: "PURP 103",
         estimatedMinutes: 44,
@@ -310,7 +310,7 @@ Submit the plan as an assignment so your mentor can respond to it.`,
     isSequential: true,
     modules: [
       {
-        title: "Discovering Your Purpose",
+        title: "PURP 201 – Discovering Your Purpose",
         summary: "A structured discovery workshop using story, gifting, burden and opportunity.",
         sessionCode: "PURP 201",
         estimatedMinutes: 48,
@@ -371,7 +371,7 @@ Do not write the final statement yet. Bring the raw material to your clarity ses
         ],
       },
       {
-        title: "Limits and liberating potential",
+        title: "PURP 202 – Understanding and Liberating Your Potential",
         summary: "Naming the ceilings that keep capacity imprisoned.",
         sessionCode: "PURP 202",
         estimatedMinutes: 40,
@@ -435,7 +435,7 @@ Share it with your accountability partner before you begin.`,
         ],
       },
       {
-        title: "Defining Your Purpose Statement",
+        title: "PURP 204 – Defining Your Purpose Statement",
         summary: "Draft, test and refine a statement you can defend.",
         sessionCode: "PURP 204",
         estimatedMinutes: 40,
@@ -505,7 +505,7 @@ Your mentor will respond with one strength, one gap, and one next action. Bring 
     isSequential: true,
     modules: [
       {
-        title: "Understanding vision",
+        title: "PURP 301 – Vision Building (Part 1): Understanding Vision",
         summary: "Vision as a disciplined act of imagination under God.",
         sessionCode: "PURP 301",
         estimatedMinutes: 46,
@@ -560,7 +560,7 @@ Speak it to one person who loves you enough to disagree with you.`,
         ],
       },
       {
-        title: "Positioning for emergence",
+        title: "PURP 303 – Positioning for Emergence: Manifesting as Sons",
         summary: "Readiness, visibility and stewardship of your message.",
         sessionCode: "PURP 303",
         estimatedMinutes: 40,

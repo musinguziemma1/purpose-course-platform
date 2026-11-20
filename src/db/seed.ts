@@ -335,7 +335,7 @@ async function main() {
         sortOrder: 1,
         imageUrl: "/images/level-foundation.jpg",
         description:
-          "At the foundation level, you will understand the fundamental concept of purpose in all its embodiments for a Kingdom citizen. The sessions and lessons will help you understand why you were born, God's original intention for your life, the source of your significance, fulfillment and influence. You will know how your purpose connects with your God-given destiny, vision, life's assignment, calling, career, gifts, goals, story, personal development and so on. You may have heard about purpose before, but at this level it will redefine purpose like you have never heard it before.",
+          "The Foundation Level introduces participants to the meaning, significance and foundations of purpose. It explores how purpose relates to personal value, work, career, calling and service. Participants examine the relationship between their identity, gifts, responsibilities and life direction. They are encouraged to reflect on their beliefs and assumptions about purpose and their place in the world. By the end of this level, participants should have a stronger conceptual foundation for discovering and pursuing their purpose.",
         outcomes: [
           "Articulate a biblical definition of purpose in your own words",
           "Distinguish purpose from career, ambition and assignment",
@@ -354,7 +354,7 @@ async function main() {
         sortOrder: 2,
         imageUrl: "/images/level-intermediate.jpg",
         description:
-          "At the intermediate level, you will learn the concept of potential and purpose discovery. If you haven't discovered your purpose before getting to this level, you are most likely to discover it, and should you have discovered it before, you will gain the clarity needed for you to fulfil God's purpose for your life. The modules will help you understand you effectively so you can clearly articulate your purpose, hone your message to the world, find your most dominant gifts, craft your story and begin to lead with, and through, purpose. There are coaches who will support you through your clarity sessions on your journey.",
+          "The Intermediate Level moves participants from understanding purpose to actively discovering and defining their own purpose. It encourages deeper reflection on personal identity, gifts, potential, experiences and aspirations. Participants examine how their lives, choices and contributions can shape the legacy they leave behind. They are guided to articulate their purpose through a clear and meaningful purpose statement. By the end of this level, participants should have greater clarity about their purpose and the transformation they desire to bring about.",
         outcomes: [
           "Complete a guided purpose discovery process",
           "Write a one-sentence purpose statement you can defend",
@@ -373,7 +373,7 @@ async function main() {
         sortOrder: 3,
         imageUrl: "/images/level-advanced.jpg",
         description:
-          "At the advanced level, you will learn the principles required for you to own your message to the world and begin to live your life's calling. You will understand how to build a personal brand that effectively propagates the Kingdom mandate and influence, and impact the world with your purpose and begin to create and add value to those around you. We can guarantee that the modules on this level will help you hone your gifts in order to deploy your purpose for God to find expression through you to the world.",
+          "The Advanced Level focuses on translating purpose and personal clarity into meaningful influence and impact. Participants explore vision, strategic positioning, time, relationships and relevance as dimensions of purposeful living. They examine how to align their abilities and resources with opportunities to contribute to society. The level challenges them to move beyond personal development towards purposeful influence and measurable contribution. By the end of this level, participants should be better equipped to pursue their vision and create meaningful, sustainable impact.",
         outcomes: [
           "Build a personal vision and brand that carries your message",
           "Position yourself for the rooms and roles your purpose requires",
@@ -400,7 +400,7 @@ async function main() {
       code: "PURP 101",
       title: "Understanding Purpose",
       summary:
-        "A ground-clearing session. We separate purpose from the noise of ambition, comparison and inherited expectation, and look at what Scripture means when it says you were made on purpose for a purpose.",
+        "This module introduces the concept of purpose and its significance in human life. Participants explore what it means to live intentionally rather than merely exist or respond to circumstances. They examine the relationship between purpose, identity, meaning and direction.",
       focusQuestions: ["What is purpose, really?", "Why does definition matter before discovery?", "How does purpose differ from assignment?"],
       format: "Experiential presentation + reflection",
     },
@@ -409,7 +409,7 @@ async function main() {
       code: "PURP 102",
       title: "Becoming a Person of Value",
       summary:
-        "Purpose is carried by character. We look at the interior life that sustains a public assignment, and the small daily choices that make a person valuable to the people they are sent to serve.",
+        "This module examines personal value and the qualities, attitudes and principles that contribute to becoming people of value. It challenges the assumption that human value is determined solely by wealth, status, achievement or recognition.",
       focusQuestions: ["What makes a person valuable?", "Which habits protect your interior life?", "How do you build value without seeking validation?"],
       format: "Case study + round table",
     },
@@ -418,7 +418,7 @@ async function main() {
       code: "PURP 103",
       title: "Purpose and Career: Understanding the Concept of Work",
       summary:
-        "Work is not a detour from purpose. We reframe vocation, map your current job onto your assignment and work through the practical question of what to do on Monday.",
+        "This module explores the relationship between purpose, career and work. Participants consider how abilities, interests, values and aspirations inform career choices and how work can express purpose and contribute to society.",
       focusQuestions: ["Is my job my purpose?", "How do I serve purpose in an unrelated role?", "When is it time to change work?"],
       format: "Key presentation + peer consultation",
     },
@@ -427,7 +427,7 @@ async function main() {
       code: "PURP 104",
       title: "Purpose and Predestination",
       summary:
-        "A careful, hopeful conversation about God's sovereignty and human agency. We hold together the truth that you were known before you were formed, with the real freedom and responsibility of your choices.",
+        "This module explores purpose, destiny, human choice and personal responsibility. Participants examine predestination and the role of individual decisions in shaping life outcomes.",
       focusQuestions: ["What does it mean to be predestined?", "How does grace meet my decisions?", "What is mine to do and what is God's to do?"],
       format: "Teaching + guided reflection",
     },
@@ -436,7 +436,7 @@ async function main() {
       code: "PURP 105",
       title: "Purpose, Ministry and Calling",
       summary:
-        "We distinguish the call to follow from the call to a platform. Participants examine how ministry, vocation and daily faithfulness overlap, and begin naming what they are sent to.",
+        "This module explores the relationship between purpose, ministry and calling. Participants examine ways to express purpose through service and recognise calling as meaningful contribution beyond formal religious positions.",
       focusQuestions: ["Is everyone called to ministry?", "How do I test an inward call?", "What is my first assignment?"],
       format: "Round table + testimony",
     },
@@ -445,7 +445,7 @@ async function main() {
       code: "PURP 201",
       title: "Discovering Your Purpose",
       summary:
-        "A structured discovery workshop using story, gifting, burden and opportunity. Participants leave with raw material for a purpose statement rather than a vague sense of destiny.",
+        "This module guides participants through a reflective process of discovering purpose by examining identity, experiences, passions, gifts and convictions. Participants begin identifying themes that point towards their individual purpose.",
       focusQuestions: ["Where does my story break and bloom?", "What burden will not leave me?", "What do people consistently receive from me?"],
       format: "Interactive workshop",
     },
@@ -454,7 +454,7 @@ async function main() {
       code: "PURP 202",
       title: "Understanding and Liberating Your Potential",
       summary:
-        "We identify the ceilings that keep potential imprisoned — fear, comparison, unhealed history, poor stewardship — and design a specific release plan with an accountability partner.",
+        "This module examines human potential and the attitudes, fears, limitations and circumstances that prevent people from developing their capabilities. Participants consider intentional growth, learning and discipline.",
       focusQuestions: ["What is capping my capacity?", "Which strengths are undeveloped?", "Who can hold me accountable?"],
       format: "Case study + coaching",
     },
@@ -463,7 +463,7 @@ async function main() {
       code: "PURP 203",
       title: "How Will You Be Remembered?",
       summary:
-        "A legacy session. Participants write the eulogy they hope will be true, then reverse-engineer the next 12 months from it. Sobering, clarifying and deeply practical.",
+        "This module invites participants to reflect on the legacy they want their lives to leave behind and how everyday choices, relationships, character and contributions shape that legacy.",
       focusQuestions: ["What do I want said of me?", "What must I stop doing now?", "Which relationships need repair?"],
       format: "Experiential reflection",
     },
@@ -472,7 +472,7 @@ async function main() {
       code: "PURP 204",
       title: "Defining Your Purpose Statement",
       summary:
-        "Draft, test and refine a purpose statement in a small group. Coaches give direct feedback on clarity, scope and truthfulness before participants finalise a version.",
+        "This module guides participants in articulating purpose through a clear, personal and actionable statement that draws together identity, values, gifts, passions, potential and desired contribution.",
       focusQuestions: ["Who is my primary audience?", "What transformation am I sent to bring?", "How will I know it is mine?"],
       format: "Clarity sessions with coaches",
     },
@@ -481,7 +481,7 @@ async function main() {
       code: "PURP 205",
       title: "Walking in Dominion: Defining Your Transformation Story",
       summary:
-        "We turn the discovery work into a story you can tell. Participants shape a three-minute transformation story for interviews, pulpits, client rooms and family tables.",
+        "This module explores purpose through personal transformation, responsible influence and stewardship. Participants connect their life journeys with the positive change they intend to create.",
       focusQuestions: ["What changed in me?", "How do I tell it without pride?", "Where will I first tell it?"],
       format: "Story lab + presentation",
     },
@@ -490,7 +490,7 @@ async function main() {
       code: "PURP 301",
       title: "Vision Building (Part 1): Understanding Vision",
       summary:
-        "Vision as a disciplined act of the imagination under God. We examine the anatomy of vision — burden, picture, pathway and cost — and test a first draft against reality.",
+        "This module introduces vision as an essential element in translating purpose into a desired future and encourages participants to articulate a clear picture of positive change.",
       focusQuestions: ["What picture keeps returning?", "What does it cost?", "Who needs it to be true?"],
       format: "Key presentation + workshop",
     },
@@ -499,7 +499,7 @@ async function main() {
       code: "PURP 302",
       title: "Vision Building (Part 2): Principles of Vision",
       summary:
-        "From picture to plan. Participants build a 12-month operating plan with measurable milestones, a budget of time, money and attention, and a rhythm of review.",
+        "This module examines clarity, commitment, preparation, focus and perseverance as principles that strengthen vision and translate it into practical priorities and actions.",
       focusQuestions: ["What are the milestones?", "What will I stop doing?", "How will I review progress?"],
       format: "Planning lab",
     },
@@ -508,7 +508,7 @@ async function main() {
       code: "PURP 303",
       title: "Positioning for Emergence: Manifesting as Sons",
       summary:
-        "Preparation, visibility and readiness. We work through personal branding as stewardship, practical positioning, and the character required to stay in the room once you enter it.",
+        "This module explores positioning as the responsible recognition and response to opportunities for purposeful contribution, grounded in identity, maturity and preparation.",
       focusQuestions: ["What room do I need to be in?", "What evidence of my work exists?", "Can my character carry my gift?"],
       format: "Case study + mentoring",
     },
@@ -517,7 +517,7 @@ async function main() {
       code: "PURP 304",
       title: "Purpose, Time and Relationships",
       summary:
-        "A candid look at the relational economy of purpose: who to walk with, who to release, how to protect time for what matters, and how to build tables instead of stages.",
+        "This module examines how time management and relationships influence purposeful living. Participants reflect on priorities, commitments and investing in relationships that support their vision.",
       focusQuestions: ["Who holds my ladder?", "What relationships drain or fuel me?", "How do I steward seasons?"],
       format: "Round table + coaching",
     },
@@ -526,7 +526,7 @@ async function main() {
       code: "PURP 305",
       title: "Becoming Relevant and Impactful",
       summary:
-        "A collaborative capstone. Each participant presents a purpose project, receives a panel review and leaves with a 90-day deployment plan and a community of accountability.",
+        "This module focuses on relevance and impact through competence, service, innovation and responsible influence. Participants develop an action plan for tangible positive contribution.",
       focusQuestions: ["What will I ship in 90 days?", "Who does it serve?", "How will I know it worked?"],
       format: "Capstone presentations + panel",
     },

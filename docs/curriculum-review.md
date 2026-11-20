@@ -1,5 +1,13 @@
 # Curriculum coverage and review
 
+The attached 2026 programme specification defines four pathways: Purpose
+Program for Adults, Purpose Program for Students, YouLead!, and
+Purpose-to-Peace. The public programme catalogue exposes all four pathways and
+their level/module structure. The database's currently published digital
+course remains the 15-session adult PURP programme; student, YouLead! and
+Purpose-to-Peace digital lesson delivery requires a separate faculty-approved
+digital build.
+
 Read-only Supabase inventory, 12 November 2026: 15 programme sessions, eight
 published digital modules, 24 published lessons, eight five-question session
 checks and three twenty-question level exams (100 questions). Run
