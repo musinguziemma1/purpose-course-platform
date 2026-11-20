@@ -1,6 +1,6 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
-import { ArrowRight, BookOpen, CalendarClock, FileAudio, FileText, ImageIcon, Layers, Library, Plus, Video } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarClock, FileAudio, FileText, ImageIcon, Layers, Library, PenLine, Plus, Video } from "lucide-react";
 import { db } from "@/db";
 import { courseLevels } from "@/db/schema";
 import { getAcademyAdminStats, getAcademyTree, getLessonMediaCounts, getLiveSessions } from "@/db/courses";
@@ -75,12 +75,11 @@ export default async function AdminAcademyPage() {
           <div>
             <h2 className="font-serif text-lg text-navy">Programme outlines</h2>
             <p className="mt-1 max-w-3xl text-[11.5px] leading-relaxed text-stone-600">
-              Based on the supplied programme document. These draft records contain programme, level and module outlines only;
-              they do not create or publish learner-facing lessons.
+              Edit levels and modules, then publish an outline to the public catalogue. This does not publish learner-facing lessons.
             </p>
           </div>
           <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-800">
-            {programmeOutlines.length} drafts
+            {programmeOutlines.filter((programme) => programme.status === "draft").length} drafts
           </span>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -114,6 +113,14 @@ export default async function AdminAcademyPage() {
                   </div>
                 ))}
               </div>
+              {canAuthor ? (
+                <Link
+                  href={`/admin/academy/programmes/${programme.id}`}
+                  className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-full bg-navy px-3 text-[10.5px] font-semibold text-paper hover:bg-navy-700"
+                >
+                  <PenLine className="h-3 w-3" /> Edit outline
+                </Link>
+              ) : null}
             </details>
           ))}
           {programmeOutlines.length === 0 ? (
