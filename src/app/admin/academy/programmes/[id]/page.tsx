@@ -5,6 +5,7 @@ import { ArrowLeft, Plus } from "lucide-react";
 import { AddProgrammeLevelForm, AddProgrammeModuleForm, ProgrammeLevelEditor, ProgrammeModuleEditor, ProgrammeSettingsForm } from "@/components/academy/programme-editor-forms";
 import { getProgrammeOutlines } from "@/db/programmes";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
+import { getProgrammeLevelPresentation } from "@/lib/programme-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -64,41 +65,47 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
           <h2 className="font-serif text-lg text-navy">Levels and modules</h2>
           <p className="text-[11.5px] text-stone-600">Edit names, add or remove outline items, and publish the completed structure when ready.</p>
         </div>
-        {programme.levels.map((level, levelIndex) => (
-          <section key={level.id} className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 bg-cream/40 p-4">
-              <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-500">
-                Level {levelIndex + 1} · {level.modules.length} modules
-              </p>
-              <ProgrammeLevelEditor
-                programmeId={programme.id}
-                level={{ id: level.id, name: level.name }}
-                position={levelIndex}
-                total={programme.levels.length}
-              />
-            </div>
-            <div className="space-y-3 p-4">
-              {level.modules.map((module, moduleIndex) => (
-                <div key={module.id} className="flex items-start gap-2">
-                  <span className="mt-3 w-5 shrink-0 text-right text-[11px] text-stone-400">{moduleIndex + 1}.</span>
-                  <ProgrammeModuleEditor
-                    programmeId={programme.id}
-                    levelId={level.id}
-                    module={{ id: module.id, title: module.title }}
-                    position={moduleIndex}
-                    total={level.modules.length}
-                  />
-                </div>
-              ))}
-              {level.modules.length === 0 ? (
-                <p className="text-[11px] text-stone-500">No outline modules yet. Add one before publishing.</p>
-              ) : null}
-              <div className="border-t border-navy/8 pt-3">
-                <AddProgrammeModuleForm programmeId={programme.id} levelId={level.id} />
+        {programme.levels.map((level, levelIndex) => {
+          const { stage, focus } = getProgrammeLevelPresentation(level.name, levelIndex);
+          return (
+            <section key={level.id} className="admin-card overflow-hidden">
+              <div className="border-b border-navy/10 bg-cream/40 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-dark">
+                  Level {levelIndex + 1} · {stage} · {focus}
+                </p>
+                <p className="mb-3 mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-500">
+                  {level.modules.length} outline modules
+                </p>
+                <ProgrammeLevelEditor
+                  programmeId={programme.id}
+                  level={{ id: level.id, name: level.name }}
+                  position={levelIndex}
+                  total={programme.levels.length}
+                />
               </div>
-            </div>
-          </section>
-        ))}
+              <div className="space-y-3 p-4">
+                {level.modules.map((module, moduleIndex) => (
+                  <div key={module.id} className="flex items-start gap-2">
+                    <span className="mt-3 w-5 shrink-0 text-right text-[11px] text-stone-400">{moduleIndex + 1}.</span>
+                    <ProgrammeModuleEditor
+                      programmeId={programme.id}
+                      levelId={level.id}
+                      module={{ id: module.id, title: module.title }}
+                      position={moduleIndex}
+                      total={level.modules.length}
+                    />
+                  </div>
+                ))}
+                {level.modules.length === 0 ? (
+                  <p className="text-[11px] text-stone-500">No outline modules yet. Add one before publishing.</p>
+                ) : null}
+                <div className="border-t border-navy/8 pt-3">
+                  <AddProgrammeModuleForm programmeId={programme.id} levelId={level.id} />
+                </div>
+              </div>
+            </section>
+          );
+        })}
         {programme.levels.length === 0 ? (
           <div className="admin-card p-4 text-[11.5px] text-stone-600">No levels yet. Add a level to begin the outline.</div>
         ) : null}

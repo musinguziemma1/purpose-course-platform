@@ -8,6 +8,7 @@ import { getProgrammeOutlines } from "@/db/programmes";
 import { CourseForm, LevelForm } from "@/components/academy/admin-forms";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { formatDateTime, STATUS_META } from "@/lib/utils";
+import { getProgrammeLevelPresentation } from "@/lib/programme-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,8 @@ export default async function AdminAcademyPage() {
           <div>
             <h2 className="font-serif text-lg text-navy">Programme outlines</h2>
             <p className="mt-1 max-w-3xl text-[11.5px] leading-relaxed text-stone-600">
-              Edit levels and modules, then publish an outline to the public catalogue. This does not publish learner-facing lessons.
+              Published outlines follow Foundation, Intermediate and Advanced by level order, while keeping each programme’s focus and modules.
+              This does not publish learner-facing lessons.
             </p>
           </div>
           <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-800">
@@ -102,16 +104,22 @@ export default async function AdminAcademyPage() {
                 {programme.description}
               </p>
               <div className="mt-3 space-y-3">
-                {programme.levels.map((level) => (
-                  <div key={level.id} className="rounded-lg border border-navy/8 bg-paper p-3">
-                    <p className="text-[11.5px] font-semibold text-navy">{level.name}</p>
-                    <ol className="mt-2 list-decimal space-y-1 pl-4 text-[11px] leading-relaxed text-stone-600">
-                      {level.modules.map((module) => (
-                        <li key={module.id}>{module.title}</li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
+                {programme.levels.map((level, levelIndex) => {
+                  const { stage, focus } = getProgrammeLevelPresentation(level.name, levelIndex);
+                  return (
+                    <div key={level.id} className="rounded-lg border border-navy/8 bg-paper p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-gold-dark">
+                        Level {levelIndex + 1} · {stage}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] font-semibold text-navy">{focus}</p>
+                      <ol className="mt-2 list-decimal space-y-1 pl-4 text-[11px] leading-relaxed text-stone-600">
+                        {level.modules.map((module) => (
+                          <li key={module.id}>{module.title}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  );
+                })}
               </div>
               {canAuthor ? (
                 <Link

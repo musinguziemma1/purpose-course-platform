@@ -14,6 +14,7 @@ import { PRINCIPLES } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import { getCourseProgram, getSiteSettings, getTestimonials } from "@/db/queries";
 import { getProgrammeOutlines } from "@/db/programmes";
+import { getProgrammeLevelPresentation } from "@/lib/programme-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -195,16 +196,22 @@ export default async function CoursePage() {
                     <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{programme.structure}</p>
                     <p className="mt-3 text-[13.5px] leading-relaxed text-stone-600">{programme.description}</p>
                     <div className="mt-5 space-y-4">
-                      {programme.levels.map((level) => (
-                        <details key={level.id} className="rounded-xl border border-navy/8 bg-cream/40 px-4 py-3">
-                          <summary className="cursor-pointer text-[12.5px] font-semibold text-navy">{level.name}</summary>
-                          <ul className="mt-3 space-y-2 border-t border-navy/8 pt-3">
-                            {level.modules.map((module) => (
-                              <li key={module.id} className="text-[12.5px] leading-relaxed text-stone-600">{module.title}</li>
-                            ))}
-                          </ul>
-                        </details>
-                      ))}
+                      {programme.levels.map((level, levelIndex) => {
+                        const { stage, focus } = getProgrammeLevelPresentation(level.name, levelIndex);
+                        return (
+                          <details key={level.id} className="rounded-xl border border-navy/8 bg-cream/40 px-4 py-3">
+                            <summary className="cursor-pointer text-[12.5px] font-semibold text-navy">
+                              <span className="mr-2 text-gold-dark">Level {levelIndex + 1} · {stage}</span>
+                              {focus}
+                            </summary>
+                            <ul className="mt-3 space-y-2 border-t border-navy/8 pt-3">
+                              {level.modules.map((module) => (
+                                <li key={module.id} className="text-[12.5px] leading-relaxed text-stone-600">{module.title}</li>
+                              ))}
+                            </ul>
+                          </details>
+                        );
+                      })}
                     </div>
                   </article>
                 </Reveal>

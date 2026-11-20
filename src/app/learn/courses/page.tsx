@@ -10,6 +10,8 @@ import { courseLevels } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { LevelProgression } from "@/components/academy/level-progression";
+import { getProgrammeOutlines } from "@/db/programmes";
+import { groupProgrammeOutlinesByStage } from "@/lib/programme-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -18,10 +20,12 @@ export const metadata = { title: "Academy courses" };
 export default async function StudentCoursesPage() {
   const user = await getSessionUser();
   if (!user) return null;
-  const [academy, levels] = await Promise.all([
+  const [academy, levels, programmeOutlines] = await Promise.all([
     getStudentAcademy(user.profileId),
     db.select().from(courseLevels).orderBy(courseLevels.sortOrder),
+    getProgrammeOutlines({ includeDrafts: false }),
   ]);
+  const programmeStages = groupProgrammeOutlinesByStage(programmeOutlines);
 
   const levelId = academy.enrollment?.levelId ?? null;
 
@@ -45,6 +49,11 @@ export default async function StudentCoursesPage() {
             Structured lessons in progression: video teaching, audio, illustrations, downloadable material and practice.
             Complete each lesson to unlock the next.
           </p>
+          {programmeStages.length ? (
+            <Link href="#published-programme-outlines" className="mt-2 inline-flex text-[11.5px] font-semibold text-gold-dark hover:underline">
+              Browse published programme outlines
+            </Link>
+          ) : null}
         </div>
         <div className="rounded-xl border border-navy/10 bg-paper px-4 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-500">Curriculum progress</p>
@@ -161,11 +170,60 @@ export default async function StudentCoursesPage() {
         })}
       </div>
 
+      {programmeStages.length ? (
+        <section id="published-programme-outlines" className="scroll-mt-24 space-y-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Published outlines</p>
+            <h2 className="mt-1 font-serif text-2xl text-navy">Programme pathways by level</h2>
+            <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-stone-600">
+              These outlines show each programme’s level and module structure. They are separate from digital lessons,
+              assessments, lesson progress and certificates.
+            </p>
+          </div>
+          {programmeStages.map(({ levelIndex, stage, items }) => (
+            <section key={stage} className="admin-card overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy/10 bg-cream/40 px-5 py-3.5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">Level {levelIndex + 1}</p>
+                  <h3 className="font-serif text-lg text-navy">{stage}</h3>
+                </div>
+                <span className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
+                  {items.length} published {items.length === 1 ? "pathway" : "pathways"}
+                </span>
+              </div>
+              <ul className="divide-y divide-navy/8">
+                {items.map(({ programme, level, focus }) => (
+                  <li key={`${programme.id}-${level.id}`}>
+                    <Link
+                      href={`/learn/programmes/${programme.slug}`}
+                      className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-cream/30"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12.5px] font-semibold text-navy">{programme.name}</p>
+                        <p className="mt-0.5 text-[11.5px] text-stone-600">{focus}</p>
+                      </div>
+                      <span className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
+                        {level.modules.length} outline modules
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 text-stone-400" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </section>
+      ) : null}
+
       {academy.courses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="The curriculum is being prepared."
-          description="Your faculty is publishing the first course. Check back shortly."
+          title={programmeOutlines.length ? "No digital lessons yet." : "The curriculum is being prepared."}
+          description={
+            programmeOutlines.length
+              ? "Published programme outlines are available above; digital lessons will appear once created and published."
+              : "Your faculty is publishing the first course. Check back shortly."
+          }
           action={<Link href="/course" className="chip chip-gold">See the programme →</Link>}
         />
       ) : null}
