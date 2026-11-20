@@ -694,6 +694,58 @@ export const liveSessionStatusEnum = pgEnum("live_session_status", [
 
 export const liveMessageKindEnum = pgEnum("live_message_kind", ["chat", "question", "prompt", "system"]);
 
+/* Programme outlines remain separate from learner-facing digital courses. */
+export const programmes = pgTable(
+  "programmes",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 96 }).notNull().unique(),
+    name: varchar("name", { length: 200 }).notNull(),
+    duration: varchar("duration", { length: 80 }).notNull(),
+    structure: varchar("structure", { length: 180 }).notNull(),
+    description: text("description").notNull(),
+    status: publishStatusEnum("status").notNull().default("draft"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("programmes_sort_idx").on(table.sortOrder)],
+);
+
+export const programmeLevels = pgTable(
+  "programme_levels",
+  {
+    id: serial("id").primaryKey(),
+    programmeId: integer("programme_id")
+      .notNull()
+      .references(() => programmes.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 96 }).notNull(),
+    name: varchar("name", { length: 200 }).notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("programme_levels_program_slug_idx").on(table.programmeId, table.slug),
+    index("programme_levels_order_idx").on(table.programmeId, table.sortOrder),
+  ],
+);
+
+export const programmeModules = pgTable(
+  "programme_modules",
+  {
+    id: serial("id").primaryKey(),
+    programmeLevelId: integer("programme_level_id")
+      .notNull()
+      .references(() => programmeLevels.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 96 }).notNull(),
+    title: varchar("title", { length: 220 }).notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [
+    uniqueIndex("programme_modules_level_slug_idx").on(table.programmeLevelId, table.slug),
+    index("programme_modules_order_idx").on(table.programmeLevelId, table.sortOrder),
+  ],
+);
+
 export const courses = pgTable(
   "courses",
   {

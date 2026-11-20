@@ -21,56 +21,56 @@ import { synchronizeCertificates } from "./certificate-awards";
 type Q = [string, string[], number, string];
 
 const SESSION_QUIZZES: Record<string, Q[]> = {
-  "What purpose actually is": [
+  "PURP 101 – Understanding Purpose": [
     ["In PURP 101, purpose is best described as…", ["The career you eventually choose", "The enduring reason you are here, independent of roles", "A feeling of fulfilment you pursue", "The platform you build for influence"], 1, "Purpose is the enduring reason you are here; assignment and vocation change with seasons."],
     ["Which distinction does the lesson draw?", ["Purpose equals assignment", "Assignment is the specific work purpose requires in a season", "Vocation is identical to purpose", "Purpose changes whenever a job changes"], 1, "Purpose endures; assignment is season-specific; vocation is the craft or field."],
     ["Why does the course insist on definition before discovery?", ["Definitions are required by law", "A statement you cannot define cannot be stewarded", "Definitions impress facilitators", "Definition replaces the need for prayer"], 1, "Definition makes stewardship possible."],
     ["The five principles are organised by which first question?", ["What can I do?", "Who am I?", "Where am I going?", "Why am I here?"], 1, "Identity comes first: who am I?"],
     ["Which is NOT one of the five purpose principles?", ["Source", "Potential", "Productivity", "Destiny"], 2, "The five are Identity, Source, Purpose, Potential and Destiny."],
   ],
-  "Becoming a person of value": [
+  "PURP 102 – Becoming a Person of Value": [
     ["The 'unglamorous test' of character asks…", ["What am I like when I am tired?", "How many people follow me?", "What have I achieved this year?", "How well do I speak in public?"], 0, "Character shows in how you treat people when depleted."],
     ["Which is one of the four 'rooms' of value?", ["The room of applause", "The room of repair", "The room of comparison", "The room of secrecy"], 1, "The four rooms are prayer, repair, rest and telling."],
     ["Why is a private foundation necessary?", ["A public assignment eventually rests on it", "It guarantees promotion", "It removes all criticism", "It replaces accountability"], 0, "Platforms collapse when the foundation is missing."],
     ["A discipline you announce immediately is often…", ["More effective", "Abandoned quietly", "A biblical requirement", "A sign of maturity"], 1, "Announcing early usually substitutes for doing the work."],
     ["The audit in PURP 102 asks you to choose…", ["Five new gifts", "One practice kept for thirty days", "A new job", "Three mentors"], 1, "One practice, thirty days, before telling anyone."],
   ],
-  "Purpose and work": [
+  "PURP 103 – Purpose and Career: Understanding the Concept of Work": [
     ["The lesson argues your job is…", ["A verdict on your worth", "A workshop for purpose", "Irrelevant to calling", "The same thing as assignment"], 1, "Work is a workshop, not a verdict."],
     ["Which three items should be distinguished?", ["Salary, title, benefits", "Assignment, vocation, position", "Purpose, hobby, ambition", "Manager, team, client"], 1, "Assignment, vocation and position are different categories."],
     ["The false choice appears when someone…", ["Changes jobs", "Treats a position as the assignment", "Takes a sabbatical", "Builds a career"], 1, "Positions end; assignments do not fail because a seat changed."],
     ["What is the most under-used planning tool named in the lesson?", ["Addition", "Subtraction", "Delegation", "Automation"], 1, "Subtraction: one thing to stop."],
     ["The ninety-day plan asks for one person to serve, one skill to develop, and…", ["One conference to attend", "One thing to stop", "One title to pursue", "One competitor to study"], 1, "Service, skill, and subtraction."],
   ],
-  "Discovering Your Purpose": [
+  "PURP 201 – Discovering Your Purpose": [
     ["Which is NOT one of the four sources of evidence?", ["Story", "Gifting", "Popularity", "Burden"], 2, "The four are story, gifting, burden and opportunity."],
     ["A purpose statement built on one source is usually…", ["Sufficient", "A preference dressed as revelation", "Stronger than a tested one", "Not worth writing"], 1, "Test claims against at least two sources."],
     ["Gifting is best evidenced by…", ["Compliments", "Specific examples across different rooms", "Self-assessment alone", "Title and seniority"], 1, "Ask for examples, not adjectives."],
     ["What belongs in the 'unknown' column of the audit?", ["Gifts you desire", "Claims without evidence", "Compliments you liked", "Your job title"], 1, "Anything without evidence stays unknown until tested."],
     ["The discovery walk covers origin, wound, gift and…", ["Reward", "Invitation", "Income", "Platform"], 1, "Origin, wound, gift, invitation."],
   ],
-  "Limits and liberating potential": [
+  "PURP 202 – Understanding and Liberating Your Potential": [
     ["Which is a ceiling on capacity named in the lesson?", ["Comparison", "Coaching", "Rest", "Feedback"], 0, "Fear, comparison, unhealed history and poor stewardship are the ceilings."],
     ["Potential is described as…", ["Infinite and unconditional", "A stewardship with a shape and limit", "A personality trait", "A measure of intelligence"], 1, "Potential is capacity entrusted for service."],
     ["The lesson says you are responsible for…", ["Universal potential", "The portion in your hands", "Everyone else's growth", "Constant output"], 1, "Responsibility is limited to the entrusted portion."],
     ["The release plan includes a conversation, a boundary and…", ["A promotion", "A request", "A resignation", "A rebrand"], 1, "Ask for the opportunity your gifts require."],
     ["A boundary's purpose in the plan is to…", ["Protect your best hours", "Avoid people", "Increase output", "Signal status"], 0, "Boundaries protect capacity rather than avoid relationship."],
   ],
-  "Defining Your Purpose Statement": [
+  "PURP 204 – Defining Your Purpose Statement": [
     ["Which is NOT one of the four parts of a statement?", ["Audience", "Transformation", "Evidence", "Revenue"], 3, "Audience, transformation, evidence and limit."],
     ["The limit in a purpose statement shows…", ["What you are not sent to do", "Your salary ceiling", "How many followers you want", "The size of your team"], 0, "A truthful limit clarifies the assignment."],
     ["A statement that cannot be tested is…", ["Ready to publish", "Not yet a statement", "Ideal for a brand", "Better than a specific one"], 1, "Testability is part of clarity."],
     ["How many times should you revise after peer feedback?", ["Once", "Five times", "Never", "Until perfect"], 0, "Revise once, not five times."],
     ["Testing the statement should involve…", ["One peer and one mentor", "Only yourself", "Social media polls", "A focus group of strangers"], 0, "One peer and one mentor is the guidance."],
   ],
-  "Understanding vision": [
+  "PURP 301 – Vision Building (Part 1): Understanding Vision": [
     ["Which is NOT part of the anatomy of vision?", ["Burden", "Picture", "Pathway", "Publicity"], 3, "Burden, picture, pathway and cost."],
     ["Vision is built twice: first in secret then…", ["In public", "In isolation", "In silence", "Abroad"], 0, "Secret formation, public testing."],
     ["The test of whether you have a vision or a slogan is…", ["Can you picture a normal Tuesday?", "Is it trending?", "Does it rhyme?", "Did a leader endorse it?"], 0, "If you cannot picture a Tuesday, it is a slogan."],
     ["Every milestone in the plan needs…", ["A person and a price", "A hashtag", "A sponsor", "A deadline only"], 0, "Milestones need people and cost."],
     ["The cost conversation is meant to be had with…", ["Anyone online", "One person who loves you enough to disagree", "Only your mentor", "No one"], 1, "Speak the cost to someone who can disagree."],
   ],
-  "Positioning for emergence": [
+  "PURP 303 – Positioning for Emergence: Manifesting as Sons": [
     ["Positioning answers which question?", ["Who is watching me?", "If the room opened tomorrow, what evidence would I bring?", "How do I become famous?", "Who can promote me?"], 1, "It is about prepared evidence, not promotion."],
     ["Which three assets does the lesson name?", ["Evidence, language, posture", "Money, contacts, luck", "Talent, timing, title", "Followers, likes, shares"], 0, "Evidence, language and posture."],
     ["A personal brand is described as…", ["A performance", "Promises you keep in public", "A logo", "A follower count"], 1, "Brand is kept promises, not performance."],

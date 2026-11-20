@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { PRINCIPLES } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import { getCourseProgram, getSiteSettings, getTestimonials } from "@/db/queries";
+import { PROGRAMME_CATALOGUE } from "@/lib/programme-catalogue";
 
 export const dynamic = "force-dynamic";
 
@@ -171,6 +172,45 @@ export default async function CoursePage() {
           </section>
         );
       })}
+
+      <section className="border-t border-navy/10 py-16">
+        <div className="shell">
+          <Reveal>
+            <p className="eyebrow">Programme catalogue</p>
+            <h2 className="mt-4 font-serif text-3xl text-navy">Four distinct learning pathways</h2>
+            <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-stone-600">
+              The adults curriculum is distinct from the students curriculum. YouLead! develops leadership through values,
+              actions and influence, while Purpose-to-Peace develops personal, relational and community peace leadership.
+            </p>
+          </Reveal>
+          <div className="mt-8 grid gap-5 lg:grid-cols-2">
+            {PROGRAMME_CATALOGUE.map((programme) => (
+              <Reveal key={programme.name}>
+                <article className="h-full rounded-2xl border border-navy/10 bg-paper p-6">
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <h3 className="font-serif text-2xl text-navy">{programme.name}</h3>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold-dark">{programme.duration}</p>
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500">{programme.structure}</p>
+                  <p className="mt-3 text-[13.5px] leading-relaxed text-stone-600">{programme.description}</p>
+                  <div className="mt-5 space-y-4">
+                    {programme.levels.map((level) => (
+                      <details key={level.name} className="rounded-xl border border-navy/8 bg-cream/40 px-4 py-3">
+                        <summary className="cursor-pointer text-[12.5px] font-semibold text-navy">{level.name}</summary>
+                        <ul className="mt-3 space-y-2 border-t border-navy/8 pt-3">
+                          {level.modules.map((module) => (
+                            <li key={module} className="text-[12.5px] leading-relaxed text-stone-600">{module}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ))}
+                  </div>
+                </article>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="bg-ink py-16 text-paper">
         <div className="shell grid gap-10 lg:grid-cols-2 lg:items-center">

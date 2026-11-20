@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./index";
+import { PROGRAMME_CATALOGUE } from "../lib/programme-catalogue";
 import {
   courseLevels,
   courseModules,
@@ -9,6 +10,9 @@ import {
   liveMessages,
   liveRsvps,
   liveSessions,
+  programmeLevels,
+  programmeModules,
+  programmes,
   profiles,
   roles,
 } from "./schema";
@@ -76,6 +80,73 @@ type CourseSeed = {
   modules: ModuleSeed[];
 };
 
+async function seedProgrammeOutlines() {
+  for (const [programmeIndex, programmeSeed] of PROGRAMME_CATALOGUE.entries()) {
+    const [programme] = await db
+      .insert(programmes)
+      .values({
+        slug: programmeSeed.slug,
+        name: programmeSeed.name,
+        duration: programmeSeed.duration,
+        structure: programmeSeed.structure,
+        description: programmeSeed.description,
+        status: "draft",
+        sortOrder: programmeIndex + 1,
+      })
+      .onConflictDoUpdate({
+        target: programmes.slug,
+        set: {
+          name: sql`excluded.name`,
+          duration: sql`excluded.duration`,
+          structure: sql`excluded.structure`,
+          description: sql`excluded.description`,
+          sortOrder: sql`excluded.sort_order`,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: programmes.id });
+
+    const levelRows = await db
+      .insert(programmeLevels)
+      .values(
+        programmeSeed.levels.map((level, index) => ({
+          programmeId: programme.id,
+          slug: level.slug,
+          name: level.name,
+          sortOrder: index + 1,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [programmeLevels.programmeId, programmeLevels.slug],
+        set: { name: sql`excluded.name`, sortOrder: sql`excluded.sort_order` },
+      })
+      .returning({ id: programmeLevels.id, slug: programmeLevels.slug });
+    const levelBySlug = new Map(levelRows.map((level) => [level.slug, level]));
+
+    for (const levelSeed of programmeSeed.levels) {
+      const level = levelBySlug.get(levelSeed.slug);
+      if (!level) throw new Error(`Failed to seed programme level ${programmeSeed.slug}/${levelSeed.slug}.`);
+
+      await db
+        .insert(programmeModules)
+        .values(
+          levelSeed.modules.map((title, index) => ({
+            programmeLevelId: level.id,
+            slug: `module-${index + 1}`,
+            title,
+            sortOrder: index + 1,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [programmeModules.programmeLevelId, programmeModules.slug],
+          set: { title: sql`excluded.title`, sortOrder: sql`excluded.sort_order` },
+        });
+    }
+  }
+
+  return PROGRAMME_CATALOGUE.length;
+}
+
 const COURSES: CourseSeed[] = [
   {
     level: "foundation",
@@ -93,7 +164,7 @@ const COURSES: CourseSeed[] = [
     isSequential: true,
     modules: [
       {
-        title: "What purpose actually is",
+        title: "PURP 101 – Understanding Purpose",
         summary: "Definitions before discovery — clearing the ground for the rest of the course.",
         sessionCode: "PURP 101",
         estimatedMinutes: 42,
@@ -168,7 +239,7 @@ Before each session, name which question the session is answering. After the ses
         ],
       },
       {
-        title: "Becoming a person of value",
+        title: "PURP 102 – Becoming a Person of Value",
         summary: "Character before platform — the interior life that carries an assignment.",
         sessionCode: "PURP 102",
         estimatedMinutes: 38,
@@ -230,7 +301,7 @@ Score each of the four rooms from one to five, then choose one practice you will
         ],
       },
       {
-        title: "Purpose and work",
+        title: "PURP 103 – Purpose and Career: Understanding the Concept of Work",
         summary: "What to do on Monday when assignment and ambition disagree.",
         sessionCode: "PURP 103",
         estimatedMinutes: 44,
@@ -310,7 +381,7 @@ Submit the plan as an assignment so your mentor can respond to it.`,
     isSequential: true,
     modules: [
       {
-        title: "Discovering Your Purpose",
+        title: "PURP 201 – Discovering Your Purpose",
         summary: "A structured discovery workshop using story, gifting, burden and opportunity.",
         sessionCode: "PURP 201",
         estimatedMinutes: 48,
@@ -371,7 +442,7 @@ Do not write the final statement yet. Bring the raw material to your clarity ses
         ],
       },
       {
-        title: "Limits and liberating potential",
+        title: "PURP 202 – Understanding and Liberating Your Potential",
         summary: "Naming the ceilings that keep capacity imprisoned.",
         sessionCode: "PURP 202",
         estimatedMinutes: 40,
@@ -435,7 +506,7 @@ Share it with your accountability partner before you begin.`,
         ],
       },
       {
-        title: "Defining Your Purpose Statement",
+        title: "PURP 204 – Defining Your Purpose Statement",
         summary: "Draft, test and refine a statement you can defend.",
         sessionCode: "PURP 204",
         estimatedMinutes: 40,
@@ -505,7 +576,7 @@ Your mentor will respond with one strength, one gap, and one next action. Bring 
     isSequential: true,
     modules: [
       {
-        title: "Understanding vision",
+        title: "PURP 301 – Vision Building (Part 1): Understanding Vision",
         summary: "Vision as a disciplined act of imagination under God.",
         sessionCode: "PURP 301",
         estimatedMinutes: 46,
@@ -560,7 +631,7 @@ Speak it to one person who loves you enough to disagree with you.`,
         ],
       },
       {
-        title: "Positioning for emergence",
+        title: "PURP 303 – Positioning for Emergence: Manifesting as Sons",
         summary: "Readiness, visibility and stewardship of your message.",
         sessionCode: "PURP 303",
         estimatedMinutes: 40,
@@ -613,6 +684,7 @@ For each empty seat, name the one person you will invite this month — and what
 ];
 
 export async function seedAcademyContent() {
+  const programmeCount = await seedProgrammeOutlines();
   const levelRows = await db.select().from(courseLevels);
   const levelBySlug = new Map(levelRows.map((level) => [level.slug, level]));
   const profileRows = await db
@@ -843,5 +915,5 @@ export async function seedAcademyContent() {
     ]);
   }
 
-  return { courses: createdCourses.length, liveSessions: liveRows.length };
+  return { courses: createdCourses.length, liveSessions: liveRows.length, programmes: programmeCount };
 }

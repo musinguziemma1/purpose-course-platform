@@ -117,12 +117,12 @@ before(async () => {
   ]);
   const prior = (
     await client.query(
-      "select id from course_levels order by level_number desc,id desc limit 1",
+      "select id from course_levels where level_number < 4 order by level_number desc,id desc limit 1",
     )
   ).rows[0];
   for (const [name, number] of [
-    ["A", 9501],
-    ["B", 9502],
+    ["A", 4],
+    ["B", 5],
   ]) {
     const level = (
       await client.query(
