@@ -17,6 +17,8 @@ import {
   notifications,
   pages,
   profiles,
+  programmeLevels,
+  programmes,
   resourceDownloads,
   resources,
   roles,
@@ -223,13 +225,28 @@ export async function getPopularTags(limit = 12) {
  * ------------------------------------------------------------------ */
 
 export async function getCourseProgram() {
-  const [levels, sessions] = await Promise.all([
+  const [programmeRows, programmeLevelRows, levels, sessions] = await Promise.all([
+    db.select().from(programmes).where(eq(programmes.status, "published")).orderBy(asc(programmes.sortOrder), asc(programmes.id)),
+    db.select().from(programmeLevels).orderBy(asc(programmeLevels.sortOrder), asc(programmeLevels.id)),
     db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
     db.select().from(courseSessions).orderBy(asc(courseSessions.sortOrder)),
   ]);
-  return levels.map((level) => ({
-    ...level,
-    sessions: sessions.filter((session) => session.levelId === level.id),
+  return programmeRows.map((programme) => ({
+    ...programme,
+    levels: programmeLevelRows
+      .filter((programmeLevel) => programmeLevel.programmeId === programme.id)
+      .map((programmeLevel) => {
+        const level = levels.find((candidate) => candidate.programmeLevelId === programmeLevel.id);
+        return level
+          ? {
+              ...level,
+              introduction: programmeLevel.introduction,
+              academicOutcomes: programmeLevel.outcomes,
+              sessions: sessions.filter((session) => session.levelId === level.id),
+            }
+          : null;
+      })
+      .filter((level) => level !== null),
   }));
 }
 

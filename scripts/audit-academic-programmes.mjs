@@ -32,12 +32,18 @@ try {
   const modules = (await client.query(`
     select pm.id, pm.code, p.slug as programme_slug, pl.slug as level_slug,
       cm.id as digital_module_id, c.id as course_id,
+      count(distinct cs.id)::int as facilitated_sessions,
+      coalesce(max(jsonb_array_length(cs.focus_questions)), 0)::int as focus_questions,
+      coalesce(max(cs.duration_minutes), 0)::int as session_duration_minutes,
+      count(distinct cs.id) filter (where nullif(trim(cs.summary), '') is null)::int as sessions_missing_summary,
       count(distinct l.id) filter (where l.status = 'published' and l.slug like 'academic-principle-%')::int as aligned_lessons,
       count(distinct a.id) filter (where a.curriculum_key like 'assignment:%')::int as assignments,
       count(distinct q.id) filter (where q.curriculum_key like 'quiz:%' and q.status = 'published')::int as quizzes
     from programme_modules pm
     join programme_levels pl on pl.id = pm.programme_level_id
     join programmes p on p.id = pl.programme_id
+    left join course_levels cl on cl.programme_level_id = pl.id
+    left join course_sessions cs on cs.level_id = cl.id and cs.code = pm.code
     left join course_modules cm on cm.programme_module_id = pm.id
     left join courses c on c.id = cm.course_id and c.status = 'published'
     left join lessons l on l.module_id = cm.id
@@ -79,6 +85,10 @@ try {
   for (const curriculumModule of modules) {
     const label = `${curriculumModule.programme_slug}/${curriculumModule.level_slug}/${curriculumModule.code}`;
     if (!curriculumModule.digital_module_id || !curriculumModule.course_id) errors.push(`${label} has no published digital module.`);
+    if (curriculumModule.facilitated_sessions !== 1) errors.push(`${label} has ${curriculumModule.facilitated_sessions} facilitated sessions instead of 1.`);
+    if (curriculumModule.sessions_missing_summary) errors.push(`${label} has no facilitated-session summary.`);
+    if (curriculumModule.focus_questions < 3) errors.push(`${label} has ${curriculumModule.focus_questions} focus questions instead of at least 3.`);
+    if (curriculumModule.session_duration_minutes < 60 || curriculumModule.session_duration_minutes > 180) errors.push(`${label} has an invalid facilitated-session duration.`);
     if (curriculumModule.aligned_lessons !== 5) errors.push(`${label} has ${curriculumModule.aligned_lessons} aligned teaching lessons instead of 5.`);
     if (curriculumModule.assignments !== 1) errors.push(`${label} has ${curriculumModule.assignments} curriculum assignments instead of 1.`);
     if (curriculumModule.quizzes !== 1) errors.push(`${label} has ${curriculumModule.quizzes} published quizzes instead of 1.`);
@@ -99,6 +109,7 @@ try {
     programmes,
     digitalLevels: levels.length,
     academicModules: modules.length,
+    facilitatedSessions: modules.reduce((total, curriculumModule) => total + curriculumModule.facilitated_sessions, 0),
     alignedTeachingLessons: modules.reduce((total, curriculumModule) => total + curriculumModule.aligned_lessons, 0),
     curriculumAssignments: modules.reduce((total, curriculumModule) => total + curriculumModule.assignments, 0),
     alignedAssessments: assessments.length,

@@ -43,7 +43,7 @@ export function SiteFooter() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">Explore</p>
             <ul className="mt-4 space-y-2.5 text-sm text-paper/70">
               {[
-                { href: "/course", label: "The 15-session programme" },
+                { href: "/course", label: "Programme catalogue" },
                 { href: "/blog", label: "Purpose journal" },
                 { href: "/resources", label: "Downloadable resources" },
                 { href: "/community", label: "Live community" },

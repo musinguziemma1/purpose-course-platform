@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ACADEMIC_PROGRAMMES, academicModuleKey } from "../src/lib/academic-programmes.ts";
+import { ACADEMIC_PROGRAMMES, academicModuleKey, academicSessionDesign } from "../src/lib/academic-programmes.ts";
 
 test("the academic catalogue contains every PDF programme, level and module", () => {
   const levels = ACADEMIC_PROGRAMMES.flatMap((programme) => programme.levels);
@@ -11,6 +11,26 @@ test("the academic catalogue contains every PDF programme, level and module", ()
   assert.equal(modules.length, 51);
   assert.equal(modules.reduce((total, curriculumModule) => total + curriculumModule.concepts.length, 0), 255);
   assert.deepEqual(ACADEMIC_PROGRAMMES.map((programme) => programme.levels.length), [3, 3, 3, 3]);
+});
+
+test("every academic module has a complete professional session design", () => {
+  let sessionCount = 0;
+
+  for (const programme of ACADEMIC_PROGRAMMES) {
+    for (const level of programme.levels) {
+      for (const [moduleIndex, curriculumModule] of level.modules.entries()) {
+        const session = academicSessionDesign(curriculumModule, moduleIndex, level.modules.length);
+        sessionCount += 1;
+        assert.equal(session.durationMinutes, 90);
+        assert.ok(session.format.length >= 30);
+        assert.ok(session.summary.length >= 300);
+        assert.equal(session.focusQuestions.length, 5);
+        assert.ok(session.focusQuestions.every((question) => question.length >= 50 && question.endsWith("?")));
+      }
+    }
+  }
+
+  assert.equal(sessionCount, 51);
 });
 
 test("curriculum identifiers and teaching concepts are complete and unambiguous", () => {

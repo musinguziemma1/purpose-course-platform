@@ -6,6 +6,7 @@ import {
   assignments,
   courseLevels,
   courseModules,
+  courseSessions,
   courses,
   lessons,
   programmeLevels,
@@ -14,6 +15,7 @@ import {
 } from "./schema";
 import {
   ACADEMIC_PROGRAMMES,
+  academicSessionDesign,
   academicModuleKey,
   type AcademicModule,
 } from "../lib/academic-programmes";
@@ -122,6 +124,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
     let moduleCount = 0;
     let lessonCount = 0;
     let assignmentCount = 0;
+    let sessionCount = 0;
     let assessmentCount = 0;
     let questionCount = 0;
 
@@ -315,6 +318,37 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
             })
             .returning({ id: courseModules.id });
 
+          const session = academicSessionDesign(moduleSeed, moduleIndex, levelSeed.modules.length);
+          const sessionValues = {
+            levelId: level.id,
+            code: moduleSeed.code,
+            title: moduleSeed.title,
+            summary: session.summary,
+            focusQuestions: session.focusQuestions,
+            format: session.format,
+            durationMinutes: session.durationMinutes,
+            sortOrder: moduleIndex + 1,
+          };
+          const sessionInsert = tx.insert(courseSessions).values(sessionValues);
+          if (programmeSeed.slug === "purpose-program-adults") {
+            await sessionInsert.onConflictDoNothing({
+              target: [courseSessions.levelId, courseSessions.code],
+            });
+          } else {
+            await sessionInsert.onConflictDoUpdate({
+              target: [courseSessions.levelId, courseSessions.code],
+              set: {
+                title: sql`excluded.title`,
+                summary: sql`excluded.summary`,
+                focusQuestions: sql`excluded.focus_questions`,
+                format: sql`excluded.format`,
+                durationMinutes: sql`excluded.duration_minutes`,
+                sortOrder: sql`excluded.sort_order`,
+              },
+            });
+          }
+          sessionCount += 1;
+
           for (const [conceptIndex, concept] of moduleSeed.concepts.entries()) {
             const lessonSlug = `academic-principle-${conceptIndex + 1}`;
             await tx
@@ -470,6 +504,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
       modules: moduleCount,
       lessons: lessonCount,
       assignments: assignmentCount,
+      sessions: sessionCount,
       assessments: assessmentCount,
       questions: questionCount,
     };

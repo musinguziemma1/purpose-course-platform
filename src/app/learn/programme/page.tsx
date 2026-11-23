@@ -15,7 +15,7 @@ export default async function StudentProgrammePage() {
   const workspace = user ? await getStudentWorkspace(user.profileId) : null;
   if (!workspace) return null;
 
-  const { enrollment, levels, sessions, completedIds, level, completedInLevel, levelSessions, totalSessions, completedTotal, programmeModules } = workspace;
+  const { enrollment, programmeGroups, sessions, completedIds, level, completedInLevel, levelSessions, totalSessions, completedTotal, programmeModules } = workspace;
 
   return (
     <div className="space-y-6">
@@ -49,7 +49,14 @@ export default async function StudentProgrammePage() {
         for recorded learning progress. Linked modules show the available digital material; some programme sessions do not yet have a published digital module.
       </div>
 
-      {levels.map((programmeLevel) => {
+      {programmeGroups.map(({ programme, levels }) => (
+        <section key={programme.id} className="space-y-4 rounded-2xl border border-navy/10 bg-cream/25 p-3 sm:p-4">
+          <header className="px-2 py-2 sm:px-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Programme catalogue</p>
+            <h2 className="mt-1 font-serif text-2xl text-navy">{programme.name}</h2>
+            <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-stone-600">{programme.description}</p>
+          </header>
+          {levels.map((programmeLevel) => {
         const accent = accentClasses(programmeLevel.accent);
         const sessionsForLevel = sessions.filter((session) => session.levelId === programmeLevel.id);
         const isMine = level?.id === programmeLevel.id;
@@ -124,7 +131,9 @@ export default async function StudentProgrammePage() {
             </ul>
           </section>
         );
-      })}
+          })}
+        </section>
+      ))}
     </div>
   );
 }

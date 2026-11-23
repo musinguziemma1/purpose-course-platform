@@ -29,6 +29,13 @@ export type AcademicProgramme = {
   levels: AcademicLevel[];
 };
 
+export type AcademicSessionDesign = {
+  summary: string;
+  focusQuestions: [string, string, string, string, string];
+  format: string;
+  durationMinutes: number;
+};
+
 const academicModule = (
   code: string,
   title: string,
@@ -689,4 +696,39 @@ export const ACADEMIC_PROGRAMMES: AcademicProgramme[] = [
 
 export function academicModuleKey(programmeSlug: string, levelSlug: string, moduleCode: string) {
   return `${programmeSlug}:${levelSlug}:${moduleCode.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`;
+}
+
+const SESSION_FORMATS = [
+  "Concept seminar + diagnostic reflection",
+  "Case analysis + facilitated dialogue",
+  "Applied workshop + peer consultation",
+  "Guided reflection + action planning",
+] as const;
+
+const withoutTerminalPunctuation = (value: string) => value.replace(/[.!?]+$/, "");
+
+export function academicSessionDesign(
+  module: AcademicModule,
+  moduleIndex: number,
+  moduleCount: number,
+): AcademicSessionDesign {
+  const title = module.title.toLowerCase();
+  const concepts = module.concepts.map(withoutTerminalPunctuation);
+  const format =
+    moduleIndex === moduleCount - 1
+      ? "Integration studio + peer-reviewed action plan"
+      : SESSION_FORMATS[moduleIndex % SESSION_FORMATS.length];
+
+  return {
+    summary: `${module.summary} In this facilitated 90-minute session, learners clarify the module's five aligned principles, test them against a realistic case, evaluate ethical consequences and translate the learning into an evidence-based action commitment. Particular attention is given to ${concepts[1].toLowerCase()} and ${concepts[2].toLowerCase()}.`,
+    focusQuestions: [
+      `How should ${title} be defined, and which common misconception must be rejected?`,
+      `What evidence supports or challenges this principle: ${concepts[0]}?`,
+      `How would you apply this principle in a realistic personal, educational, organisational or community context: ${concepts[1]}?`,
+      `Which ethical risk appears when this issue is misunderstood or neglected: ${concepts[3]}?`,
+      `What accountable action would demonstrate this outcome in practice: ${concepts[4]}?`,
+    ],
+    format,
+    durationMinutes: 90,
+  };
 }

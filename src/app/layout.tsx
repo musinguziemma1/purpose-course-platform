@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: "%s · Purpose Course",
   },
   description:
-    "Purpose Course helps you discover why you were born, clarify your assignment and live it with impact. Three levels, fifteen sessions and a growing learning community.",
+    "Purpose Course offers four learning pathways across twelve progressive levels, with facilitated sessions, aligned assessment and a growing learning community.",
   keywords: [
     "purpose course",
     "purpose discovery",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     images: ["/images/hero-workshop.jpg"],
     title: "Purpose Course — Discover. Clarify. Live. Impact.",
     description:
-      "Three levels, fifteen sessions, five purpose principles. Build a life that expresses your God-given assignment.",
+      "Four pathways, twelve levels and fifty-one facilitated sessions. Build a life that expresses your God-given assignment.",
   },
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   robots: { index: true, follow: true },

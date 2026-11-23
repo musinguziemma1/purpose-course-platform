@@ -16,6 +16,8 @@ import {
   lessons,
   mentorAssignments,
   profiles,
+  programmeLevels,
+  programmes,
   reflections,
   roles,
 } from "@/db/schema";
@@ -43,7 +45,7 @@ export async function getStudentWorkspace(profileId: string) {
   const enrollment = enrollmentRows[0]?.enrollment ?? null;
   const level = enrollmentRows[0]?.level ?? null;
 
-  const [levels, sessions, progress, coaching, assignmentRows, reflectionRows, mentorRows, programmeModules] = await Promise.all([
+  const [levels, sessions, progress, coaching, assignmentRows, reflectionRows, mentorRows, programmeModules, catalogueRows] = await Promise.all([
     db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
     db.select().from(courseSessions).orderBy(asc(courseSessions.sortOrder)),
     db.select({ progress: learningProgress }).from(learningProgress)
@@ -86,6 +88,13 @@ export async function getStudentWorkspace(profileId: string) {
       .innerJoin(lessons, and(eq(lessons.moduleId, courseModules.id), eq(lessons.status, "published")))
       .where(eq(courses.status, "published")).groupBy(courseModules.id, courses.id)
       .orderBy(asc(courses.sortOrder), asc(courseModules.sortOrder), asc(courseModules.id)),
+    db
+      .select({ programme: programmes, programmeLevel: programmeLevels, level: courseLevels })
+      .from(programmes)
+      .innerJoin(programmeLevels, eq(programmeLevels.programmeId, programmes.id))
+      .innerJoin(courseLevels, eq(courseLevels.programmeLevelId, programmeLevels.id))
+      .where(eq(programmes.status, "published"))
+      .orderBy(asc(programmes.sortOrder), asc(programmeLevels.sortOrder), asc(courseLevels.id)),
   ]);
 
   const mentorId = mentorRows[0]?.mentorId ?? null;
@@ -110,12 +119,21 @@ export async function getStudentWorkspace(profileId: string) {
   const nextSession = levelSessions.find((session) => !completedIds.has(session.id)) ?? null;
   const totalSessions = sessions.length;
   const completedTotal = completedIds.size;
+  const programmeGroups = Array.from(
+    catalogueRows.reduce((groups, row) => {
+      const existing = groups.get(row.programme.id);
+      if (existing) existing.levels.push(row.level);
+      else groups.set(row.programme.id, { programme: row.programme, levels: [row.level] });
+      return groups;
+    }, new Map<number, { programme: (typeof catalogueRows)[number]["programme"]; levels: typeof levels }>()),
+  ).map(([, group]) => group);
 
   return {
     enrollment,
     level,
     levels,
     sessions,
+    programmeGroups,
     programmeModules,
     levelSessions,
     progress,

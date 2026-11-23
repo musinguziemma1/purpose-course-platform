@@ -11,7 +11,6 @@ import { getSessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { LevelProgression } from "@/components/academy/level-progression";
 import { getProgrammeOutlines } from "@/db/programmes";
-import { groupProgrammeOutlinesByStage } from "@/lib/programme-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +24,14 @@ export default async function StudentCoursesPage() {
     db.select().from(courseLevels).orderBy(courseLevels.sortOrder),
     getProgrammeOutlines({ includeDrafts: false }),
   ]);
-  const programmeStages = groupProgrammeOutlinesByStage(programmeOutlines);
+  const catalogueGroups = programmeOutlines.map((programme) => ({
+    programme,
+    levels: programme.levels
+      .map((outline) => ({ outline, level: levels.find((level) => level.programmeLevelId === outline.id) }))
+      .filter((item) => item.level !== undefined),
+    courses: academy.courses.filter((course) => course.subtitle === programme.name),
+  }));
+  const organisedCourses = catalogueGroups.flatMap((group) => group.courses);
 
   const levelId = academy.enrollment?.levelId ?? null;
 
@@ -49,7 +55,7 @@ export default async function StudentCoursesPage() {
             Structured lessons in progression: video teaching, audio, illustrations, downloadable material and practice.
             Complete each lesson to unlock the next.
           </p>
-          {programmeStages.length ? (
+          {catalogueGroups.length ? (
             <Link href="#published-programme-outlines" className="mt-2 inline-flex text-[11.5px] font-semibold text-gold-dark hover:underline">
               Browse published programme outlines
             </Link>
@@ -71,28 +77,39 @@ export default async function StudentCoursesPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-navy/10 bg-paper px-4 py-3">
-        <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-stone-500">
-          <Filter className="h-3 w-3" /> Enrolment level
-        </span>
-        {levels.map((level) => (
-          <span
-            key={level.id}
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11px] font-medium",
-              level.id === levelId ? "bg-navy text-paper" : "bg-cream text-stone-600",
-            )}
-          >
-            {level.name}
+      <div className="rounded-xl border border-navy/10 bg-paper px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-stone-500">
+            <Filter className="h-3 w-3" /> Programme catalogue and enrolment level
           </span>
-        ))}
-        <span className="ml-auto text-[11px] text-stone-500">
-          {academy.inProgressCount} lesson{academy.inProgressCount === 1 ? "" : "s"} in progress
-        </span>
+          <span className="text-[11px] text-stone-500">
+            {academy.inProgressCount} lesson{academy.inProgressCount === 1 ? "" : "s"} in progress
+          </span>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          {catalogueGroups.map(({ programme, levels: programmeLevels }) => (
+            <div key={programme.id} className="rounded-lg bg-cream/50 p-3">
+              <p className="text-[11px] font-semibold text-navy">{programme.name}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {programmeLevels.map(({ outline, level }) => (
+                  <span
+                    key={outline.id}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[10.5px] font-medium",
+                      level?.id === levelId ? "bg-navy text-paper" : "bg-paper text-stone-600",
+                    )}
+                  >
+                    {outline.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        {academy.courses.map((course) => {
+        {organisedCourses.map((course) => {
           const next = course.nextLesson;
           const locked = !course.enrolled && !course.progression.some((lesson) => lesson.unlocked);
           return (
@@ -170,37 +187,37 @@ export default async function StudentCoursesPage() {
         })}
       </div>
 
-      {programmeStages.length ? (
+      {catalogueGroups.length ? (
         <section id="published-programme-outlines" className="scroll-mt-24 space-y-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Published outlines</p>
-            <h2 className="mt-1 font-serif text-2xl text-navy">Programme pathways by level</h2>
+            <h2 className="mt-1 font-serif text-2xl text-navy">Programme catalogue</h2>
             <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-stone-600">
               Each published pathway is linked to its digital lessons, module quizzes, assignments, level examination,
               progress record and certificate requirements.
             </p>
           </div>
-          {programmeStages.map(({ levelIndex, stage, items }) => (
-            <section key={stage} className="admin-card overflow-hidden">
+          {catalogueGroups.map(({ programme }) => (
+            <section key={programme.id} className="admin-card overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy/10 bg-cream/40 px-5 py-3.5">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">Level {levelIndex + 1}</p>
-                  <h3 className="font-serif text-lg text-navy">{stage}</h3>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">Published programme</p>
+                  <h3 className="font-serif text-lg text-navy">{programme.name}</h3>
                 </div>
                 <span className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
-                  {items.length} published {items.length === 1 ? "pathway" : "pathways"}
+                  {programme.levels.length} levels · {programme.levels.reduce((total, level) => total + level.modules.length, 0)} modules
                 </span>
               </div>
               <ul className="divide-y divide-navy/8">
-                {items.map(({ programme, level, focus }) => (
-                  <li key={`${programme.id}-${level.id}`}>
+                {programme.levels.map((level, levelIndex) => (
+                  <li key={level.id}>
                     <Link
                       href={`/learn/programmes/${programme.slug}`}
                       className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-cream/30"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-[12.5px] font-semibold text-navy">{programme.name}</p>
-                        <p className="mt-0.5 text-[11.5px] text-stone-600">{focus}</p>
+                        <p className="text-[12.5px] font-semibold text-navy">Level {levelIndex + 1} · {level.name}</p>
+                        <p className="mt-0.5 line-clamp-2 text-[11.5px] text-stone-600">{level.introduction}</p>
                       </div>
                       <span className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
                         {level.modules.length} academic modules

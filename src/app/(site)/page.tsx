@@ -15,7 +15,6 @@ import {
 import { HeroCarousel } from "@/components/home/hero-carousel";
 import { TestimonialCarousel } from "@/components/home/testimonial-carousel";
 import { LiveThreadList } from "@/components/community/live-thread-list";
-import { ProgrammeRail } from "@/components/site/programme-rail";
 import { ArticleCard } from "@/components/site/article-card";
 import { PrincipleIcon, accentClasses } from "@/components/site/principle-icon";
 import { NewsletterForm } from "@/components/site/newsletter-form";
@@ -50,19 +49,6 @@ export default async function HomePage() {
   ]);
 
   const [lead, ...secondary] = articles;
-  const levelCards = program.map((level) => ({
-    id: level.id,
-    slug: level.slug,
-    name: level.name,
-    levelNumber: level.levelNumber,
-    tagline: level.tagline,
-    description: level.description,
-    accent: level.accent,
-    icon: level.icon,
-    weeks: level.weeks,
-    sessions: level.sessions.map((session) => ({ id: session.id, code: session.code, title: session.title })),
-  }));
-
   return (
     <>
       <HeroCarousel
@@ -128,34 +114,61 @@ export default async function HomePage() {
         <div className="shell">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <Reveal className="max-w-2xl">
-              <p className="eyebrow">The programme</p>
+              <p className="eyebrow">Programme catalogue</p>
               <h2 className="mt-4 font-serif text-4xl leading-tight text-navy sm:text-[2.85rem]">
-                Three levels. Fifteen sessions. One clear assignment.
+                Four pathways. Twelve levels. Fifty-one designed sessions.
               </h2>
               <p className="mt-4 max-w-xl text-[15.5px] leading-relaxed text-stone-600">
-                Lessons are presented in key presentations, case studies, round tables and facilitative
+                Each programme keeps its level sequence together through digital lessons and
                 transformational engagements — an experiential approach to purpose discovery.
               </p>
             </Reveal>
             <Reveal delay={0.1} className="flex flex-wrap gap-3 text-[12px] text-stone-600">
               <span className="inline-flex items-center gap-2 rounded-full border border-navy/12 bg-paper px-3 py-1.5">
-                <CalendarDays className="h-3.5 w-3.5 text-gold-dark" /> 15 weeks total
+                <CalendarDays className="h-3.5 w-3.5 text-gold-dark" /> Progressive pathways
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-navy/12 bg-paper px-3 py-1.5">
                 <Users className="h-3.5 w-3.5 text-gold-dark" /> Cohort-based
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-navy/12 bg-paper px-3 py-1.5">
-                <GraduationCap className="h-3.5 w-3.5 text-gold-dark" /> Coaches included
+                <GraduationCap className="h-3.5 w-3.5 text-gold-dark" /> Assessment aligned
               </span>
             </Reveal>
           </div>
 
-          <div className="mt-11">
-            <ProgrammeRail levels={levelCards} />
-          </div>
+          <Stagger className="mt-11 grid gap-5 lg:grid-cols-2">
+            {program.map((programme) => (
+              <StaggerItem key={programme.id}>
+                <Link
+                  href={`/course#${programme.slug}`}
+                  className="group flex h-full flex-col rounded-2xl border border-navy/10 bg-paper p-6 shadow-xs transition hover:-translate-y-0.5 hover:shadow-lift"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Published programme</p>
+                      <h3 className="mt-1 font-serif text-2xl text-navy">{programme.name}</h3>
+                    </div>
+                    <Badge variant="outline">{programme.duration}</Badge>
+                  </div>
+                  <p className="mt-3 flex-1 text-[13px] leading-relaxed text-stone-600">{programme.description}</p>
+                  <p className="mt-4 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-stone-500">{programme.structure}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {programme.levels.map((level) => (
+                      <span key={level.id} className="rounded-full bg-cream px-2.5 py-1 text-[10.5px] text-stone-600">
+                        {level.name} · {level.sessions.length} sessions
+                      </span>
+                    ))}
+                  </div>
+                  <span className="mt-5 inline-flex items-center gap-2 border-t border-navy/8 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-navy">
+                    Review this pathway <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </StaggerItem>
+            ))}
+          </Stagger>
           <Reveal className="mt-9 flex justify-center">
             <Link href="/course" className="inline-flex items-center gap-2 rounded-full bg-navy px-6 py-3 text-sm font-semibold text-paper transition-colors hover:bg-navy-700">
-              See every session in detail <ArrowRight className="h-4 w-4" />
+              Explore the full catalogue <ArrowRight className="h-4 w-4" />
             </Link>
           </Reveal>
         </div>
