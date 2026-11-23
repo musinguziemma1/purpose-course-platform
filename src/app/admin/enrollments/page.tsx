@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
-import { cohorts, courseLevels, enrollments, profiles, roles, users } from "@/db/schema";
+import { cohorts, enrollments, profiles, roles, users } from "@/db/schema";
 import { requireAdminPage } from "@/lib/page-access";
 import { EnrolmentForm, NewEnrolmentForm } from "@/components/academy/cohort-forms";
+import { getProgrammeLevelOptions } from "@/db/programme-options";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Enrolment management" };
 export default async function EnrolmentPage({
@@ -22,9 +23,8 @@ export default async function EnrolmentPage({
     offset = Math.max(0, Math.min(100000, Number(params.offset) || 0));
   const [rows, available, students, levels] = await Promise.all([
     db
-      .select({ record: enrollments, levelName: courseLevels.name })
+      .select({ record: enrollments })
       .from(enrollments)
-      .leftJoin(courseLevels, eq(enrollments.levelId, courseLevels.id))
       .where(
         and(
           status ? eq(enrollments.status, status as "waitlist") : undefined,
@@ -50,11 +50,12 @@ export default async function EnrolmentPage({
       .where(inArray(cohorts.status, ["draft", "active", "completed"]))
       .orderBy(cohorts.name),
     db.select({ id: profiles.id, name: profiles.fullName, email: users.email }).from(profiles).innerJoin(users, eq(users.id, profiles.userId)).innerJoin(roles, eq(roles.id, profiles.roleId)).where(and(eq(users.isActive, true), eq(roles.slug, "student"))).orderBy(profiles.fullName).limit(250),
-    db.select({ id: courseLevels.id, name: courseLevels.name }).from(courseLevels).orderBy(courseLevels.levelNumber),
+    getProgrammeLevelOptions(),
   ]);
   const page = (next: number) =>
     "/admin/enrollments?" +
     new URLSearchParams({ q, status: status ?? "", offset: String(next) });
+  const levelLabels = new Map(levels.map((level) => [level.id, level.name]));
   return (
     <div className="space-y-5">
       <div>
@@ -100,14 +101,15 @@ export default async function EnrolmentPage({
         </button>
       </form>
       <div className="space-y-4">
-        {rows.map(({ record, levelName }) => (
+        {rows.map(({ record }) => (
           <article key={record.id} className="admin-card p-5">
             <h2 className="font-serif text-xl text-navy">{record.fullName}</h2>
             <p className="mt-1 break-all text-sm text-stone-500">
               {record.email}
             </p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-gold-dark">
-              {levelName ?? "Level needs review"} · {record.status}
+              {levelLabels.get(record.levelId ?? -1) ?? "Level needs review"} ·{" "}
+              {record.status}
             </p>
             {!record.profileId ? (
               <p className="mt-2 text-xs text-amber-800">

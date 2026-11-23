@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
   saveEvent,
@@ -51,6 +52,7 @@ export function EventForm({
   hostId,
   timezone = "Africa/Kampala",
   existing,
+  nativeAvailable = true,
 }: {
   options: EventOptions;
   request?: boolean;
@@ -59,6 +61,7 @@ export function EventForm({
   existing?: Existing;
   nativeAvailable?: boolean;
 }) {
+  const schedulingBlocked = !request && !nativeAvailable;
   const [key] = useState(() => crypto.randomUUID()),
     [zone, setZone] = useState(existing?.timezone ?? timezone),
     [start] = useState(() =>
@@ -85,7 +88,29 @@ export function EventForm({
   );
   return (
     <form action={action} className="space-y-3">
-      <fieldset disabled={pending} className="min-w-0 space-y-3">
+      {schedulingBlocked ? (
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950"
+        >
+          <p className="font-semibold">In-platform video is not ready.</p>
+          <p className="mt-1">
+            Scheduling is paused until the project-controlled conference relay
+            is connected. This protects learners from receiving a room that
+            cannot carry audio or video; external meeting links are not used.
+          </p>
+          <Link
+            href="/admin/operations"
+            className="mt-2 inline-block font-semibold underline"
+          >
+            View operational readiness
+          </Link>
+        </div>
+      ) : null}
+      <fieldset
+        disabled={pending || schedulingBlocked}
+        className="min-w-0 space-y-3"
+      >
         <input type="hidden" name="scheduleKey" value={key} />
         {existing ? (
           <>
@@ -216,7 +241,7 @@ export function EventForm({
         ) : null}
         <EventNote state={state} />
         <button
-          disabled={pending}
+          disabled={pending || schedulingBlocked}
           className="rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-50"
         >
           {pending

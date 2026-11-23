@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { requireAdminPage } from "@/lib/page-access";
 import { db } from "@/db";
 import {
   cohorts,
   cohortMembers,
   cohortWeeks,
-  courseLevels,
   courses,
+  enrollments,
   profiles,
   roles,
   users,
@@ -18,6 +18,8 @@ import {
   CohortMemberForm,
   CohortMembershipControl,
 } from "@/components/academy/cohort-forms";
+import { getProgrammeLevelOptions } from "@/db/programme-options";
+import { can } from "@/lib/rbac";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage cohort" };
 export default async function CohortDetail({
@@ -34,7 +36,8 @@ export default async function CohortDetail({
     .where(eq(cohorts.id, id))
     .limit(1);
   if (!cohort) notFound();
-  const [members, levels, courseRows, people, weeks] = await Promise.all([
+  const [members, levels, courseRows, people, eligibleLearners, weeks] =
+    await Promise.all([
     db
       .select({
         member: cohortMembers,
@@ -46,10 +49,7 @@ export default async function CohortDetail({
       .innerJoin(users, eq(profiles.userId, users.id))
       .where(eq(cohortMembers.cohortId, id))
       .orderBy(cohortMembers.role, profiles.fullName),
-    db
-      .select({ id: courseLevels.id, name: courseLevels.name })
-      .from(courseLevels)
-      .orderBy(asc(courseLevels.levelNumber)),
+    getProgrammeLevelOptions(),
     db
       .select({
         id: courses.id,
@@ -59,7 +59,13 @@ export default async function CohortDetail({
       .from(courses)
       .orderBy(courses.title),
     db
-      .select({ id: profiles.id, name: profiles.fullName, role: roles.name })
+      .select({
+        id: profiles.id,
+        name: profiles.fullName,
+        role: roles.name,
+        roleSlug: roles.slug,
+        permissions: roles.permissions,
+      })
       .from(profiles)
       .innerJoin(users, eq(profiles.userId, users.id))
       .innerJoin(roles, eq(profiles.roleId, roles.id))
@@ -67,11 +73,41 @@ export default async function CohortDetail({
       .orderBy(profiles.fullName)
       .limit(1000),
     db
+      .select({ id: enrollments.profileId })
+      .from(enrollments)
+      .where(
+        and(
+          cohort.levelId
+            ? eq(enrollments.levelId, cohort.levelId)
+            : sql`false`,
+          eq(enrollments.status, "enrolled"),
+        ),
+      ),
+    db
       .select()
       .from(cohortWeeks)
       .where(eq(cohortWeeks.cohortId, id))
       .orderBy(cohortWeeks.weekNumber),
   ]);
+  const eligibleLearnerIds = new Set(
+    eligibleLearners.flatMap((row) => (row.id ? [row.id] : [])),
+  );
+  const candidates = people.flatMap<{
+    id: string;
+    name: string;
+    role: string;
+    membership: "learner" | "faculty";
+  }>((person) => {
+    if (person.roleSlug === "student")
+      return eligibleLearnerIds.has(person.id)
+        ? [{ ...person, membership: "learner" as const }]
+        : [];
+    const authorised =
+      can(person, "mentorship.coach") ||
+      can(person, "academy.author") ||
+      can(person, "academy.oversee");
+    return authorised ? [{ ...person, membership: "faculty" as const }] : [];
+  });
   const size = members.filter(
     (row) => row.member.role === "learner" && row.member.status === "active",
   ).length;
@@ -134,7 +170,7 @@ export default async function CohortDetail({
               <h2 className="mb-4 font-serif text-xl text-navy">
                 Place a member
               </h2>
-              <CohortMemberForm cohortId={id} people={people} />
+              <CohortMemberForm cohortId={id} people={candidates} />
               <Link
                 href="/admin/enrollments"
                 className="mt-4 inline-block text-sm font-semibold text-gold-dark underline"

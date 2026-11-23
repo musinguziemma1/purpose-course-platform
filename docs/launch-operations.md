@@ -12,7 +12,7 @@ For legacy data, run the read-only plan first:
 npm run ops:enrolments -- plan --env-file .env.supabase.local --project YOUR_PROJECT_REFERENCE
 ```
 
-`apply` pauses active records without a valid active Student identity/level and aligns unambiguous account-email mismatches. It does not invent identities, merge conflicting records, award levels or delete progress. It writes an encrypted before-change snapshot using `.local/credentials/recovery-backup.key` and commits audit records in the same transaction as the reconciliation. A completed encrypted backup must already have established that key. Conflicting identities require staff review. Review and protect a verified backup before a hosted application.
+`apply` pauses active records without a valid active Student identity/level, aligns unambiguous account-email mismatches, and pauses or removes active learner memberships that no longer have an active enrolment in the cohort's level. It does not invent identities, merge conflicting records, award levels or delete progress. It writes an encrypted before-change snapshot using `.local/credentials/recovery-backup.key` and commits audit records in the same transaction as the reconciliation. A completed encrypted backup must already have established that key. Conflicting identities require staff review. Review and protect a verified backup before a hosted application.
 
 ## Release safeguards
 
@@ -32,6 +32,8 @@ Vercel continues to build Git commits. The protection on `main` gates the normal
 Production scheduling fails closed until an authenticated project-controlled TURN relay is configured. External meeting links are rejected. Mentors can still submit proposed sessions, but approval and scheduling require the in-platform conference service. Room access remains protected by enrolment/cohort authorization, while calendar metadata is discoverable according to the shared public/account policy. Event search uses `/events/:id` for every role.
 
 Native rooms are available for local development. In production, they become available only with valid server-side `TURN_URL`, `TURN_USERNAME` and `TURN_CREDENTIAL`. `TURN_URL` accepts comma-separated `turn:`/`turns:` endpoints, optionally with a port and `?transport=udp` or `tcp`. `CONFERENCE_ENABLED=false` disables native rooms even if TURN is configured. Keep these values out of Git and `NEXT_PUBLIC_*` variables. The relay must be operated under the project’s control and tested on representative devices and networks before accepting live cohorts.
+
+The complete project-owned setup and acceptance procedure is in [Project-controlled conference relay](conference-relay.md).
 
 The default eight interactive mesh seats and direct host-to-viewer streams are intended for small tested groups. Do not advertise an untested broadcast audience size. Increase capacity only after measured relay, host-upload and participant-network testing.
 

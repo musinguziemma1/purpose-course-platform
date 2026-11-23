@@ -7,7 +7,7 @@ import pg from "pg";
 let client, pool, live, cohort, db, access;
 const key = randomUUID(),
   actors = {},
-  ids = { users: [], levels: [], cohorts: [] };
+  ids = { users: [], levels: [], cohorts: [], programmes: [] };
 const future = (days = 3, hours = 0) =>
   new Date(Date.now() + days * 86400000 + hours * 3600000).toISOString();
 const sessionInput = (extra = {}) => ({
@@ -133,6 +133,51 @@ before(async () => {
     ids.levels.push(level.id);
     ids["level" + name] = level.id;
   }
+  const pathwayProgramme = (
+    await client.query(
+      "insert into programmes(slug,name,duration,structure,description,status) values($1,$2,'Fixture','Two levels','Programme-scoped enrolment fixture','published') returning id",
+      [key + "-pathway", key + " Pathway"],
+    )
+  ).rows[0];
+  const otherProgramme = (
+    await client.query(
+      "insert into programmes(slug,name,duration,structure,description,status) values($1,$2,'Fixture','One level','Separate programme fixture','published') returning id",
+      [key + "-other-pathway", key + " Other pathway"],
+    )
+  ).rows[0];
+  ids.programmes.push(pathwayProgramme.id, otherProgramme.id);
+  for (const [levelId, name, order] of [
+    [ids.levelA, "Foundation", 1],
+    [ids.levelB, "Advanced", 2],
+  ]) {
+    const programmeLevel = (
+      await client.query(
+        "insert into programme_levels(programme_id,slug,name,sort_order) values($1,$2,$3,$4) returning id",
+        [pathwayProgramme.id, key + "-" + order, name, order],
+      )
+    ).rows[0];
+    await client.query(
+      "update course_levels set programme_level_id=$1 where id=$2",
+      [programmeLevel.id, levelId],
+    );
+  }
+  ids.foreignLevel = (
+    await client.query(
+      "insert into course_levels(slug,name,level_number,tagline,description) values($1,$2,4,'Fixture','Fixture') returning id",
+      [key + "-foreign", key + " Foreign foundation"],
+    )
+  ).rows[0].id;
+  ids.levels.push(ids.foreignLevel);
+  const foreignProgrammeLevel = (
+    await client.query(
+      "insert into programme_levels(programme_id,slug,name,sort_order) values($1,$2,'Foundation',1) returning id",
+      [otherProgramme.id, key + "-foreign-foundation"],
+    )
+  ).rows[0];
+  await client.query(
+    "update course_levels set programme_level_id=$1 where id=$2",
+    [foreignProgrammeLevel.id, ids.foreignLevel],
+  );
   ids.course = (
     await client.query(
       "insert into courses(level_id,slug,title,status)values($1,$2,$3,'published')returning id",
@@ -188,6 +233,9 @@ after(async () => {
   await client.query("delete from users where id=any($1::uuid[])", [ids.users]);
   await client.query("delete from course_levels where id=any($1::int[])", [
     ids.levels,
+  ]);
+  await client.query("delete from programmes where id=any($1::int[])", [
+    ids.programmes,
   ]);
   await client.end();
   await pool?.end();
@@ -358,13 +406,17 @@ test("enrolment pause withdraws membership and resumption rechecks capacity with
     /permission/i,
   );
 });
-test("waitlisted higher levels cannot be activated without the previous award and interest entries need approved accounts", async () => {
+test("higher-level admission follows its own programme pathway and interest entries need approved accounts", async () => {
   const entry = (
     await client.query(
       "insert into enrollments(profile_id,email,full_name,level_id,status)values($1,$2,'Fixture',$3,'waitlist')returning id",
       [actors.student.profileId, actors.student.email, ids.levelB],
     )
   ).rows[0];
+  await client.query(
+    "insert into certificates(code,profile_id,kind,level_id,title)values($1,$2,'level',$3,'Different programme award')",
+    [randomUUID(), actors.student.profileId, ids.foreignLevel],
+  );
   assert.match(
     (
       await cohort.manageEnrolment(
@@ -373,6 +425,19 @@ test("waitlisted higher levels cannot be activated without the previous award an
       )
     ).error,
     /previous level/i,
+  );
+  await client.query(
+    "insert into certificates(code,profile_id,kind,level_id,title)values($1,$2,'level',$3,'Correct programme award')",
+    [randomUUID(), actors.student.profileId, ids.levelA],
+  );
+  assert.equal(
+    (
+      await cohort.manageEnrolment(
+        await enrolInput(entry.id, { status: "enrolled" }),
+        actors.admin,
+      )
+    ).ok,
+    true,
   );
   const interest = (
     await client.query(
@@ -881,4 +946,27 @@ test("staff create explicit level requests with the actual Student identity and 
   assert.match((await cohort.createLevelEnrolment({profileId:actors.otherStudent.profileId,levelId:ids.levelB},actors.admin)).error,/already exists/);
   assert.match((await cohort.createLevelEnrolment({profileId:actors.mentor.profileId,levelId:ids.levelB},actors.admin)).error,/approved Student/);
   assert.match((await cohort.createLevelEnrolment({profileId:actors.otherStudent.profileId,levelId:ids.levelB},actors.mentor)).error,/permission/);
+});
+
+test("completing a level releases the learner's active cohort seat", async () => {
+  const actor = actors[ids.placed];
+  const enrolmentId = ids[ids.placed + "Enrolment"];
+  await client.query(
+    "insert into certificates(code,profile_id,kind,level_id,title) values($1,$2,'level',$3,'Completed level fixture') on conflict do nothing",
+    [randomUUID(), actor.profileId, ids.levelA],
+  );
+  const result = await cohort.manageEnrolment(
+    await enrolInput(enrolmentId, { status: "completed" }),
+    actors.admin,
+  );
+  assert.equal(result.ok, true, result.error);
+  assert.equal(
+    (
+      await client.query(
+        "select status from cohort_members where cohort_id=$1 and profile_id=$2",
+        [ids.cohortB, actor.profileId],
+      )
+    ).rows[0].status,
+    "removed",
+  );
 });

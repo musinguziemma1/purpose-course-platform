@@ -20,6 +20,7 @@ import { slugify } from "@/lib/utils";
 import { liveHost, liveReadable } from "@/db/learning-access";
 import { canOverseeLearners } from "@/db/learner-access";
 import { changeLessonCompletion } from "@/db/lesson-progress";
+import { getLevelPathway } from "@/db/programme-pathway";
 
 export type AcademyState = { ok?: boolean; error?: string; message?: string };
 
@@ -452,8 +453,9 @@ export async function enrollInCourse(formData: FormData) {
   if (!Number.isSafeInteger(levelId) || levelId < 1) return;
   const [available] = await db.select({ id: courses.id }).from(courses).where(and(eq(courses.levelId, levelId), eq(courses.status, "published"))).limit(1);
   if (!available) return;
-  const [firstLevel] = await db.select({ id: courseLevels.id }).from(courseLevels).orderBy(courseLevels.levelNumber, courseLevels.id).limit(1);
-  if (firstLevel && firstLevel.id !== levelId) {
+  const pathway = await db.transaction((tx) => getLevelPathway(tx, levelId));
+  if (!pathway) return;
+  if (!pathway.isFirst) {
     const { enrollInNextLevel } = await import("@/db/level-progression");
     await enrollInNextLevel(levelId, user);
     revalidatePath("/learn", "layout");

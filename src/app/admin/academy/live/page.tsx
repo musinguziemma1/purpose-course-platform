@@ -1,14 +1,197 @@
-import { nativeConferenceAvailable } from "@/lib/conference-config";
 import Link from "next/link";
-import {notFound} from "next/navigation";
-import {eq} from "drizzle-orm";
-import {db} from "@/db";
-import {liveSessions} from "@/db/schema";
-import {requireAdminPage} from "@/lib/page-access";
-import {getEventCalendar,getEventOptions,getSessionRequests,canScheduleEvents} from "@/db/live-events";
-import {EventCalendar} from "@/components/academy/event-calendar";
-import {EventForm,RequestReviewForm} from "@/components/academy/event-forms";
-import {eventDate} from "@/lib/event-time";
-export const dynamic="force-dynamic";
-export const metadata={title:"Live session scheduling"};
-export default async function AdminLivePage({searchParams}:{searchParams:Promise<{edit?:string}>}){const user=await requireAdminPage("/admin/academy/live");if(!canScheduleEvents(user))notFound();const params=await searchParams,editId=Number(params.edit)||0;const[events,options,requests,editing]=await Promise.all([getEventCalendar(user,{limit:60}),getEventOptions(user),getSessionRequests(user),editId?db.select().from(liveSessions).where(eq(liveSessions.id,editId)).limit(1):[]]);const session=editing[0];if(editId&&(!session||session.status!=="scheduled"))notFound();return <div className="space-y-5"><div><Link href="/admin/academy" className="text-sm text-gold-dark underline">← Academy builder</Link><h1 className="mt-3 font-serif text-3xl text-navy">Live sessions</h1><p className="mt-2 max-w-3xl text-sm leading-relaxed text-stone-600">Schedule once for the shared event calendar, account notifications and public event pages. Course and cohort restrictions protect joining links, agendas and recordings.</p></div><div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]"><div className="space-y-5"><section><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h2 className="font-serif text-xl text-navy">Scheduled and live events</h2><Link href="/events?past=1" className="text-sm font-semibold text-gold-dark underline">Past and cancelled events</Link></div><EventCalendar initialEvents={events.map(row=>({...row,startsAt:row.startsAt.toISOString()}))} manage/></section><section id="requests" className="admin-card p-5"><h2 className="font-serif text-xl text-navy">Mentor session requests</h2><p className="mt-2 text-sm text-stone-500">Approval publishes the proposed schedule. Decline with a reason if the mentor should propose another date.</p><div className="mt-5 space-y-4">{requests.map(({request,mentorName})=><article key={request.id} className="rounded-xl border border-navy/15 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-source">{request.status} · {mentorName}</p><h3 className="mt-2 font-serif text-lg text-navy">{request.title}</h3><p className="mt-2 text-sm text-stone-500">{eventDate(request.startsAt,request.timezone)} · {request.timezone} · {request.durationMinutes} minutes</p><p className="mt-2 whitespace-pre-line text-sm text-stone-600">{request.description}</p>{request.agenda?<p className="mt-2 whitespace-pre-line text-sm text-stone-500">{request.agenda}</p>:null}{request.status==="pending"?<RequestReviewForm key={request.updatedAt.toISOString()} id={request.id} version={request.updatedAt.toISOString()}/>:<p className="mt-2 text-sm text-stone-500">{request.reviewNote??"Decision recorded."}</p>}</article>)}{!requests.length?<p className="text-sm text-stone-500">No mentor requests yet.</p>:null}</div></section></div><section className="admin-card p-5"><h2 className="mb-4 font-serif text-xl text-navy">{session?"Edit scheduled event":"Schedule an event"}</h2><EventForm nativeAvailable={nativeConferenceAvailable()} key={session?.updatedAt.toISOString()??"new"} options={options} hostId={user.profileId} timezone={user.timezone??"Africa/Kampala"} existing={session?{...session,startsAt:session.startsAt.toISOString(),updatedAt:session.updatedAt.toISOString()}:undefined}/>{session?<Link href="/admin/academy/live" className="mt-4 inline-block text-sm text-gold-dark underline">Create another event</Link>:null}</section></div></div>;}
+import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { liveSessions } from "@/db/schema";
+import {
+  canScheduleEvents,
+  getEventCalendar,
+  getEventOptions,
+  getSessionRequests,
+} from "@/db/live-events";
+import { EventCalendar } from "@/components/academy/event-calendar";
+import {
+  EventForm,
+  RequestReviewForm,
+} from "@/components/academy/event-forms";
+import { eventDate } from "@/lib/event-time";
+import { nativeConferenceAvailable } from "@/lib/conference-config";
+import { requireAdminPage } from "@/lib/page-access";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Live session scheduling" };
+
+export default async function AdminLivePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
+  const user = await requireAdminPage("/admin/academy/live");
+  if (!canScheduleEvents(user)) notFound();
+
+  const params = await searchParams;
+  const editId = Number(params.edit) || 0;
+  const [events, options, requests, editing] = await Promise.all([
+    getEventCalendar(user, { limit: 60 }),
+    getEventOptions(user),
+    getSessionRequests(user),
+    editId
+      ? db
+          .select()
+          .from(liveSessions)
+          .where(eq(liveSessions.id, editId))
+          .limit(1)
+      : [],
+  ]);
+  const session = editing[0];
+  const nativeAvailable = nativeConferenceAvailable();
+  if (editId && (!session || session.status !== "scheduled")) notFound();
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <Link
+          href="/admin/academy"
+          className="text-sm text-gold-dark underline"
+        >
+          ← Academy builder
+        </Link>
+        <h1 className="mt-3 font-serif text-3xl text-navy">Live sessions</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-stone-600">
+          Schedule once for the shared event calendar, account notifications
+          and public event pages. Course and cohort restrictions protect room
+          access, agendas and recordings.
+        </p>
+      </div>
+
+      {!nativeAvailable ? (
+        <section className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
+          <h2 className="font-semibold">
+            Conference relay connection required
+          </h2>
+          <p className="mt-1 max-w-4xl leading-relaxed">
+            The scheduler is paused because production cannot yet provide a
+            reliable in-platform audio/video path. Connect the project-owned
+            TURN service using server-only TURN_URL, TURN_USERNAME and
+            TURN_CREDENTIAL settings, then redeploy. Mentor proposals remain
+            available, but approval waits for relay readiness.
+          </p>
+          <Link
+            href="/admin/operations"
+            className="mt-2 inline-block font-semibold underline"
+          >
+            View operational readiness
+          </Link>
+        </section>
+      ) : null}
+
+      <div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <div className="space-y-5">
+          <section>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-serif text-xl text-navy">
+                Scheduled and live events
+              </h2>
+              <Link
+                href="/events?past=1"
+                className="text-sm font-semibold text-gold-dark underline"
+              >
+                Past and cancelled events
+              </Link>
+            </div>
+            <EventCalendar
+              initialEvents={events.map((row) => ({
+                ...row,
+                startsAt: row.startsAt.toISOString(),
+              }))}
+              manage
+            />
+          </section>
+
+          <section id="requests" className="admin-card p-5">
+            <h2 className="font-serif text-xl text-navy">
+              Mentor session requests
+            </h2>
+            <p className="mt-2 text-sm text-stone-500">
+              Approval publishes the proposed schedule. Decline with a reason
+              if the mentor should propose another date.
+            </p>
+            <div className="mt-5 space-y-4">
+              {requests.map(({ request, mentorName }) => (
+                <article
+                  key={request.id}
+                  className="rounded-xl border border-navy/15 p-4"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wider text-source">
+                    {request.status} · {mentorName}
+                  </p>
+                  <h3 className="mt-2 font-serif text-lg text-navy">
+                    {request.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-stone-500">
+                    {eventDate(request.startsAt, request.timezone)} ·{" "}
+                    {request.timezone} · {request.durationMinutes} minutes
+                  </p>
+                  <p className="mt-2 whitespace-pre-line text-sm text-stone-600">
+                    {request.description}
+                  </p>
+                  {request.agenda ? (
+                    <p className="mt-2 whitespace-pre-line text-sm text-stone-500">
+                      {request.agenda}
+                    </p>
+                  ) : null}
+                  {request.status === "pending" ? (
+                    <RequestReviewForm
+                      key={request.updatedAt.toISOString()}
+                      id={request.id}
+                      version={request.updatedAt.toISOString()}
+                    />
+                  ) : (
+                    <p className="mt-2 text-sm text-stone-500">
+                      {request.reviewNote ?? "Decision recorded."}
+                    </p>
+                  )}
+                </article>
+              ))}
+              {!requests.length ? (
+                <p className="text-sm text-stone-500">
+                  No mentor requests yet.
+                </p>
+              ) : null}
+            </div>
+          </section>
+        </div>
+
+        <section className="admin-card p-5">
+          <h2 className="mb-4 font-serif text-xl text-navy">
+            {session ? "Edit scheduled event" : "Schedule an event"}
+          </h2>
+          <EventForm
+            nativeAvailable={nativeAvailable}
+            key={session?.updatedAt.toISOString() ?? "new"}
+            options={options}
+            hostId={user.profileId}
+            timezone={user.timezone ?? "Africa/Kampala"}
+            existing={
+              session
+                ? {
+                    ...session,
+                    startsAt: session.startsAt.toISOString(),
+                    updatedAt: session.updatedAt.toISOString(),
+                  }
+                : undefined
+            }
+          />
+          {session ? (
+            <Link
+              href="/admin/academy/live"
+              className="mt-4 inline-block text-sm text-gold-dark underline"
+            >
+              Create another event
+            </Link>
+          ) : null}
+        </section>
+      </div>
+    </div>
+  );
+}

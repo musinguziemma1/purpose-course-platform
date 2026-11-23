@@ -1,9 +1,95 @@
 import Link from "next/link";
-import{and,asc,count,desc,eq}from"drizzle-orm";
-import{db}from"@/db";
-import{cohortMembers,cohorts,courseLevels,courses}from"@/db/schema";
-import{requireAdminPage}from"@/lib/page-access";
-import{CohortSetupForm}from"@/components/academy/cohort-forms";
-export const dynamic="force-dynamic";
-export const metadata={title:"Cohort setup"};
-export default async function AdminCohortsPage(){await requireAdminPage("/admin/cohorts");const[rows,levels,courseRows]=await Promise.all([db.select({cohort:cohorts,size:count(cohortMembers.id)}).from(cohorts).leftJoin(cohortMembers,and(eq(cohortMembers.cohortId,cohorts.id),eq(cohortMembers.role,"learner"),eq(cohortMembers.status,"active"))).groupBy(cohorts.id).orderBy(desc(cohorts.createdAt)).limit(100),db.select({id:courseLevels.id,name:courseLevels.name}).from(courseLevels).orderBy(asc(courseLevels.levelNumber)),db.select({id:courses.id,title:courses.title,levelId:courses.levelId}).from(courses).orderBy(courses.title)]);return <div className="space-y-5"><div><h1 className="font-serif text-3xl text-navy">Cohort setup</h1><p className="mt-2 max-w-3xl text-sm text-stone-600">Set learning dates, level scope and capacity, then place approved learners and faculty. Manage enrolments separately from account approval.</p><Link href="/admin/enrollments" className="mt-3 inline-block text-sm font-semibold text-gold-dark underline">Manage enrolments →</Link></div><div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]"><section className="space-y-4">{rows.map(({cohort,size})=><article key={cohort.id} className="admin-card p-5"><p className="text-xs font-semibold uppercase tracking-wider text-source">{cohort.status} · {levels.find(level=>level.id===cohort.levelId)?.name??"Level needs review"}</p><h2 className="mt-2 font-serif text-2xl text-navy">{cohort.name}</h2><p className="mt-2 text-sm text-stone-500">{cohort.startsAt.toISOString().slice(0,10)} to {cohort.endsAt.toISOString().slice(0,10)} · {size} / {cohort.capacity} learners</p><p className="mt-3 text-sm leading-relaxed text-stone-600">{cohort.description}</p><Link href={"/admin/cohorts/"+cohort.id} className="mt-4 inline-block rounded-full bg-navy px-4 py-2 text-sm font-semibold text-paper">Manage cohort</Link></article>)}{!rows.length?<p className="admin-card p-6 text-sm text-stone-500">Create the first cohort, then add approved students and faculty.</p>:null}</section><section className="admin-card p-5"><h2 className="mb-4 font-serif text-xl text-navy">Create a cohort</h2><CohortSetupForm levels={levels} courses={courseRows}/></section></div></div>;}
+import { and, count, desc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { cohortMembers, cohorts, courses } from "@/db/schema";
+import { getProgrammeLevelOptions } from "@/db/programme-options";
+import { requireAdminPage } from "@/lib/page-access";
+import { CohortSetupForm } from "@/components/academy/cohort-forms";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Cohort setup" };
+
+export default async function AdminCohortsPage() {
+  await requireAdminPage("/admin/cohorts");
+  const [rows, levels, courseRows] = await Promise.all([
+    db
+      .select({ cohort: cohorts, size: count(cohortMembers.id) })
+      .from(cohorts)
+      .leftJoin(
+        cohortMembers,
+        and(
+          eq(cohortMembers.cohortId, cohorts.id),
+          eq(cohortMembers.role, "learner"),
+          eq(cohortMembers.status, "active"),
+        ),
+      )
+      .groupBy(cohorts.id)
+      .orderBy(desc(cohorts.createdAt))
+      .limit(100),
+    getProgrammeLevelOptions(),
+    db
+      .select({ id: courses.id, title: courses.title, levelId: courses.levelId })
+      .from(courses)
+      .orderBy(courses.title),
+  ]);
+  const levelLabels = new Map(levels.map((level) => [level.id, level.name]));
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="font-serif text-3xl text-navy">Cohort setup</h1>
+        <p className="mt-2 max-w-3xl text-sm text-stone-600">
+          Set learning dates, programme level and capacity, then place approved
+          learners and authorised faculty. Account approval remains separate
+          from level enrolment and cohort placement.
+        </p>
+        <Link
+          href="/admin/enrollments"
+          className="mt-3 inline-block text-sm font-semibold text-gold-dark underline"
+        >
+          Manage enrolments →
+        </Link>
+      </div>
+      <div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <section className="space-y-4">
+          {rows.map(({ cohort, size }) => (
+            <article key={cohort.id} className="admin-card p-5">
+              <p className="text-xs font-semibold uppercase tracking-wider text-source">
+                {cohort.status} ·{" "}
+                {levelLabels.get(cohort.levelId ?? -1) ?? "Level needs review"}
+              </p>
+              <h2 className="mt-2 font-serif text-2xl text-navy">
+                {cohort.name}
+              </h2>
+              <p className="mt-2 text-sm text-stone-500">
+                {cohort.startsAt.toISOString().slice(0, 10)} to{" "}
+                {cohort.endsAt.toISOString().slice(0, 10)} · {size} /{" "}
+                {cohort.capacity} learners
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-stone-600">
+                {cohort.description}
+              </p>
+              <Link
+                href={`/admin/cohorts/${cohort.id}`}
+                className="mt-4 inline-block rounded-full bg-navy px-4 py-2 text-sm font-semibold text-paper"
+              >
+                Manage cohort
+              </Link>
+            </article>
+          ))}
+          {!rows.length ? (
+            <p className="admin-card p-6 text-sm text-stone-500">
+              Create the first cohort, then add approved students and faculty.
+            </p>
+          ) : null}
+        </section>
+        <section className="admin-card p-5">
+          <h2 className="mb-4 font-serif text-xl text-navy">
+            Create a cohort
+          </h2>
+          <CohortSetupForm levels={levels} courses={courseRows} />
+        </section>
+      </div>
+    </div>
+  );
+}

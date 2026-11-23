@@ -21,6 +21,7 @@ import type { SessionUser } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { isUuid } from "@/lib/contact";
 import { slugify } from "@/lib/utils";
+import { getLevelPathway } from "@/db/programme-pathway";
 export type CohortInput = {
   id?: number;
   version?: string;
@@ -638,19 +639,17 @@ export async function manageEnrolment(
     )
       return { error: "The active Student account must match this enrolment." };
     if (input.status === "enrolled" && record.status !== "enrolled") {
-      const levels = await tx
-        .select()
-        .from(courseLevels)
-        .orderBy(asc(courseLevels.levelNumber), asc(courseLevels.id));
-      const index = levels.findIndex((level) => level.id === record.levelId);
-      if (index > 0) {
+      const pathway = await getLevelPathway(tx, record.levelId);
+      if (!pathway)
+        return { error: "The enrolment level no longer exists." };
+      if (pathway.previousLevel) {
         const [award] = await tx
           .select({ id: certificates.id })
           .from(certificates)
           .where(
             and(
               eq(certificates.profileId, profileId),
-              eq(certificates.levelId, levels[index - 1].id),
+              eq(certificates.levelId, pathway.previousLevel.id),
               eq(certificates.kind, "level"),
               isNull(certificates.revokedAt),
             ),
@@ -702,7 +701,7 @@ export async function manageEnrolment(
     if (cohort && input.status === "enrolled") {
       const error = await placeLearner(tx, cohort, profileId, record.id);
       if (error) return { error };
-    } else if (input.status !== "completed")
+    } else
       await tx
         .update(cohortMembers)
         .set({ status: input.status === "paused" ? "paused" : "removed" })

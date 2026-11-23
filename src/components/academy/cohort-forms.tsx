@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   saveCohort,
   saveCohortMember,
@@ -57,6 +57,15 @@ export function CohortSetupForm({
     saveCohort,
     {},
   );
+  const [selectedLevel, setSelectedLevel] = useState(
+    String(cohort?.levelId ?? ""),
+  );
+  const [selectedCourse, setSelectedCourse] = useState(
+    String(cohort?.courseId ?? ""),
+  );
+  const visibleCourses = courses.filter(
+    (course) => String(course.levelId ?? "") === selectedLevel,
+  );
   return (
     <form action={action} className="space-y-3">
       <fieldset disabled={pending} className="min-w-0 space-y-3">
@@ -104,7 +113,23 @@ export function CohortSetupForm({
           </Field>
         </div>
         <Field label="Course level">
-          <Select name="levelId" required defaultValue={cohort?.levelId ?? ""}>
+          <Select
+            name="levelId"
+            required
+            value={selectedLevel}
+            onChange={(event) => {
+              const levelId = event.target.value;
+              setSelectedLevel(levelId);
+              if (
+                !courses.some(
+                  (course) =>
+                    String(course.id) === selectedCourse &&
+                    String(course.levelId) === levelId,
+                )
+              )
+                setSelectedCourse("");
+            }}
+          >
             <option value="">Choose level</option>
             {levels.map((level) => (
               <option key={level.id} value={level.id}>
@@ -114,9 +139,14 @@ export function CohortSetupForm({
           </Select>
         </Field>
         <Field label="Specific course" hint="optional">
-          <Select name="courseId" defaultValue={cohort?.courseId ?? ""}>
+          <Select
+            name="courseId"
+            value={selectedCourse}
+            disabled={!selectedLevel}
+            onChange={(event) => setSelectedCourse(event.target.value)}
+          >
             <option value="">All courses in this level</option>
-            {courses.map((course) => (
+            {visibleCourses.map((course) => (
               <option key={course.id} value={course.id}>
                 {course.title}
               </option>
@@ -187,11 +217,23 @@ export function CohortMemberForm({
   people,
 }: {
   cohortId: number;
-  people: { id: string; name: string; role: string }[];
+  people: {
+    id: string;
+    name: string;
+    role: string;
+    membership: "learner" | "faculty";
+  }[];
 }) {
   const [state, action, pending] = useActionState<CohortState, FormData>(
     saveCohortMember,
     {},
+  );
+  const [membershipRole, setMembershipRole] = useState("learner");
+  const [selectedProfile, setSelectedProfile] = useState("");
+  const candidates = people.filter((person) =>
+    membershipRole === "learner"
+      ? person.membership === "learner"
+      : person.membership === "faculty",
   );
   return (
     <form action={action} className="space-y-3">
@@ -199,9 +241,14 @@ export function CohortMemberForm({
         <input type="hidden" name="cohortId" value={cohortId} />
         <input type="hidden" name="status" value="active" />
         <Field label="Account to place">
-          <Select name="profileId" required defaultValue="">
+          <Select
+            name="profileId"
+            required
+            value={selectedProfile}
+            onChange={(event) => setSelectedProfile(event.target.value)}
+          >
             <option value="">Choose an active account</option>
-            {people.map((person) => (
+            {candidates.map((person) => (
               <option key={person.id} value={person.id}>
                 {person.name} · {person.role}
               </option>
@@ -209,7 +256,14 @@ export function CohortMemberForm({
           </Select>
         </Field>
         <Field label="Membership role">
-          <Select name="role" defaultValue="learner">
+          <Select
+            name="role"
+            value={membershipRole}
+            onChange={(event) => {
+              setMembershipRole(event.target.value);
+              setSelectedProfile("");
+            }}
+          >
             <option value="learner">Learner</option>
             <option value="mentor">Mentor</option>
             <option value="facilitator">Facilitator</option>
@@ -218,14 +272,15 @@ export function CohortMemberForm({
         <p className="text-xs text-stone-500">
           Learners need approved enrolment in this level. Placement transfers
           them from any other cohort in the same level and preserves learning
-          progress.
+          progress. Faculty choices only include authorised mentors,
+          instructors and programme administrators.
         </p>
         <Note state={state} />
         <button
-          disabled={pending}
+          disabled={pending || !candidates.length || !selectedProfile}
           className="rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-paper disabled:opacity-50"
         >
-          Add or transfer member
+          {candidates.length ? "Add or transfer member" : "No eligible accounts"}
         </button>
       </fieldset>
     </form>

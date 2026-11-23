@@ -20,7 +20,7 @@ export default async function OperationsPage() {
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{checks.map(([label, count, href]) => <div key={label} className="admin-card p-5"><dt className="text-sm text-stone-600">{label}</dt><dd className={`mt-2 text-3xl font-semibold ${count ? "text-amber-700" : "text-source"}`}>{count}</dd><Link href={href} className="mt-3 inline-block text-sm font-semibold text-gold-dark underline">Review</Link></div>)}</dl>
     <section className="admin-card space-y-3 p-5"><h2 className="font-serif text-xl text-navy">Service configuration</h2>
       <p className="text-sm text-stone-600">Account email: {status.emailConfigured ? "configured — verify real delivery in Notifications" : "sender configuration incomplete"}.</p>
-      <p className="text-sm text-stone-600">Live meetings: {status.nativeVideoReady ? "in-platform room available" : "platform conference relay is not configured"}.</p>
+      <p className="text-sm text-stone-600">Live meetings: {status.nativeVideoReady ? "in-platform room available" : "platform conference relay is not configured; add server-only TURN_URL, TURN_USERNAME and TURN_CREDENTIAL settings, then redeploy"}.</p>
       <p className="text-xs text-stone-500">Last checked: {status.checkedAt}. Backup and restore evidence is retained privately by the operator; this page does not certify backup retention or recovery readiness.</p>
     </section>
   </div>;
