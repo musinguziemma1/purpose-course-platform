@@ -18,12 +18,8 @@ type Database = typeof db | Transaction;
 export function makeRoomCode() { return `pc-${randomBytes(6).toString("hex")}`; }
 
 export function iceServers(): { urls: string | string[]; username?: string; credential?: string }[] {
-  const servers: { urls: string | string[]; username?: string; credential?: string }[] = [
-    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
-  ];
   const { relay } = conferenceConfiguration();
-  if (relay) servers.push(relay);
-  return servers;
+  return relay ? [relay] : [];
 }
 
 export async function ensureRoomCode(sessionId: number) {

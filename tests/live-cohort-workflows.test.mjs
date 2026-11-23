@@ -23,7 +23,7 @@ const sessionInput = (extra = {}) => ({
   hostId: actors.mentor.profileId,
   courseId: null,
   cohortId: null,
-  meetingUrl: "https://meet.example.invalid/private-room",
+  meetingUrl: "",
   isPublic: true,
   ...extra,
 });
@@ -827,20 +827,18 @@ test("expired live events move to history and cannot be reopened or joined", asy
   assert.equal(await conference.joinRoom({code:current.room_code,peerId:randomUUID(),viewer:actors.student}), null);
 });
 
-test("external-only scheduling requires a meeting link while mentor proposals remain requestable", async () => {
+test("live scheduling fails closed when the in-platform conference relay is unavailable", async () => {
   const old=process.env.CONFERENCE_ENABLED;
   process.env.CONFERENCE_ENABLED="false";
   try {
     const input=sessionInput({startsAt:future(31),meetingUrl:""});
-    assert.match((await live.scheduleLiveEvent(input,actors.admin)).error,/meeting link/);
+    assert.match((await live.scheduleLiveEvent(input,actors.admin)).error,/conference relay/);
     assert.equal((await live.requestLiveEvent(input,actors.mentor)).ok,true);
     const request=(await client.query("select * from live_session_requests where request_key=$1",[input.scheduleKey])).rows[0];
     const decision={id:request.id,version:request.updated_at.toISOString(),decision:"approve",note:"Approved teaching session."};
-    assert.match((await live.reviewLiveEventRequest(decision,actors.admin)).error,/meeting link/);
+    assert.match((await live.reviewLiveEventRequest(decision,actors.admin)).error,/conference relay/);
     const result=await live.reviewLiveEventRequest({...decision,meetingUrl:"https://meet.example.invalid/approved"},actors.admin);
-    assert.equal(result.ok,true,result.error);
-    const approved=(await client.query("select scheduled_session_id from live_session_requests where id=$1",[request.id])).rows[0];
-    assert.equal((await row("live_sessions",approved.scheduled_session_id)).meeting_url,"https://meet.example.invalid/approved");
+    assert.match(result.error,/conference relay/);
   } finally {if(old===undefined)delete process.env.CONFERENCE_ENABLED;else process.env.CONFERENCE_ENABLED=old;}
 });
 

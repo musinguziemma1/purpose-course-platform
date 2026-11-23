@@ -18,10 +18,10 @@ the scheduler may turn off public website listing. Calendar lists refresh every
 
 Calendar discovery is separate from joining access. Public readers and other
 accounts can see event descriptions and dates. Course enrolment and cohort
-membership still protect agendas, meeting links, video rooms and recordings.
+membership still protect agendas, video rooms and recordings.
 Student enrolment is not required for a properly assigned cohort mentor to teach.
-Use an HTTPS external meeting link when delivering through another conferencing
-service; otherwise the platform's existing video room is available.
+Every scheduled session uses the platform's own authenticated video room. External
+meeting links are rejected and are not presented to learners or faculty.
 
 Open an event to RSVP, enter its room or read preparation instructions. The host
 or scheduler can start, end or cancel it. Schedulers can edit a scheduled event.

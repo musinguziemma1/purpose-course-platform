@@ -88,12 +88,8 @@ function validated(input: LiveInput) {
     )
   )
     return "Choose a valid course and cohort.";
-  if (
-    input.meetingUrl &&
-    (!safeContentUrl(input.meetingUrl, true) ||
-      !input.meetingUrl.startsWith("https://"))
-  )
-    return "Use an HTTPS meeting link, or leave it empty for the built-in room.";
+  if (input.meetingUrl.trim())
+    return "External meeting links are not supported. Use the built-in live room.";
   return null;
 }
 async function notify(
@@ -223,7 +219,7 @@ async function persistSchedule(
 ) {
   const error = validated(input);
   if (error) return { error };
-  if (!nativeConferenceAvailable() && !input.meetingUrl.trim()) return { error: "Add an HTTPS meeting link before scheduling this session. Native video rooms are not configured." };
+  if (!nativeConferenceAvailable()) return { error: "Configure the platform conference relay before scheduling live sessions." };
   let old: typeof liveSessions.$inferSelect | undefined;
   if (input.id) {
     [old] = await tx
@@ -269,7 +265,7 @@ async function persistSchedule(
     hostId: input.hostId,
     courseId: input.courseId,
     cohortId: input.cohortId,
-    meetingUrl: input.meetingUrl || null,
+    meetingUrl: null,
     isPublic: input.isPublic,
     groupSize: input.groupSize || null,
     updatedAt: new Date(
@@ -365,8 +361,8 @@ export async function changeLiveEventStatus(
       return { error: "That session status change is unavailable." };
     if (input.status === "live" && session.startsAt.getTime() + (session.durationMinutes + 15) * 60000 < Date.now())
       return { error: "This session has expired. Schedule a new session with a future time." };
-    if (input.status === "live" && !nativeConferenceAvailable() && !session.meetingUrl)
-      return { error: "Add a meeting link to the schedule before starting this session." };
+    if (input.status === "live" && !nativeConferenceAvailable())
+      return { error: "Configure the platform conference relay before starting this session." };
     await tx
       .update(liveSessions)
       .set({
@@ -500,7 +496,7 @@ export async function requestLiveEvent(
   });
 }
 export async function reviewLiveEventRequest(
-  input: { id: string; version: string; decision: string; note: string; meetingUrl?: string },
+  input: { id: string; version: string; decision: string; note: string },
   viewer: SessionUser | null,
 ) {
   if (
@@ -552,7 +548,7 @@ export async function reviewLiveEventRequest(
           hostId: request.requestedById,
           courseId: request.courseId,
           cohortId: request.cohortId,
-          meetingUrl: input.meetingUrl?.trim() ?? "",
+          meetingUrl: "",
           isPublic: true,
         },
         actor,

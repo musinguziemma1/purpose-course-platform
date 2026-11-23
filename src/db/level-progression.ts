@@ -7,6 +7,7 @@ import {
   courses,
   enrollments,
   notifications,
+  programmeLevels,
   profiles,
 } from "@/db/schema";
 import { currentActor, type Transaction } from "@/db/actor";
@@ -15,9 +16,10 @@ import type { SessionUser } from "@/lib/auth";
 
 async function progression(tx: Transaction, profileId: string) {
   const levels = await tx
-    .select()
+    .select({ level: courseLevels, programmeId: programmeLevels.programmeId })
     .from(courseLevels)
-    .orderBy(asc(courseLevels.levelNumber), asc(courseLevels.id));
+    .leftJoin(programmeLevels, eq(programmeLevels.id, courseLevels.programmeLevelId))
+    .orderBy(asc(courseLevels.sortOrder), asc(courseLevels.levelNumber), asc(courseLevels.id));
   const earned = await tx
     .select({ levelId: certificates.levelId })
     .from(certificates)
@@ -36,14 +38,17 @@ async function progression(tx: Transaction, profileId: string) {
     .select({ levelId: courses.levelId })
     .from(courses)
     .where(eq(courses.status, "published"));
-  return levels.map((level, index) => {
+  return levels.map(({ level, programmeId }) => {
+    const pathway = levels.filter((candidate) => candidate.programmeId === programmeId);
+    const index = pathway.findIndex((candidate) => candidate.level.id === level.id);
     const enrollment = existing.find((row) => row.levelId === level.id);
     const completed = earned.some((row) => row.levelId === level.id);
     const prerequisiteMet =
-      index === 0 || earned.some((row) => row.levelId === levels[index - 1].id);
+      index === 0 || earned.some((row) => row.levelId === pathway[index - 1].level.id);
     const available = published.some((row) => row.levelId === level.id);
     return {
       ...level,
+      programmeId,
       completed,
       prerequisiteMet,
       available,

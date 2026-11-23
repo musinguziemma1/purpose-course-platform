@@ -4,5 +4,21 @@
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "regions": ["fra1"],
-  "crons": [{ "path": "/api/jobs/maintenance", "schedule": "0 0 * * *" }]
+  "schedules": {
+    "email-delivery": {
+      "schedule": "*/15 * * * *",
+      "path": "/api/jobs/email",
+      "requestMethod": "GET"
+    },
+    "scheduled-publishing": {
+      "schedule": "*/15 * * * *",
+      "path": "/api/jobs/publishing",
+      "requestMethod": "GET"
+    },
+    "platform-maintenance": {
+      "schedule": "*/15 * * * *",
+      "path": "/api/jobs/maintenance",
+      "requestMethod": "GET"
+    }
+  }
 }

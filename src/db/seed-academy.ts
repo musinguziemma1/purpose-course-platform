@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "./index";
 import { PROGRAMME_CATALOGUE } from "../lib/programme-catalogue";
+import { syncAcademicProgrammes } from "./sync-academic-programmes";
 import {
   courseLevels,
   courseModules,
@@ -760,6 +761,8 @@ export async function seedAcademyContent() {
     createdCourses.push({ id: inserted[0].id, slug: seed.slug, levelId: level.id });
   }
 
+  const academic = await syncAcademicProgrammes({ includeAssessments: false });
+
   // Student progress: first course's opening lesson complete, second in progress.
   const firstCourse = createdCourses[0];
   if (firstCourse && student) {
@@ -803,7 +806,7 @@ export async function seedAcademyContent() {
         status: "scheduled",
         startsAt: daysAhead(3, 15),
         durationMinutes: 90,
-        meetingUrl: "https://meet.google.com/purpose-clarity-lab",
+        meetingUrl: null,
         agenda:
           "1. Teaching: the four-part test (15 min)\n2. Groups of three: read, test, note (30 min)\n3. Rewrite in silence (15 min)\n4. Two live reviews + close (30 min)",
       },
@@ -817,7 +820,7 @@ export async function seedAcademyContent() {
         status: "scheduled",
         startsAt: daysAhead(6, 11),
         durationMinutes: 75,
-        meetingUrl: "https://meet.google.com/purpose-group-studio",
+        meetingUrl: null,
         groupSize: 4,
         agenda:
           "Groups of four. Each person: 5 minutes to present evidence, 6 minutes of questions, 2 minutes of written encouragement.",
@@ -832,7 +835,7 @@ export async function seedAcademyContent() {
         status: "live",
         startsAt: daysAgo(0, 8),
         durationMinutes: 60,
-        meetingUrl: "https://meet.google.com/purpose-round-table",
+        meetingUrl: null,
         agenda: "Three questions from the room, then open table. Daniel hosts; Grace moderates the feed.",
       },
       {
@@ -843,7 +846,7 @@ export async function seedAcademyContent() {
         status: "scheduled",
         startsAt: daysAhead(9, 16),
         durationMinutes: 60,
-        meetingUrl: "https://meet.google.com/purpose-office-hours",
+        meetingUrl: null,
       },
       {
         courseId: createdCourses[0]?.id ?? null,
@@ -854,7 +857,7 @@ export async function seedAcademyContent() {
         status: "ended",
         startsAt: daysAgo(14, 15),
         durationMinutes: 75,
-        recordingUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+        recordingUrl: null,
       },
     ])
     .returning({ id: liveSessions.id, title: liveSessions.title });
@@ -915,5 +918,5 @@ export async function seedAcademyContent() {
     ]);
   }
 
-  return { courses: createdCourses.length, liveSessions: liveRows.length, programmes: programmeCount };
+  return { courses: academic.levels, liveSessions: liveRows.length, programmes: programmeCount };
 }

@@ -182,7 +182,8 @@ export default async function CoursePage() {
               <p className="eyebrow">Programme catalogue</p>
               <h2 className="mt-4 font-serif text-3xl text-navy">Learning pathways</h2>
               <p className="mt-3 max-w-3xl text-[14px] leading-relaxed text-stone-600">
-                Explore published programme outlines. Digital lessons are provided separately through the Academy.
+                Explore the published academic pathways. Enrolled learners continue through their linked lessons,
+                assignments, quizzes, examinations and certificates in the Academy.
               </p>
             </Reveal>
             <div className="mt-8 grid gap-5 lg:grid-cols-2">

@@ -1,5 +1,34 @@
 # Curriculum coverage and review
 
+## Current aligned curriculum — 23 November 2026
+
+The attached programme specification is now represented as four linked academic
+and digital pathways: Purpose Program for Adults, Purpose Program for Students,
+YouLead!, and Purpose-to-Peace. The delivery model contains 12 programme-specific
+levels and 51 modules. Existing adult URLs and rich lessons are retained, while
+each module now also has five aligned teaching-principle lessons, five formative
+prompts, one applied assignment and one five-question quiz.
+
+The 12 level examinations cover every module. Five-module and four-module levels
+use 20 questions; three-module Purpose-to-Peace levels use 15. The complete
+aligned bank contains 480 questions: 255 module-quiz questions and 225 level-exam
+questions. Every question has a teaching explanation and maps to a published
+digital module and lesson. Programme-scoped level progression prevents an adult,
+student, YouLead! or Purpose-to-Peace certificate from unlocking another pathway.
+
+Run `npm run curriculum:sync` to apply the idempotent academic release, then
+`npm run curriculum:audit` for a read-only check. The verified local audit reports
+4 programmes, 12 digital levels, 51 modules, 255 aligned lessons, 51 assignments,
+63 assessments, 480 questions, zero missing explanations and zero structural
+integrity errors.
+
+Structural alignment is not academic approval. Faculty must still review the
+teaching claims, contextual examples, distractor quality, marking expectations,
+pass marks and safeguarding language before opening enrolment. The platform must
+record that governance decision separately from automated technical checks.
+
+## Historical baseline — superseded by the aligned curriculum above
+
 The attached 2026 programme specification defines four pathways: Purpose
 Program for Adults, Purpose Program for Students, YouLead!, and
 Purpose-to-Peace. The public programme catalogue exposes all four pathways and

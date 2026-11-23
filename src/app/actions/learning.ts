@@ -170,5 +170,5 @@ export async function requestCoaching(_prev: LearningState, formData: FormData):
   revalidatePath("/learn/mentor");
   revalidatePath("/mentor");
   revalidatePath("/mentor/sessions");
-  return { ok: true, message: "Request sent. Your mentor will confirm the time and the meeting link by notification." };
+  return { ok: true, message: "Request sent. Your mentor will confirm the time and in-platform session details by notification." };
 }

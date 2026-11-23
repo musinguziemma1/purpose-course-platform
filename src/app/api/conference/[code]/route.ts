@@ -30,7 +30,7 @@ export async function POST(request: Request, { params }: Context) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid body");
   } catch { return NextResponse.json({ error: "Invalid body." }, { status: 400 }); }
   const action = payload.action;
-  if (action !== "leave" && !nativeConferenceAvailable()) return NextResponse.json({ error: "Use the meeting link on the event page. Native video rooms are not configured." }, { status: 503 });
+  if (action !== "leave" && !nativeConferenceAvailable()) return NextResponse.json({ error: "The platform conference relay is not configured." }, { status: 503 });
   const peerId = typeof payload.peerId === "string" ? payload.peerId : "";
   if (!peerPattern.test(peerId)) return NextResponse.json({ error: "Invalid peer id." }, { status: 422 });
   if (action === "join") {

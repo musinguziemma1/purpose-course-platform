@@ -176,8 +176,8 @@ export default async function StudentCoursesPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Published outlines</p>
             <h2 className="mt-1 font-serif text-2xl text-navy">Programme pathways by level</h2>
             <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-stone-600">
-              These outlines show each programme’s level and module structure. They are separate from digital lessons,
-              assessments, lesson progress and certificates.
+              Each published pathway is linked to its digital lessons, module quizzes, assignments, level examination,
+              progress record and certificate requirements.
             </p>
           </div>
           {programmeStages.map(({ levelIndex, stage, items }) => (
@@ -203,7 +203,7 @@ export default async function StudentCoursesPage() {
                         <p className="mt-0.5 text-[11.5px] text-stone-600">{focus}</p>
                       </div>
                       <span className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
-                        {level.modules.length} outline modules
+                        {level.modules.length} academic modules
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-stone-400" />
                     </Link>
@@ -218,10 +218,10 @@ export default async function StudentCoursesPage() {
       {academy.courses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title={programmeOutlines.length ? "No digital lessons yet." : "The curriculum is being prepared."}
+          title={programmeOutlines.length ? "No courses are available for this account." : "The curriculum is being prepared."}
           description={
             programmeOutlines.length
-              ? "Published programme outlines are available above; digital lessons will appear once created and published."
+              ? "Published pathways are available above. Contact the programme team if your enrolment should include a course."
               : "Your faculty is publishing the first course. Check back shortly."
           }
           action={<Link href="/course" className="chip chip-gold">See the programme →</Link>}

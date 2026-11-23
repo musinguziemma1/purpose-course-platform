@@ -82,7 +82,7 @@ export default async function VideoRoomPage({ params }: Params) {
             <p className="mt-1">
               Use a stable connection and headphones. Interactive seats support camera and microphone;
               observers receive the host&apos;s stream. Call quality depends on participants&apos; connections and the host&apos;s
-              upload capacity. Use the session meeting link for larger classes. The live feed supports questions and group work.
+              upload capacity and the platform conference relay. The live feed supports questions and group work without leaving the system.
             </p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-stone-500">
               <Lock className="h-3 w-3" /> Room code <span className="font-mono text-navy">{code}</span> · only signed-in
@@ -104,7 +104,6 @@ export default async function VideoRoomPage({ params }: Params) {
                 createdAt: message.createdAt.toISOString(),
               }))}
               initialStatus={record.session.status}
-              meetingUrl={null}
               recordingUrl={record.session.recordingUrl}
               defaultName={user.fullName}
               isLive={record.session.status === "live"}

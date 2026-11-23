@@ -17,6 +17,7 @@ import {
   roles,
 } from "./schema";
 import { synchronizeCertificates } from "./certificate-awards";
+import { syncAcademicProgrammes } from "./sync-academic-programmes";
 
 type Q = [string, string[], number, string];
 
@@ -200,6 +201,8 @@ export async function seedAssessments() {
     );
   }
 
+  const academic = await syncAcademicProgrammes();
+
   // Level exams — 20 questions after every level
   const levelExamIds: Record<string, number> = {};
   for (const level of levelRows) {
@@ -363,5 +366,5 @@ Shared finding: each statement needed a limit before it felt truthful.`,
     }
   }
 
-  return { levelExams: Object.keys(levelExamIds).length };
+  return { levelExams: academic.levels };
 }

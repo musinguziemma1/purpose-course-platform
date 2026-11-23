@@ -115,17 +115,6 @@ export default async function EventPage({
                   >
                     Session feed
                   </Link>
-                  {privateSession.meetingUrl &&
-                  safeContentUrl(privateSession.meetingUrl, true) ? (
-                    <a
-                      href={privateSession.meetingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="rounded-full border border-navy/20 px-5 py-2.5 text-sm font-semibold text-navy"
-                    >
-                      Join meeting ↗
-                    </a>
-                  ) : null}
                 </div>
                 <EventRsvpForm id={id} going={event.myRsvp} />
               </>

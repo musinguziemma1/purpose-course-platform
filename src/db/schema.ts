@@ -342,6 +342,9 @@ export const resourceDownloads = pgTable("resource_downloads", {
 
 export const courseLevels = pgTable("course_levels", {
   id: serial("id").primaryKey(),
+  programmeLevelId: integer("programme_level_id")
+    .unique()
+    .references((): AnyPgColumn => programmeLevels.id, { onDelete: "set null" }),
   slug: varchar("slug", { length: 96 }).notNull().unique(),
   name: varchar("name", { length: 120 }).notNull(),
   levelNumber: integer("level_number").notNull(),
@@ -363,7 +366,7 @@ export const courseSessions = pgTable(
     levelId: integer("level_id")
       .notNull()
       .references(() => courseLevels.id, { onDelete: "cascade" }),
-    code: varchar("code", { length: 16 }).notNull().unique(),
+    code: varchar("code", { length: 16 }).notNull(),
     title: varchar("title", { length: 200 }).notNull(),
     summary: text("summary").notNull(),
     focusQuestions: jsonb("focus_questions").$type<string[]>().notNull().default([]),
@@ -371,7 +374,10 @@ export const courseSessions = pgTable(
     durationMinutes: integer("duration_minutes").notNull().default(90),
     sortOrder: integer("sort_order").notNull().default(0),
   },
-  (table) => [index("course_sessions_level_idx").on(table.levelId)],
+  (table) => [
+    uniqueIndex("course_sessions_level_code_idx").on(table.levelId, table.code),
+    index("course_sessions_level_idx").on(table.levelId),
+  ],
 );
 
 export const enrollments = pgTable(
@@ -616,8 +622,10 @@ export const reflections = pgTable(
 
 export const assignments = pgTable("assignments", {
   id: serial("id").primaryKey(),
+  curriculumKey: varchar("curriculum_key", { length: 240 }).unique(),
   levelId: integer("level_id").references(() => courseLevels.id, { onDelete: "cascade" }),
   sessionId: integer("session_id").references(() => courseSessions.id, { onDelete: "set null" }),
+  moduleId: integer("module_id").references((): AnyPgColumn => courseModules.id, { onDelete: "cascade" }),
   title: varchar("title", { length: 220 }).notNull(),
   brief: text("brief").notNull(),
   createdById: uuid("created_by_id").references(() => profiles.id, { onDelete: "set null" }),
@@ -627,7 +635,10 @@ export const assignments = pgTable("assignments", {
   dueAt: timestamp("due_at", { withTimezone: true }),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("assignments_assignee_idx").on(table.assigneeId, table.levelId)]);
+}, (table) => [
+  index("assignments_assignee_idx").on(table.assigneeId, table.levelId),
+  index("assignments_module_idx").on(table.moduleId),
+]);
 
 export const assignmentSubmissions = pgTable(
   "assignment_submissions",
@@ -694,7 +705,7 @@ export const liveSessionStatusEnum = pgEnum("live_session_status", [
 
 export const liveMessageKindEnum = pgEnum("live_message_kind", ["chat", "question", "prompt", "system"]);
 
-/* Programme outlines remain separate from learner-facing digital courses. */
+/* Programme outlines are the academic source linked to learner-facing delivery. */
 export const programmes = pgTable(
   "programmes",
   {
@@ -721,6 +732,9 @@ export const programmeLevels = pgTable(
       .references(() => programmes.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 96 }).notNull(),
     name: varchar("name", { length: 200 }).notNull(),
+    introduction: text("introduction").notNull().default(""),
+    outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
+    examPrompts: jsonb("exam_prompts").$type<string[]>().notNull().default([]),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [
@@ -738,6 +752,11 @@ export const programmeModules = pgTable(
       .references(() => programmeLevels.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 96 }).notNull(),
     title: varchar("title", { length: 220 }).notNull(),
+    code: varchar("code", { length: 24 }),
+    introduction: text("introduction").notNull().default(""),
+    outcomes: jsonb("outcomes").$type<string[]>().notNull().default([]),
+    formativePrompts: jsonb("formative_prompts").$type<string[]>().notNull().default([]),
+    assignmentBrief: text("assignment_brief").notNull().default(""),
     sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [
@@ -774,6 +793,9 @@ export const courseModules = pgTable(
   "course_modules",
   {
     id: serial("id").primaryKey(),
+    programmeModuleId: integer("programme_module_id")
+      .unique()
+      .references(() => programmeModules.id, { onDelete: "set null" }),
     courseId: integer("course_id")
       .notNull()
       .references(() => courses.id, { onDelete: "cascade" }),
@@ -917,6 +939,7 @@ export const assessments = pgTable(
   "assessments",
   {
     id: serial("id").primaryKey(),
+    curriculumKey: varchar("curriculum_key", { length: 240 }).unique(),
     kind: assessmentKindEnum("kind").notNull().default("session"),
     levelId: integer("level_id").references(() => courseLevels.id, { onDelete: "cascade" }),
     courseId: integer("course_id").references(() => courses.id, { onDelete: "cascade" }),

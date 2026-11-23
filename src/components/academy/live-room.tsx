@@ -24,7 +24,6 @@ export function LiveRoom({
   sessionId,
   initialMessages,
   initialStatus,
-  meetingUrl,
   recordingUrl,
   defaultName,
   canPost = true,
@@ -32,7 +31,6 @@ export function LiveRoom({
   sessionId: number;
   initialMessages: Message[];
   initialStatus: string;
-  meetingUrl: string | null;
   recordingUrl: string | null;
   defaultName: string;
   canPost?: boolean;
@@ -113,16 +111,6 @@ export function LiveRoom({
           {live ? "Live feed" : `Feed · ${status}`}
         </p>
         <div className="flex items-center gap-2">
-          {meetingUrl && ["scheduled", "live"].includes(status) ? (
-            <a
-              href={meetingUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#155e63] px-3 text-[11px] font-semibold text-paper hover:bg-[#124a4e]"
-            >
-              <Video className="h-3.5 w-3.5" /> Join room
-            </a>
-          ) : null}
           {recordingUrl && status === "ended" ? (
             <a
               href={recordingUrl}

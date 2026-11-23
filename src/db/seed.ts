@@ -1808,7 +1808,7 @@ Cannot evidence yet: public speaking beyond a small room. I avoid it and I know 
   const enterprise = await seedEnterprise();
   console.log(`Enterprise: ${enterprise.permissions} permissions, ${enterprise.achievements} achievements, ${enterprise.events} events.`);
 
-  console.log(`Academy: ${academy.courses} courses, ${academy.programmes} draft programme outlines, ${academy.liveSessions} live sessions, ${assessmentSeed.levelExams} level exams.`);
+  console.log(`Academy: ${academy.courses} courses, ${academy.programmes} published programmes, ${academy.liveSessions} live sessions, ${assessmentSeed.levelExams} level exams.`);
 
   console.log(
     `Seeded ${profileRows.length} profiles, ${articleRows.length} articles, ${sessionRows.length} sessions, ${subscriberSeeds.length} subscribers.`,

@@ -22,13 +22,13 @@ export default async function StudentProgrammeOutlinePage({ params }: Params) {
           <ArrowLeft className="h-3.5 w-3.5" /> Academy courses
         </Link>
         <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">
-          Published programme outline · {programme.duration}
+          Published academic programme · {programme.duration}
         </p>
         <h1 className="mt-1 font-serif text-3xl text-navy">{programme.name}</h1>
         <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-stone-600">{programme.description}</p>
         <p className="mt-3 max-w-3xl rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[11.5px] leading-relaxed text-stone-700">
-          This is a programme outline. Its module titles do not represent published digital lessons, lesson progress,
-          assessments or certificates.
+          This programme is connected to the Academy’s digital lessons, aligned quizzes, assignments, level examinations,
+          progress rules and certificates. Course access follows your approved programme enrolment.
         </p>
       </div>
 
@@ -44,7 +44,7 @@ export default async function StudentProgrammeOutlinePage({ params }: Params) {
                 <h2 className="mt-1 font-serif text-xl text-navy">{focus}</h2>
               </div>
               <span className="rounded-full bg-paper px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-600">
-                {level.modules.length} outline modules
+                {level.modules.length} academic modules
               </span>
             </div>
             <ol className="divide-y divide-navy/8">

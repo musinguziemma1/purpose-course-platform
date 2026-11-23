@@ -61,7 +61,6 @@ export default async function MentorLiveRoomPage({ params }: Params) {
             createdAt: message.createdAt.toISOString(),
           }))}
           initialStatus={room.session.status}
-          meetingUrl={room.session.meetingUrl}
           recordingUrl={room.session.recordingUrl}
           defaultName={user.fullName}
           isLive={room.session.status === "live"}

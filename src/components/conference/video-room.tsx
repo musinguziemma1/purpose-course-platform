@@ -186,7 +186,7 @@ export function VideoRoom({
     [closeConnection, sendSignal],
   );
 
-  const iceServersRef = useRef<RTCIceServer[]>([{ urls: "stun:stun.l.google.com:19302" }]);
+  const iceServersRef = useRef<RTCIceServer[]>([]);
 
   /* ------------------------------------------------------------- lifecycle */
 
@@ -614,7 +614,7 @@ export function VideoRoom({
         </p>
       ) : null}
       <p className="border-t border-white/10 px-4 py-2 text-[10px] leading-relaxed text-paper/35">
-        Peer-to-peer WebRTC · media never passes through our servers · STUN with optional TURN relay
+        Secure in-platform WebRTC · connectivity provided by the platform conference relay
         {Object.keys(remoteStreams).length > 0 ? ` · ${Object.keys(remoteStreams).length} live connection${Object.keys(remoteStreams).length === 1 ? "" : "s"}` : ""}
       </p>
     </div>

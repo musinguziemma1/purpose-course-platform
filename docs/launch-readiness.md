@@ -39,7 +39,8 @@ not establish launch readiness.
 - [ ] Reconcile programme structure, question banks, and missing resource files.
   - [x] Provide three owner-requested starter PDFs and remove fabricated download responses and demonstration counters for missing files.
   - [x] Map the published digital modules to programme sessions and distinguish self-reported attendance from assessed progress.
-  - [ ] Complete missing teaching materials and obtain faculty review of question coverage and explanations; see [curriculum review](curriculum-review.md).
+  - [x] Complete the digital teaching, assignment, quiz and level-exam alignment for all four pathways; every aligned question now has a teaching explanation.
+  - [ ] Obtain faculty approval of teaching claims, examples, distractors, pass marks and marking expectations; see [curriculum review](curriculum-review.md).
 
 ## 4. Production operations and experience
 
@@ -62,6 +63,32 @@ from this workspace will be recorded explicitly; they will not be marked done
 based on placeholder configuration.
 
 ## Verification log
+
+23 November academic release and production review: the programme specification
+is implemented as 4 linked programmes, 12 programme-scoped levels and 51 digital
+modules. The local read-only audit reports 255 aligned teaching lessons, 51
+assignments, 63 assessments, 480 questions, zero missing explanations and zero
+integrity errors. Type checking, lint with no errors, the production build,
+migration-planning tests and database-configuration tests pass. The complete
+163-test TSX suite also passes, including academic catalogue, assessment,
+programme progression, live-room security and scheduled-worker coverage.
+
+Live teaching now fails closed unless the project-controlled authenticated TURN
+relay is configured. External meeting links are rejected and removed from
+scheduling, approval and learner join surfaces. Named email, publishing and
+maintenance schedules are configured at fifteen-minute cadence. The public
+production health, calendar and sign-in probes all returned HTTP 200 on 23
+November, but this verifies the existing release only.
+
+The configured production database reference and the connected Supabase account
+do not identify the same project, so the reviewed additive migration was not
+applied. The connected Vercel account also does not expose this repository's
+project. Local email configuration has an API key and encryption/cron secrets,
+but lacks the verified sender, canonical URL and webhook secret; TURN settings
+are absent. An existing encrypted 92-table archive passed cryptographic
+verification, while the isolated restore rehearsal stopped before restoration
+because `pg_restore` is not installed. These are explicit launch blockers, not
+completed checks.
 
 13 November live teaching and enrolment update: scheduled sessions now have a
 shared account calendar, public event pages, in-app announcements and mentor

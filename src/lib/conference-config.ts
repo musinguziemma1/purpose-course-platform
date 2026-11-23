@@ -1,6 +1,6 @@
 type Environment = Record<string, string | undefined>;
 
-/** Production rooms need an authenticated relay; an external meeting remains usable without one. */
+/** Production rooms require the platform's authenticated TURN relay. */
 export function conferenceConfiguration(env: Environment = process.env) {
   const urls = (env.TURN_URL ?? "").split(",").map(value => value.trim()).filter(Boolean);
   const validUrls = urls.length > 0 && urls.length <= 8 && urls.every(value => {
