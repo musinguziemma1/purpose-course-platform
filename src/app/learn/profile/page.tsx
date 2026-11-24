@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui/card";
 import { PurposeProfileForm } from "@/components/learn/purpose-profile-form";
 import { PRINCIPLE_INFO, PRINCIPLE_KEYS } from "@/lib/purpose-journey";
 import { formatDate } from "@/lib/utils";
+import { FeaturePending } from "@/components/ui/feature-pending";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Purpose Profile" };
@@ -14,7 +15,7 @@ export default async function PurposeProfilePage() {
   const user = await getSessionUser();
   if (!user) return null;
   const [profile, history] = await Promise.all([getOwnPurposeProfile(user), getPurposeProfileHistory(user.profileId, user)]);
-  if (!profile) return null;
+  if (!profile) return <FeaturePending feature="Your Purpose Profile" />;
 
   const initial: Record<string, string> = {
     identityStatement: profile.identityStatement ?? "", coreValues: profile.coreValues.join("\n"), strengths: profile.strengths.join("\n"),

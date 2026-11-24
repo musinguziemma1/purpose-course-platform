@@ -794,14 +794,9 @@ export const reflections = pgTable(
     prompt: varchar("prompt", { length: 240 }).notNull(),
     body: text("body").notNull(),
     visibility: reflectionVisibilityEnum("visibility").notNull().default("mentor"),
-    /** Optional principle the learner was reflecting on; feeds the Purpose Journey. */
-    principle: varchar("principle", { length: 16 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    index("reflections_author_idx").on(table.authorProfileId, table.createdAt),
-    check("reflections_principle_check", sql`${table.principle} is null or ${table.principle} in ('identity','source','purpose','potential','destiny')`),
-  ],
+  (table) => [index("reflections_author_idx").on(table.authorProfileId, table.createdAt)],
 );
 
 /* ------------------------------------------------------------------ *
@@ -844,6 +839,30 @@ export const purposeProfileSnapshots = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex("purpose_profile_snapshots_version_idx").on(table.profileId, table.version)],
+).enableRLS();
+
+/*
+ * Principle tags live in side tables rather than new columns on course_modules
+ * and reflections: existing queries never depend on them, so the application
+ * keeps working on a database where this migration has not been applied yet.
+ */
+export const modulePrinciples = pgTable(
+  "module_principles",
+  {
+    moduleId: integer("module_id").primaryKey().references((): AnyPgColumn => courseModules.id, { onDelete: "cascade" }),
+    principle: varchar("principle", { length: 16 }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("module_principles_principle_check", sql`${table.principle} in ('identity','source','purpose','potential','destiny')`)],
+).enableRLS();
+
+export const reflectionPrinciples = pgTable(
+  "reflection_principles",
+  {
+    reflectionId: integer("reflection_id").primaryKey().references(() => reflections.id, { onDelete: "cascade" }),
+    principle: varchar("principle", { length: 16 }).notNull(),
+  },
+  (table) => [check("reflection_principles_principle_check", sql`${table.principle} in ('identity','source','purpose','potential','destiny')`)],
 ).enableRLS();
 
 export const assignments = pgTable("assignments", {
@@ -1032,14 +1051,9 @@ export const courseModules = pgTable(
     estimatedMinutes: integer("estimated_minutes").notNull().default(45),
     isPreview: boolean("is_preview").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
-    /** Which of the five principles this module develops; null means "infer from the title". */
-    principle: varchar("principle", { length: 16 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    uniqueIndex("course_modules_slug_idx").on(table.courseId, table.slug),
-    check("course_modules_principle_check", sql`${table.principle} is null or ${table.principle} in ('identity','source','purpose','potential','destiny')`),
-  ],
+  (table) => [uniqueIndex("course_modules_slug_idx").on(table.courseId, table.slug)],
 );
 
 export const lessons = pgTable(

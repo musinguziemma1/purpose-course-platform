@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Fingerprint } from "lucide-react";
 import { getSessionUser } from "@/lib/auth";
 import { getPurposeJourney } from "@/db/purpose-journey";
 import { PageHeader } from "@/components/ui/card";
 import { JourneyStages, NextSteps, OverallDevelopment, PrincipleProgress } from "@/components/learn/purpose-journey-view";
 import { formatDate } from "@/lib/utils";
+import { FeaturePending } from "@/components/ui/feature-pending";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Purpose Journey" };
@@ -14,7 +14,7 @@ export default async function PurposeJourneyPage() {
   const user = await getSessionUser();
   if (!user) return null;
   const journey = await getPurposeJourney(user.profileId, user);
-  if (!journey) notFound();
+  if (!journey) return <FeaturePending feature="Your Purpose Journey" />;
 
   return (
     <div className="space-y-6">

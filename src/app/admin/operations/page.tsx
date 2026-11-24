@@ -21,6 +21,13 @@ export default async function OperationsPage() {
     <section className="admin-card space-y-3 p-5"><h2 className="font-serif text-xl text-navy">Service configuration</h2>
       <p className="text-sm text-stone-600">Account email: {status.emailConfigured ? "configured — verify real delivery in Notifications" : "sender configuration incomplete"}.</p>
       <p className="text-sm text-stone-600">Live meetings: {status.nativeVideoReady ? "in-platform room available" : "platform conference relay is not configured; add server-only TURN_URL with TURN_SECRET (preferred) or TURN_USERNAME and TURN_CREDENTIAL, then redeploy"}.</p>
+      <ul className="space-y-1 text-sm text-stone-600" aria-label="Database migrations">
+        {status.features.map((item) => (
+          <li key={item.feature}>
+            {item.feature}: {item.ready ? "database ready" : `waiting for migration (missing ${item.missing.join(", ")}); run npm run db:migrate:supabase apply`}.
+          </li>
+        ))}
+      </ul>
       <p className="text-xs text-stone-500">Last checked: {status.checkedAt}. Backup and restore evidence is retained privately by the operator; this page does not certify backup retention or recovery readiness.</p>
     </section>
   </div>;

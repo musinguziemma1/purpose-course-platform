@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/card";
 import { JourneyStages, OverallDevelopment, PrincipleProgress } from "@/components/learn/purpose-journey-view";
 import { PRINCIPLE_INFO } from "@/lib/purpose-journey";
 import { formatDate } from "@/lib/utils";
+import { FeaturePending } from "@/components/ui/feature-pending";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Learner journey" };
@@ -36,7 +37,8 @@ export default async function MentorLearnerJourneyPage({ params }: Params) {
     getPurposeJourney(id, user),
     getSharedPurposeProfile(id, user),
   ]);
-  if (!learner || !journey) notFound();
+  if (!learner) notFound();
+  if (!journey) return <FeaturePending feature="The learner Purpose Journey" staff />;
   const profile = shared.profile;
 
   return (

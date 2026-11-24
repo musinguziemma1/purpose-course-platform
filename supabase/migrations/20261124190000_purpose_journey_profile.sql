@@ -1,16 +1,6 @@
 -- Purpose Journey and Purpose Profile (README sections 2 and 3).
--- Modules and reflections may name the principle they develop; learners keep an
--- evolving Purpose Profile with a snapshot per saved version.
-
-alter table public.course_modules add column if not exists principle varchar(16);
-alter table public.course_modules drop constraint if exists course_modules_principle_check;
-alter table public.course_modules add constraint course_modules_principle_check
-  check (principle is null or principle in ('identity', 'source', 'purpose', 'potential', 'destiny'));
-
-alter table public.reflections add column if not exists principle varchar(16);
-alter table public.reflections drop constraint if exists reflections_principle_check;
-alter table public.reflections add constraint reflections_principle_check
-  check (principle is null or principle in ('identity', 'source', 'purpose', 'potential', 'destiny'));
+-- Additive only: new tables, no changes to existing ones, so the application
+-- keeps working whether or not this migration has been applied yet.
 
 create table if not exists public.purpose_profiles (
   profile_id uuid primary key references public.profiles(id) on delete cascade,
@@ -46,13 +36,32 @@ create table if not exists public.purpose_profile_snapshots (
 create unique index if not exists purpose_profile_snapshots_version_idx
   on public.purpose_profile_snapshots (profile_id, version);
 
+-- Which principle a module develops (staff tag; title inference is the fallback).
+create table if not exists public.module_principles (
+  module_id integer primary key references public.course_modules(id) on delete cascade,
+  principle varchar(16) not null,
+  updated_at timestamptz not null default now(),
+  constraint module_principles_principle_check check (principle in ('identity', 'source', 'purpose', 'potential', 'destiny'))
+);
+
+-- Which principle a learner was reflecting on.
+create table if not exists public.reflection_principles (
+  reflection_id integer primary key references public.reflections(id) on delete cascade,
+  principle varchar(16) not null,
+  constraint reflection_principles_principle_check check (principle in ('identity', 'source', 'purpose', 'potential', 'destiny'))
+);
+
 alter table public.purpose_profiles enable row level security;
 alter table public.purpose_profile_snapshots enable row level security;
+alter table public.module_principles enable row level security;
+alter table public.reflection_principles enable row level security;
 
-revoke all on table public.purpose_profiles, public.purpose_profile_snapshots from public, anon, authenticated;
+revoke all on table public.purpose_profiles, public.purpose_profile_snapshots, public.module_principles, public.reflection_principles from public, anon, authenticated;
 revoke all on sequence public.purpose_profile_snapshots_id_seq from public, anon, authenticated;
-grant select, insert, update, delete on table public.purpose_profiles, public.purpose_profile_snapshots to purpose_app;
+grant select, insert, update, delete on table public.purpose_profiles, public.purpose_profile_snapshots, public.module_principles, public.reflection_principles to purpose_app;
 grant usage, select on sequence public.purpose_profile_snapshots_id_seq to purpose_app;
 
 create policy purpose_profiles_backend_access on public.purpose_profiles for all to purpose_app using (true) with check (true);
 create policy purpose_profile_snapshots_backend_access on public.purpose_profile_snapshots for all to purpose_app using (true) with check (true);
+create policy module_principles_backend_access on public.module_principles for all to purpose_app using (true) with check (true);
+create policy reflection_principles_backend_access on public.reflection_principles for all to purpose_app using (true) with check (true);

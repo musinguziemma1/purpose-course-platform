@@ -4,6 +4,7 @@ import { activityLogs, conferenceParticipants, conferenceSignals, liveSessions }
 import { sessionOpen, sessionWithinEndWindow } from "@/db/live-lifecycle";
 import { nativeConferenceAvailable } from "@/lib/conference-config";
 import { emailConfigurationError } from "@/lib/email";
+import { getSchemaReadiness } from "@/db/schema-readiness";
 
 export async function expireLiveSessions(onlyIds?: number[]) {
   return db.transaction(async tx => {
@@ -31,5 +32,6 @@ export async function getOperationsStatus() {
     (select count(*)::int from articles where status='scheduled' and scheduled_for < now()-interval '5 minutes') as overdue_publications,
     (select count(*)::int from notification_outbox where channel='email' and status in ('failed','needs_review','bounced','complained')) as email_attention,
     (select count(*)::int from notification_outbox where channel='email' and status='queued' and created_at < now()-interval '15 minutes') as old_queued_email`);
-  return { checkedAt: new Date().toISOString(), counts: result.rows[0], emailConfigured: !emailConfigurationError(), nativeVideoReady: nativeConferenceAvailable() };
+  const features = await getSchemaReadiness().catch(() => []);
+  return { checkedAt: new Date().toISOString(), counts: result.rows[0], emailConfigured: !emailConfigurationError(), nativeVideoReady: nativeConferenceAvailable(), features };
 }

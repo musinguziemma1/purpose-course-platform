@@ -10,10 +10,13 @@ import {
   learnerGoals,
   lessonProgress,
   lessons,
+  modulePrinciples,
   purposeProfileSnapshots,
   purposeProfiles,
+  reflectionPrinciples,
   reflections,
 } from "@/db/schema";
+import { whenSchemaReady } from "@/db/schema-readiness";
 import type { SessionUser } from "@/lib/auth";
 import { currentActor } from "@/db/actor";
 import { canReadLearner } from "@/db/learner-access";
@@ -68,18 +71,25 @@ export function parseList(value: string) {
   return items;
 }
 
+/** null when signed out or while the Purpose Profile migration is pending. */
 export async function getOwnPurposeProfile(viewer: SessionUser | null) {
   if (!viewer) return null;
-  const [row] = await db.select().from(purposeProfiles).where(eq(purposeProfiles.profileId, viewer.profileId)).limit(1);
-  return fieldsFrom(row);
+  return whenSchemaReady("Purpose Profile", async () => {
+    const [row] = await db.select().from(purposeProfiles).where(eq(purposeProfiles.profileId, viewer.profileId)).limit(1);
+    return fieldsFrom(row);
+  }, null);
 }
 
 /** Another person's profile is visible only to their mentors/staff, and only when they chose to share it. */
 export async function getSharedPurposeProfile(learnerId: string, viewer: SessionUser | null) {
   if (!viewer) return { profile: null, reason: "signed-out" as const };
-  if (viewer.profileId === learnerId) return { profile: await getOwnPurposeProfile(viewer), reason: null };
+  if (viewer.profileId === learnerId) {
+    const own = await getOwnPurposeProfile(viewer);
+    return own ? { profile: own, reason: null } : { profile: null, reason: "unavailable" as const };
+  }
   if (!(await canReadLearner(learnerId, viewer))) return { profile: null, reason: "forbidden" as const };
-  const [row] = await db.select().from(purposeProfiles).where(eq(purposeProfiles.profileId, learnerId)).limit(1);
+  const row = await whenSchemaReady("Purpose Profile", async () => (await db.select().from(purposeProfiles).where(eq(purposeProfiles.profileId, learnerId)).limit(1))[0] ?? null, undefined);
+  if (row === undefined) return { profile: null, reason: "unavailable" as const };
   if (!row?.sharedWithMentor) return { profile: null, reason: "not-shared" as const };
   return { profile: fieldsFrom(row), reason: null };
 }
@@ -87,8 +97,8 @@ export async function getSharedPurposeProfile(learnerId: string, viewer: Session
 export async function getPurposeProfileHistory(learnerId: string, viewer: SessionUser | null) {
   const access = await getSharedPurposeProfile(learnerId, viewer);
   if (!access.profile) return [];
-  const rows = await db.select({ version: purposeProfileSnapshots.version, snapshot: purposeProfileSnapshots.snapshot, createdAt: purposeProfileSnapshots.createdAt })
-    .from(purposeProfileSnapshots).where(eq(purposeProfileSnapshots.profileId, learnerId)).orderBy(desc(purposeProfileSnapshots.version)).limit(12);
+  const rows = await whenSchemaReady("Purpose Profile", () => db.select({ version: purposeProfileSnapshots.version, snapshot: purposeProfileSnapshots.snapshot, createdAt: purposeProfileSnapshots.createdAt })
+    .from(purposeProfileSnapshots).where(eq(purposeProfileSnapshots.profileId, learnerId)).orderBy(desc(purposeProfileSnapshots.version)).limit(12), []);
   return rows.map((row) => ({
     version: row.version,
     createdAt: row.createdAt,
@@ -115,7 +125,7 @@ export async function savePurposeProfile(input: Record<string, string>, viewer: 
   }
   const sharedWithMentor = input.sharedWithMentor === "on" || input.sharedWithMentor === "true";
 
-  return db.transaction(async (tx) => {
+  return whenSchemaReady<ProfileSaveState>("Purpose Profile", () => db.transaction(async (tx) => {
     const actor = await currentActor(tx, viewer);
     if (!actor) return { error: "Your session has ended. Sign in again to save." };
     const [current] = await tx.select({ version: purposeProfiles.version }).from(purposeProfiles).where(eq(purposeProfiles.profileId, actor.profileId)).for("update").limit(1);
@@ -126,7 +136,7 @@ export async function savePurposeProfile(input: Record<string, string>, viewer: 
     await tx.insert(purposeProfileSnapshots).values({ profileId: actor.profileId, version, snapshot: { ...values, sharedWithMentor } });
     await tx.insert(activityLogs).values({ actorId: actor.profileId, action: "purpose_profile.updated", entityType: "purpose_profile", entityId: actor.profileId, description: `Saved Purpose Profile version ${version}${sharedWithMentor ? " (shared with mentors)" : ""}.` });
     return { ok: true, version, message: "Your Purpose Profile is saved." };
-  });
+  }), { error: "Purpose Profiles are still being set up on this site. Please try again later." });
 }
 
 export type JourneyRecommendation = { title: string; detail: string; href: string; principle?: PrincipleKey };
@@ -135,13 +145,17 @@ export type JourneyRecommendation = { title: string; detail: string; href: strin
 export async function getPurposeJourney(learnerId: string, viewer: SessionUser | null) {
   if (!viewer) return null;
   if (viewer.profileId !== learnerId && !(await canReadLearner(learnerId, viewer))) return null;
+  return whenSchemaReady("Purpose Journey", () => computeJourney(learnerId), null);
+}
+
+async function computeJourney(learnerId: string) {
 
   const enrolledLevels = db.select({ levelId: enrollments.levelId }).from(enrollments)
     .where(and(eq(enrollments.profileId, learnerId), inArray(enrollments.status, ["enrolled", "completed"])));
 
   const [moduleRows, resultRows, instrumentRows, reflectionRows, profileRow, goalRows] = await Promise.all([
     db.select({
-      id: courseModules.id, title: courseModules.title, principle: courseModules.principle, sortOrder: courseModules.sortOrder,
+      id: courseModules.id, title: courseModules.title, principle: modulePrinciples.principle, sortOrder: courseModules.sortOrder,
       courseSlug: courses.slug, courseTitle: courses.title,
       lessonCount: sql<number>`count(${lessons.id})::int`,
       completedCount: sql<number>`count(${lessonProgress.lessonId}) filter (where ${lessonProgress.status} = 'completed')::int`,
@@ -149,14 +163,15 @@ export async function getPurposeJourney(learnerId: string, viewer: SessionUser |
       .innerJoin(courses, eq(courseModules.courseId, courses.id))
       .innerJoin(lessons, and(eq(lessons.moduleId, courseModules.id), eq(lessons.status, "published")))
       .leftJoin(lessonProgress, and(eq(lessonProgress.lessonId, lessons.id), eq(lessonProgress.profileId, learnerId)))
+      .leftJoin(modulePrinciples, eq(modulePrinciples.moduleId, courseModules.id))
       .where(and(eq(courses.status, "published"), inArray(courses.levelId, enrolledLevels)))
-      .groupBy(courseModules.id, courses.id)
+      .groupBy(courseModules.id, courses.id, modulePrinciples.principle)
       .orderBy(asc(courses.id), asc(courseModules.sortOrder)),
     db.select({ slug: instruments.slug, score: instrumentResults.overallScore, band: instrumentResults.bandLabel, createdAt: instrumentResults.createdAt })
       .from(instrumentResults).innerJoin(instruments, eq(instrumentResults.instrumentId, instruments.id))
       .where(eq(instrumentResults.profileId, learnerId)).orderBy(desc(instrumentResults.createdAt)),
     db.select({ slug: instruments.slug, title: instruments.title }).from(instruments).where(eq(instruments.status, "published")).orderBy(asc(instruments.sortOrder)),
-    db.select({ principle: reflections.principle, prompt: reflections.prompt }).from(reflections).where(eq(reflections.authorProfileId, learnerId)),
+    db.select({ principle: reflectionPrinciples.principle, prompt: reflections.prompt }).from(reflections).leftJoin(reflectionPrinciples, eq(reflectionPrinciples.reflectionId, reflections.id)).where(eq(reflections.authorProfileId, learnerId)),
     db.select().from(purposeProfiles).where(eq(purposeProfiles.profileId, learnerId)).limit(1),
     db.select({ title: learnerGoals.title, status: learnerGoals.status, progress: learnerGoals.progress, dueAt: learnerGoals.dueAt }).from(learnerGoals).where(eq(learnerGoals.studentId, learnerId)),
   ]);

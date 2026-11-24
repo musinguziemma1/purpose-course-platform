@@ -28,7 +28,8 @@ before(async () => {
   }
   levelId = (await client.query("select id from course_levels order by id limit 1")).rows[0].id;
   courseId = (await client.query("insert into courses(level_id,slug,title,status) values($1,$2,'Journey fixture','published') returning id", [levelId, key])).rows[0].id;
-  const moduleId = (await client.query("insert into course_modules(course_id,slug,title,principle,sort_order) values($1,$2,'Untitled fixture module','identity',1) returning id", [courseId, `${key}-m`])).rows[0].id;
+  const moduleId = (await client.query("insert into course_modules(course_id,slug,title,sort_order) values($1,$2,'Untitled fixture module',1) returning id", [courseId, `${key}-m`])).rows[0].id;
+  await client.query("insert into module_principles(module_id,principle) values($1,'identity')", [moduleId]);
   for (const index of [1, 2]) lessonIds.push((await client.query("insert into lessons(module_id,slug,title,sort_order,status) values($1,$2,$3,$4,'published') returning id", [moduleId, `${key}-l${index}`, `Lesson ${index}`, index])).rows[0].id);
   await client.query("insert into enrollments(profile_id,email,full_name,level_id,status) values($1,$2,'Fixture',$3,'enrolled')", [actors.student.profileId, actors.student.email, levelId]);
   await client.query("insert into lesson_progress(profile_id,lesson_id,status,completed_at) values($1,$2,'completed',now())", [actors.student.profileId, lessonIds[0]]);

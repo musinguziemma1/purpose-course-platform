@@ -7,6 +7,7 @@ import { AnnouncementEditor, ArchiveAnnouncementButton } from "@/components/admi
 import { PageHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/utils";
+import { FeaturePending } from "@/components/ui/feature-pending";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Announcements" };
@@ -18,6 +19,7 @@ export default async function AnnouncementsPage({ searchParams }: { searchParams
   const data = await listAnnouncements(user);
   if (!data) notFound();
   const { edit } = await searchParams;
+  if (!data.ready) return <div className="space-y-6"><PageHeader eyebrow="Publishing" title="Announcements" /><FeaturePending feature="Announcements" staff /></div>;
   const editing = data.rows.find((row) => row.announcement.id === Number(edit) && row.announcement.status !== "archived")?.announcement;
 
   return (

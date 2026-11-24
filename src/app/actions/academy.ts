@@ -1,6 +1,6 @@
 "use server";
 
-import { isPrincipleKey } from "@/lib/purpose-journey";
+import { setModulePrinciple } from "@/db/principle-tags";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, max } from "drizzle-orm";
@@ -221,7 +221,7 @@ export async function createModule(_prev: AcademyState, formData: FormData): Pro
   const [orderRow] = await db.select({ value: max(courseModules.sortOrder) }).from(courseModules).where(eq(courseModules.courseId, courseId));
 
   try {
-    await db.insert(courseModules).values({
+    const [created] = await db.insert(courseModules).values({
       courseId,
       slug: slugBase(title, `module-${Date.now()}`),
       title,
@@ -229,9 +229,9 @@ export async function createModule(_prev: AcademyState, formData: FormData): Pro
       sessionCode: nullable(formData, "sessionCode"),
       estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
       isPreview: formData.get("isPreview") === "on",
-      principle: isPrincipleKey(formData.get("principle")) ? (formData.get("principle") as string) : null,
       sortOrder: Number(orderRow?.value ?? 0) + 1,
-    });
+    }).returning({ id: courseModules.id });
+    await setModulePrinciple(created.id, formData.get("principle"));
   } catch {
     return { error: "A module with that name already exists in this course." };
   }
@@ -257,9 +257,9 @@ export async function updateModule(_prev: AcademyState, formData: FormData): Pro
       sessionCode: nullable(formData, "sessionCode"),
       estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
       isPreview: formData.get("isPreview") === "on",
-      ...(formData.has("principle") ? { principle: isPrincipleKey(formData.get("principle")) ? (formData.get("principle") as string) : null } : {}),
     })
     .where(eq(courseModules.id, moduleId));
+  if (formData.has("principle")) await setModulePrinciple(moduleId, formData.get("principle"));
 
   await log(admin.profileId, "academy.module_updated", `Updated module #${moduleId}.`, String(courseId));
   refreshAcademy(courseId);

@@ -4,6 +4,9 @@ import { activityLogs, announcements, cohortMembers, cohorts, notifications, pro
 import type { SessionUser } from "@/lib/auth";
 import { currentActor } from "@/db/actor";
 import { can } from "@/lib/rbac";
+import { whenSchemaReady } from "@/db/schema-readiness";
+
+const PENDING_ERROR = "Announcements are still being set up on this site. Apply the pending database migration, then try again.";
 
 export const AUDIENCES = ["everyone", "learners", "mentors", "staff", "cohort"] as const;
 export type Audience = (typeof AUDIENCES)[number];
@@ -46,7 +49,7 @@ function viewerAudiences(viewer: SessionUser) {
 export async function getActiveAnnouncements(viewer: SessionUser | null, limit = 3) {
   if (!viewer) return [];
   const now = new Date();
-  return db.select({ id: announcements.id, title: announcements.title, body: announcements.body, href: announcements.href, pinned: announcements.pinned, publishedAt: announcements.publishedAt })
+  return whenSchemaReady("Announcements", () => db.select({ id: announcements.id, title: announcements.title, body: announcements.body, href: announcements.href, pinned: announcements.pinned, publishedAt: announcements.publishedAt })
     .from(announcements)
     .where(and(
       eq(announcements.status, "published"),
@@ -57,18 +60,17 @@ export async function getActiveAnnouncements(viewer: SessionUser | null, limit =
       ),
     ))
     .orderBy(desc(announcements.pinned), desc(announcements.publishedAt))
-    .limit(limit);
+    .limit(limit), []);
 }
 
 export async function listAnnouncements(viewer: SessionUser | null) {
   if (!canManageAnnouncements(viewer)) return null;
-  const [rows, cohortRows] = await Promise.all([
+  const cohortRows = await db.select({ id: cohorts.id, name: cohorts.name }).from(cohorts).where(inArray(cohorts.status, ["draft", "planned", "active"])).orderBy(asc(cohorts.name));
+  const rows = await whenSchemaReady("Announcements", () =>
     db.select({ announcement: announcements, author: profiles.fullName, cohortName: cohorts.name })
       .from(announcements).leftJoin(profiles, eq(announcements.authorId, profiles.id)).leftJoin(cohorts, eq(announcements.cohortId, cohorts.id))
-      .orderBy(asc(sql`case ${announcements.status} when 'draft' then 0 when 'published' then 1 else 2 end`), desc(announcements.updatedAt)).limit(100),
-    db.select({ id: cohorts.id, name: cohorts.name }).from(cohorts).where(inArray(cohorts.status, ["draft", "planned", "active"])).orderBy(asc(cohorts.name)),
-  ]);
-  return { rows, cohorts: cohortRows };
+      .orderBy(asc(sql`case ${announcements.status} when 'draft' then 0 when 'published' then 1 else 2 end`), desc(announcements.updatedAt)).limit(100), null);
+  return { rows: rows ?? [], cohorts: cohortRows, ready: rows !== null };
 }
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -99,7 +101,7 @@ export async function saveAnnouncement(input: Record<string, string>, viewer: Se
   if (expiresAt && (Number.isNaN(expiresAt.valueOf()) || expiresAt.getTime() <= Date.now())) return { error: "Choose an expiry date in the future, or leave it empty." };
   if (!Number.isInteger(id) || id < 0 || !Number.isInteger(version) || version < 0) return { error: "Refresh the page before saving." };
 
-  return db.transaction(async (tx) => {
+  return whenSchemaReady<AnnouncementState>("Announcements", () => db.transaction(async (tx) => {
     const actor = await currentActor(tx, viewer);
     if (!actor || !canManageAnnouncements(actor)) return { error: "You do not have permission to publish announcements." };
     if (cohortId) {
@@ -133,12 +135,12 @@ export async function saveAnnouncement(input: Record<string, string>, viewer: Se
     }
     await tx.insert(activityLogs).values({ actorId: actor.profileId, action: publish && !wasPublished ? "announcement.published" : "announcement.saved", entityType: "announcement", entityId: String(announcementId), description: `${publish && !wasPublished ? "Published" : "Saved"} the announcement “${title}”${publish && !wasPublished ? ` to ${reached} people` : ""}.` });
     return { ok: true, message: publish && !wasPublished ? `Published to ${reached} ${reached === 1 ? "person" : "people"}.` : "Announcement saved." };
-  });
+  }), { error: PENDING_ERROR });
 }
 
 export async function archiveAnnouncement(id: number, version: number, viewer: SessionUser | null): Promise<AnnouncementState> {
   if (!Number.isInteger(id) || !Number.isInteger(version)) return { error: "Refresh the page and try again." };
-  return db.transaction(async (tx) => {
+  return whenSchemaReady<AnnouncementState>("Announcements", () => db.transaction(async (tx) => {
     const actor = await currentActor(tx, viewer);
     if (!actor || !canManageAnnouncements(actor)) return { error: "You do not have permission to manage announcements." };
     const [current] = await tx.select().from(announcements).where(eq(announcements.id, id)).for("update").limit(1);
@@ -147,5 +149,5 @@ export async function archiveAnnouncement(id: number, version: number, viewer: S
     await tx.update(announcements).set({ status: "archived", version: current.version + 1, updatedAt: new Date() }).where(eq(announcements.id, id));
     await tx.insert(activityLogs).values({ actorId: actor.profileId, action: "announcement.archived", entityType: "announcement", entityId: String(id), description: `Archived the announcement “${current.title}”.` });
     return { ok: true, message: "Announcement archived." };
-  });
+  }), { error: PENDING_ERROR });
 }
