@@ -1,4 +1,5 @@
 import { UpcomingEvents } from "@/components/academy/upcoming-events";
+import { AnnouncementsStrip } from "@/components/site/announcements-strip";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -109,6 +110,8 @@ export default async function StudentDashboardPage() {
           </Link>
         }
       />
+
+      <AnnouncementsStrip />
 
       {journey ? (
         <section aria-labelledby="journey-heading" className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">

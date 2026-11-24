@@ -2197,3 +2197,34 @@ export type Testimonial = typeof testimonials.$inferSelect;
 export type DiscussionThread = typeof discussionThreads.$inferSelect;
 export type DiscussionPost = typeof discussionPosts.$inferSelect;
 export type Category = typeof categories.$inferSelect;
+
+/* ------------------------------------------------------------------ *
+ * Announcements — staff messages to an audience (README §9, §15)
+ * ------------------------------------------------------------------ */
+
+export const announcements = pgTable(
+  "announcements",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 160 }).notNull(),
+    body: text("body").notNull(),
+    audience: varchar("audience", { length: 16 }).notNull().default("everyone"),
+    cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }),
+    href: varchar("href", { length: 240 }),
+    status: varchar("status", { length: 16 }).notNull().default("draft"),
+    pinned: boolean("pinned").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+    version: integer("version").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("announcements_active_idx").on(table.status, table.publishedAt),
+    check("announcements_audience_check", sql`${table.audience} in ('everyone','learners','mentors','staff','cohort')`),
+    check("announcements_status_check", sql`${table.status} in ('draft','published','archived')`),
+    check("announcements_cohort_check", sql`(${table.audience} = 'cohort') = (${table.cohortId} is not null)`),
+    check("announcements_version_check", sql`${table.version} >= 0`),
+  ],
+).enableRLS();

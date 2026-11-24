@@ -13,6 +13,7 @@ const ROUTES: [string, Permission[]][] = [
   ["/admin/academy", ["academy.author", "academy.oversee"]],
   ["/admin/articles", ["content.write", "content.review"]],
   ["/admin/reviews", ["content.review"]],
+  ["/admin/announcements", ["content.publish", "notifications.manage"]],
   ["/admin/students", ["audience.view"]],
   ["/admin/contact", ["contact.manage"]],
   ["/admin/people", ["people.manage"]],

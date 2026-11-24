@@ -1,4 +1,5 @@
 import { UpcomingEvents } from "@/components/academy/upcoming-events";
+import { AnnouncementsStrip } from "@/components/site/announcements-strip";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -65,6 +66,7 @@ export default async function MentorOverviewPage() {
           </Link>
         }
       />
+      <AnnouncementsStrip />
       <UpcomingEvents />
 
       <div className="relative overflow-hidden rounded-xl border border-navy/10">
