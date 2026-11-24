@@ -88,6 +88,9 @@ import {
   roles,
   siteSettings,
   subscribers,
+  storeBooks,
+  storeOrderItems,
+  storeOrders,
   tags,
   testimonials,
   users,
@@ -120,6 +123,17 @@ const IMG = {
   identity: "/images/journal-identity.jpg",
 };
 
+const STORE_BOOK_SEEDS = [
+  { slug: "purpose-discovery-workbook", sku: "PC-WB-001", title: "The Purpose Discovery Workbook", subtitle: "A guided journey from questions to clarity", authorName: "School of Purpose & Leadership", shortDescription: "A practical, reflection-led companion for discovering your design, gifts and direction.", description: "Move through structured exercises, thoughtful prompts and decisive next steps. This workbook follows the five Purpose Course principles and gives learners a durable record of their discoveries.", category: "Workbooks", format: "workbook", pageCount: 176, priceUgx: 45000, compareAtPriceUgx: 52000, inventoryCount: 40, coverAlt: "The Purpose Discovery Workbook cover", coverTone: "navy", isFeatured: true, isNew: true, ratingTenths: 49, reviewCount: 38 },
+  { slug: "designed-for-significance", sku: "PC-PB-002", title: "Designed for Significance", subtitle: "Understanding why your life carries purpose", authorName: "Lex Ssenyondo", shortDescription: "A compelling invitation to see your life as intentional, valuable and ready for meaningful impact.", description: "Designed for Significance explores identity, calling and contribution with a grounded blend of teaching, reflection and application for everyday life.", category: "Purpose & Calling", format: "paperback", pageCount: 224, priceUgx: 55000, compareAtPriceUgx: null, inventoryCount: 28, coverAlt: "Designed for Significance book cover", coverTone: "source", isFeatured: true, isNew: false, ratingTenths: 48, reviewCount: 61 },
+  { slug: "identity-before-activity", sku: "PC-PB-003", title: "Identity Before Activity", subtitle: "Build from who you are, not what you perform", authorName: "School of Purpose & Leadership", shortDescription: "A clear framework for leading and serving from secure identity rather than restless achievement.", description: "A thoughtful guide to unlearning performance-driven living and building habits, relationships and work from a settled understanding of identity.", category: "Identity", format: "paperback", pageCount: 192, priceUgx: 48000, compareAtPriceUgx: null, inventoryCount: 23, coverAlt: "Identity Before Activity book cover", coverTone: "potential", isFeatured: true, isNew: false, ratingTenths: 47, reviewCount: 24 },
+  { slug: "the-gift-within", sku: "PC-PB-004", title: "The Gift Within", subtitle: "Recognise, refine and release your potential", authorName: "Lex Ssenyondo", shortDescription: "Turn overlooked ability into disciplined contribution through a practical pathway of discovery and growth.", description: "The Gift Within helps readers recognise natural strengths, test them through service and refine them into capabilities that solve real problems.", category: "Gifts & Potential", format: "paperback", pageCount: 208, priceUgx: 52000, compareAtPriceUgx: 60000, inventoryCount: 31, coverAlt: "The Gift Within book cover", coverTone: "gold", isFeatured: false, isNew: true, ratingTenths: 46, reviewCount: 19 },
+  { slug: "vision-into-practice", sku: "PC-HB-005", title: "Vision Into Practice", subtitle: "A field guide for purposeful execution", authorName: "School of Purpose & Leadership", shortDescription: "Translate conviction into priorities, rhythms and measurable progress without losing the heart of the vision.", description: "A practical operating guide for leaders and builders who need to move from inspiration to focused, sustainable execution.", category: "Leadership", format: "hardcover", pageCount: 248, priceUgx: 78000, compareAtPriceUgx: null, inventoryCount: 16, coverAlt: "Vision Into Practice hardcover book", coverTone: "terracotta", isFeatured: true, isNew: true, ratingTenths: 50, reviewCount: 12 },
+  { slug: "destiny-and-stewardship", sku: "PC-PB-006", title: "Destiny & Stewardship", subtitle: "Faithfulness for the long journey", authorName: "Lex Ssenyondo", shortDescription: "A mature exploration of responsibility, timing and the daily choices that shape a meaningful legacy.", description: "Destiny and Stewardship brings purpose down to the level of character, relationships, resources and faithful action across seasons.", category: "Destiny", format: "paperback", pageCount: 232, priceUgx: 58000, compareAtPriceUgx: null, inventoryCount: 19, coverAlt: "Destiny and Stewardship book cover", coverTone: "destiny", isFeatured: false, isNew: false, ratingTenths: 48, reviewCount: 33 },
+  { slug: "purpose-conversations", sku: "PC-WB-007", title: "Purpose Conversations", subtitle: "Fifty questions for mentors, teams and small groups", authorName: "Purpose Course Faculty", shortDescription: "A beautifully structured conversation deck in book form for coaching, community and team reflection.", description: "Use fifty tested prompts to open honest conversations about identity, gifts, service, vision and next steps in purposeful living.", category: "Mentoring", format: "workbook", pageCount: 128, priceUgx: 38000, compareAtPriceUgx: null, inventoryCount: 45, coverAlt: "Purpose Conversations workbook cover", coverTone: "source", isFeatured: false, isNew: true, ratingTenths: 45, reviewCount: 8 },
+  { slug: "leaders-reflection-journal", sku: "PC-HB-008", title: "The Leader's Reflection Journal", subtitle: "Ninety days of clarity, courage and contribution", authorName: "School of Purpose & Leadership", shortDescription: "A premium guided journal that helps leaders review their inner life, decisions and impact every day.", description: "A ninety-day rhythm of concise prompts, weekly reviews and purposeful commitments for leaders who want their character and contribution to grow together.", category: "Journals", format: "hardcover", pageCount: 216, priceUgx: 68000, compareAtPriceUgx: null, inventoryCount: 34, coverAlt: "The Leader's Reflection Journal cover", coverTone: "navy", isFeatured: false, isNew: true, ratingTenths: 49, reviewCount: 17 },
+];
+
 async function main() {
   const databaseUrl = new URL(process.env.DATABASE_URL ?? "");
   if (process.env.NODE_ENV === "production" || !["localhost", "127.0.0.1"].includes(databaseUrl.hostname) || databaseUrl.port !== "54329") {
@@ -129,6 +143,7 @@ async function main() {
   await db.execute(sql`
     truncate table
       ${activityLogs}, ${notifications}, ${discussionPosts}, ${discussionThreads},
+      ${storeOrderItems}, ${storeOrders}, ${storeBooks},
       ${learnerAchievements}, ${achievements}, ${learningActivities}, ${scoringRules},
       ${rolePermissions}, ${permissions}, ${messages}, ${emailEvents},
       ${platformEvents}, ${learningEvents}, ${engagementSnapshots}, ${analyticsReports},
@@ -1800,6 +1815,8 @@ Cannot evidence yet: public speaking beyond a small room. I avoid it and I know 
       createdAt: daysAgo(12),
     },
   ]);
+
+  await db.insert(storeBooks).values(STORE_BOOK_SEEDS.map((book) => ({ ...book, status: "active", publishedAt: new Date() })));
 
   const academy = await seedAcademyContent();
   const assessmentSeed = await seedAssessments();
