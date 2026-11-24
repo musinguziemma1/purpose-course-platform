@@ -16,6 +16,7 @@ import {
   LogOut,
   MessagesSquare,
   Settings,
+  ShoppingBag,
   UserRound,
   Users,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const ITEMS = [
   { href: "/admin/media", label: "Media library", icon: BookOpen },
   { href: "/admin/cohorts", label: "Cohorts", icon: Users },
   { href: "/admin/enrollments", label: "Enrolments", icon: Users },
+  { href: "/admin/store", label: "Bookstore", icon: ShoppingBag },
   { href: "/events", label: "Event calendar", icon: CalendarDays },
   { href: "/admin/admissions", label: "Student applications", icon: UserRound },
   { href: "/admin/assignments", label: "Assignments", icon: FileCheck2 },

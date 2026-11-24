@@ -529,6 +529,115 @@ export const activityLogs = pgTable(
 );
 
 /* ------------------------------------------------------------------ *
+ * Bookstore — catalogue, inventory and immutable order snapshots
+ * ------------------------------------------------------------------ */
+
+export const storeBooks = pgTable(
+  "store_books",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    slug: varchar("slug", { length: 96 }).notNull().unique(),
+    sku: varchar("sku", { length: 48 }).notNull().unique(),
+    isbn13: varchar("isbn13", { length: 13 }).unique(),
+    title: varchar("title", { length: 220 }).notNull(),
+    subtitle: varchar("subtitle", { length: 240 }),
+    authorName: varchar("author_name", { length: 180 }).notNull(),
+    shortDescription: varchar("short_description", { length: 500 }).notNull(),
+    description: text("description").notNull(),
+    category: varchar("category", { length: 80 }).notNull(),
+    format: varchar("format", { length: 24 }).notNull().default("paperback"),
+    language: varchar("language", { length: 48 }).notNull().default("English"),
+    pageCount: integer("page_count").notNull().default(0),
+    priceUgx: integer("price_ugx").notNull(),
+    compareAtPriceUgx: integer("compare_at_price_ugx"),
+    inventoryCount: integer("inventory_count").notNull().default(0),
+    lowStockThreshold: integer("low_stock_threshold").notNull().default(5),
+    coverImageUrl: text("cover_image_url"),
+    coverAlt: varchar("cover_alt", { length: 240 }).notNull(),
+    coverTone: varchar("cover_tone", { length: 24 }).notNull().default("navy"),
+    status: varchar("status", { length: 24 }).notNull().default("draft"),
+    isFeatured: boolean("is_featured").notNull().default(false),
+    isNew: boolean("is_new").notNull().default(false),
+    ratingTenths: integer("rating_tenths").notNull().default(0),
+    reviewCount: integer("review_count").notNull().default(0),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("store_books_active_category_idx").on(table.category, table.title),
+    index("store_books_featured_idx").on(table.isFeatured, table.publishedAt),
+    check("store_books_slug_check", sql`${table.slug} ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'`),
+    check("store_books_format_check", sql`${table.format} in ('paperback', 'hardcover', 'workbook')`),
+    check("store_books_status_check", sql`${table.status} in ('draft', 'active', 'archived')`),
+    check("store_books_price_check", sql`${table.priceUgx} >= 0 and (${table.compareAtPriceUgx} is null or ${table.compareAtPriceUgx} >= ${table.priceUgx})`),
+    check("store_books_inventory_check", sql`${table.inventoryCount} >= 0 and ${table.lowStockThreshold} >= 0`),
+  ],
+).enableRLS();
+
+export const storeOrders = pgTable(
+  "store_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderNumber: varchar("order_number", { length: 32 }).notNull().unique(),
+    profileId: uuid("profile_id").references(() => profiles.id, { onDelete: "set null" }),
+    customerName: varchar("customer_name", { length: 160 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phone: varchar("phone", { length: 32 }).notNull(),
+    deliveryMethod: varchar("delivery_method", { length: 32 }).notNull(),
+    paymentMethod: varchar("payment_method", { length: 32 }).notNull(),
+    addressLine: varchar("address_line", { length: 300 }),
+    city: varchar("city", { length: 100 }),
+    country: varchar("country", { length: 80 }).notNull().default("Uganda"),
+    notes: varchar("notes", { length: 1000 }),
+    currency: varchar("currency", { length: 3 }).notNull().default("UGX"),
+    subtotalUgx: integer("subtotal_ugx").notNull(),
+    deliveryUgx: integer("delivery_ugx").notNull().default(0),
+    totalUgx: integer("total_ugx").notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("placed"),
+    paymentStatus: varchar("payment_status", { length: 24 }).notNull().default("pending"),
+    rateKey: varchar("rate_key", { length: 64 }).notNull(),
+    version: integer("version").notNull().default(0),
+    placedAt: timestamp("placed_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("store_orders_profile_created_idx").on(table.profileId, table.placedAt),
+    index("store_orders_email_created_idx").on(table.email, table.placedAt),
+    index("store_orders_status_created_idx").on(table.status, table.placedAt),
+    index("store_orders_rate_created_idx").on(table.rateKey, table.placedAt),
+    check("store_orders_delivery_check", sql`${table.deliveryMethod} in ('pickup', 'kampala_delivery', 'uganda_delivery')`),
+    check("store_orders_payment_method_check", sql`${table.paymentMethod} in ('pay_on_delivery', 'pay_on_pickup')`),
+    check("store_orders_status_check", sql`${table.status} in ('placed', 'confirmed', 'packing', 'dispatched', 'ready_for_pickup', 'completed', 'cancelled')`),
+    check("store_orders_payment_status_check", sql`${table.paymentStatus} in ('pending', 'paid', 'refunded')`),
+  ],
+).enableRLS();
+
+export const storeOrderItems = pgTable(
+  "store_order_items",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    orderId: uuid("order_id").notNull().references(() => storeOrders.id, { onDelete: "cascade" }),
+    bookId: integer("book_id").references(() => storeBooks.id, { onDelete: "set null" }),
+    sku: varchar("sku", { length: 48 }).notNull(),
+    title: varchar("title", { length: 220 }).notNull(),
+    authorName: varchar("author_name", { length: 180 }).notNull(),
+    format: varchar("format", { length: 24 }).notNull(),
+    unitPriceUgx: integer("unit_price_ugx").notNull(),
+    quantity: integer("quantity").notNull(),
+    lineTotalUgx: integer("line_total_ugx").notNull(),
+  },
+  (table) => [
+    index("store_order_items_order_idx").on(table.orderId),
+    index("store_order_items_book_idx").on(table.bookId),
+    check("store_order_items_quantity_check", sql`${table.quantity} between 1 and 25`),
+    check("store_order_items_money_check", sql`${table.unitPriceUgx} >= 0 and ${table.lineTotalUgx} = ${table.unitPriceUgx} * ${table.quantity}`),
+  ],
+).enableRLS();
+
+/* ------------------------------------------------------------------ *
  * Relations
  * ------------------------------------------------------------------ */
 

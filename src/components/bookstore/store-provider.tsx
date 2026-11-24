@@ -1,0 +1,118 @@
+"use client";
+
+import Link from "next/link";
+import { createContext, use, useCallback, useEffect, useMemo, useState } from "react";
+import { Heart, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { BookCover } from "@/components/bookstore/book-cover";
+import { formatUgx } from "@/lib/bookstore-shared";
+
+export type CartBook = { id: number; slug: string; title: string; authorName: string; format: string; priceUgx: number; inventoryCount: number; coverTone: string };
+export type CartLine = CartBook & { quantity: number };
+
+type StoreContextValue = {
+  cart: CartLine[];
+  wishlist: number[];
+  cartCount: number;
+  wishlistCount: number;
+  ready: boolean;
+  addBook: (book: CartBook, quantity?: number) => void;
+  removeBook: (id: number) => void;
+  setQuantity: (id: number, quantity: number) => void;
+  toggleWishlist: (id: number) => void;
+  isWishlisted: (id: number) => boolean;
+  clearCart: () => void;
+  openCart: () => void;
+};
+
+const StoreContext = createContext<StoreContextValue | null>(null);
+const STORAGE_KEY = "purpose-store-v1";
+
+function readStore() {
+  if (typeof window === "undefined") return { cart: [] as CartLine[], wishlist: [] as number[] };
+  try {
+    const value = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as { cart?: CartLine[]; wishlist?: number[] };
+    return { cart: Array.isArray(value.cart) ? value.cart.slice(0, 30) : [], wishlist: Array.isArray(value.wishlist) ? value.wishlist.filter(Number.isInteger).slice(0, 100) : [] };
+  } catch { return { cart: [] as CartLine[], wishlist: [] as number[] }; }
+}
+
+export function StoreProvider({ children }: { children: React.ReactNode }) {
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const stored = readStore();
+      setCart(stored.cart);
+      setWishlist(stored.wishlist);
+      setHydrated(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => { if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ cart, wishlist })); }, [cart, wishlist, hydrated]);
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setDrawerOpen(false); };
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [drawerOpen]);
+
+  const addBook = useCallback((book: CartBook, quantity = 1) => {
+    setCart((current) => {
+      const existing = current.find((line) => line.id === book.id);
+      return existing
+        ? current.map((line) => line.id === book.id ? { ...line, ...book, quantity: Math.min(book.inventoryCount, line.quantity + quantity) } : line)
+        : [...current, { ...book, quantity: Math.min(book.inventoryCount, Math.max(1, quantity)) }];
+    });
+    setDrawerOpen(true);
+  }, []);
+  const removeBook = useCallback((id: number) => setCart((current) => current.filter((line) => line.id !== id)), []);
+  const setQuantity = useCallback((id: number, quantity: number) => setCart((current) => current.map((line) => line.id === id ? { ...line, quantity: Math.max(1, Math.min(line.inventoryCount, quantity)) } : line)), []);
+  const toggleWishlist = useCallback((id: number) => setWishlist((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id]), []);
+  const clearCart = useCallback(() => setCart([]), []);
+  const value = useMemo<StoreContextValue>(() => ({
+    cart, wishlist, cartCount: cart.reduce((total, line) => total + line.quantity, 0), wishlistCount: wishlist.length, ready: hydrated,
+    addBook, removeBook, setQuantity, toggleWishlist, isWishlisted: (id) => wishlist.includes(id), clearCart, openCart: () => setDrawerOpen(true),
+  }), [cart, wishlist, hydrated, addBook, removeBook, setQuantity, toggleWishlist, clearCart]);
+  const subtotal = cart.reduce((total, line) => total + line.priceUgx * line.quantity, 0);
+
+  return (
+    <StoreContext value={value}>
+      {children}
+      {drawerOpen ? (
+        <div className="fixed inset-0 z-[80]">
+          <button type="button" aria-label="Close shopping bag" className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} />
+          <aside role="dialog" aria-modal="true" aria-labelledby="bag-title" className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-paper shadow-2xl">
+            <div className="flex items-center justify-between border-b border-navy/10 px-5 py-5">
+              <div><p className="text-[10px] font-semibold uppercase tracking-[.2em] text-gold-dark">Purpose bookstore</p><h2 id="bag-title" className="mt-1 font-serif text-2xl text-navy">Your shopping bag</h2></div>
+              <button type="button" onClick={() => setDrawerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-navy/15 text-navy" aria-label="Close shopping bag"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-5">
+              {cart.length ? <ul className="space-y-5">{cart.map((line) => (
+                <li key={line.id} className="grid grid-cols-[72px_1fr] gap-4 border-b border-navy/10 pb-5">
+                  <BookCover title={line.title} author={line.authorName} tone={line.coverTone} size="mini" />
+                  <div className="min-w-0"><Link href={`/bookstore/${line.slug}`} onClick={() => setDrawerOpen(false)} className="font-serif text-base font-semibold leading-tight text-navy hover:text-gold-dark">{line.title}</Link><p className="mt-1 text-xs text-stone-500">{line.format} · {formatUgx(line.priceUgx)}</p>
+                    <div className="mt-3 flex items-center justify-between gap-3"><div className="flex items-center rounded-full border border-navy/15 bg-white"><button type="button" onClick={() => setQuantity(line.id, line.quantity - 1)} className="p-2" aria-label={`Decrease ${line.title} quantity`}><Minus className="h-3 w-3" /></button><span className="w-7 text-center text-xs font-semibold">{line.quantity}</span><button type="button" onClick={() => setQuantity(line.id, line.quantity + 1)} className="p-2" aria-label={`Increase ${line.title} quantity`}><Plus className="h-3 w-3" /></button></div><button type="button" onClick={() => removeBook(line.id)} className="p-2 text-stone-400 hover:text-red-700" aria-label={`Remove ${line.title}`}><Trash2 className="h-4 w-4" /></button></div>
+                  </div>
+                </li>
+              ))}</ul> : <div className="flex min-h-72 flex-col items-center justify-center text-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-cream text-gold-dark"><ShoppingBag className="h-7 w-7" /></span><h3 className="mt-5 font-serif text-xl text-navy">Your bag is ready for a good book.</h3><p className="mt-2 max-w-xs text-sm text-stone-500">Browse practical books for purpose, leadership and personal growth.</p><Link href="/bookstore" onClick={() => setDrawerOpen(false)} className="mt-5 rounded-full bg-navy px-5 py-2.5 text-sm font-semibold text-white">Explore the collection</Link></div>}
+            </div>
+            {cart.length ? <div className="border-t border-navy/10 bg-white px-5 py-5"><div className="flex items-center justify-between"><span className="text-sm text-stone-500">Subtotal</span><strong className="font-serif text-xl text-navy">{formatUgx(subtotal)}</strong></div><p className="mt-1 text-[11px] text-stone-500">Delivery is calculated at checkout.</p><Link href="/bookstore/checkout" onClick={() => setDrawerOpen(false)} className="mt-4 flex w-full items-center justify-center rounded-full bg-gold px-5 py-3 text-sm font-bold text-ink shadow-sm hover:bg-gold-dark">Continue to checkout</Link></div> : null}
+          </aside>
+        </div>
+      ) : null}
+    </StoreContext>
+  );
+}
+
+export function useStore() {
+  const value = use(StoreContext);
+  if (!value) throw new Error("useStore must be used inside StoreProvider");
+  return value;
+}
+
+export function StoreSubnav() {
+  const { cartCount, wishlistCount, openCart } = useStore();
+  return <div className="sticky top-[69px] z-40 border-b border-navy/10 bg-ink text-paper lg:top-[117px] xl:top-[77px]"><div className="shell flex min-h-12 items-center justify-between gap-3"><Link href="/bookstore" className="font-serif text-sm font-semibold sm:text-base"><span className="text-gold">Purpose</span> Bookstore</Link><div className="flex items-center gap-1"><Link href="/bookstore/wishlist" className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-paper/75 hover:bg-white/10 hover:text-white"><Heart className="h-4 w-4" /><span className="hidden sm:inline">Saved</span>{wishlistCount ? <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">{wishlistCount}</span> : null}</Link><button type="button" onClick={openCart} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-3 py-2 text-xs font-bold text-ink"><ShoppingBag className="h-4 w-4" /><span>Bag</span>{cartCount ? <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-white">{cartCount}</span> : null}</button></div></div></div>;
+}

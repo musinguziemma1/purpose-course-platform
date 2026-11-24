@@ -3,6 +3,7 @@ import { can, type Permission } from "@/lib/rbac";
 type Actor = { roleSlug: string; permissions?: string[] } | null | undefined;
 
 const ROUTES: [string, Permission[]][] = [
+  ["/admin/store", ["org.manage"]],
   ["/admin/operations", ["org.manage"]],
   ["/admin/media", ["media.access"]],
   ["/admin/admissions", ["people.manage", "cohort.manage"]],

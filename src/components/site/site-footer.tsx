@@ -46,6 +46,7 @@ export function SiteFooter() {
                 { href: "/course", label: "Programme catalogue" },
                 { href: "/blog", label: "Purpose journal" },
                 { href: "/resources", label: "Downloadable resources" },
+                { href: "/bookstore", label: "Purpose bookstore" },
                 { href: "/community", label: "Live community" },
                 { href: "/about", label: "Our story & team" },
                 { href: "/contact", label: "Contact the faculty" },
