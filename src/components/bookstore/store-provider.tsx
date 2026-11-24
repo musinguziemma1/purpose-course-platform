@@ -8,7 +8,7 @@ import { formatUgx } from "@/lib/bookstore-shared";
 
 export type CartBook = { variantId: number; bookId: number; slug: string; title: string; authorName: string; variantLabel: string; deliveryKind: "physical" | "digital"; priceUgx: number; inventoryCount: number; coverTone: string; coverImageUrl?: string | null };
 export type CartLine = CartBook & { quantity: number };
-type StoreContextValue = { cart: CartLine[]; wishlist: number[]; cartCount: number; wishlistCount: number; ready: boolean; addBook: (book: CartBook, quantity?: number) => void; removeBook: (variantId: number) => void; setQuantity: (variantId: number, quantity: number) => void; toggleWishlist: (bookId: number) => void; isWishlisted: (bookId: number) => boolean; clearCart: () => void; openCart: () => void };
+type StoreContextValue = { cart: CartLine[]; wishlist: number[]; cartCount: number; wishlistCount: number; ready: boolean; addBook: (book: CartBook, quantity?: number, revealBag?: boolean) => void; removeBook: (variantId: number) => void; setQuantity: (variantId: number, quantity: number) => void; toggleWishlist: (bookId: number) => void; isWishlisted: (bookId: number) => boolean; clearCart: () => void; openCart: () => void };
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 const STORAGE_KEY = "purpose-store-v2";
@@ -27,7 +27,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { const frame = window.requestAnimationFrame(() => { const stored = readStore(); setCart(stored.cart); setWishlist(stored.wishlist); setHydrated(true); }); return () => window.cancelAnimationFrame(frame); }, []);
   useEffect(() => { if (hydrated) window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ cart, wishlist })); }, [cart, wishlist, hydrated]);
   useEffect(() => { if (!drawerOpen) return; const close = (event: KeyboardEvent) => { if (event.key === "Escape") setDrawerOpen(false); }; document.addEventListener("keydown", close); return () => document.removeEventListener("keydown", close); }, [drawerOpen]);
-  const addBook = useCallback((book: CartBook, quantity = 1) => { setCart((current) => { const existing = current.find((line) => line.variantId === book.variantId), maximum = book.deliveryKind === "digital" ? 1 : book.inventoryCount; return existing ? current.map((line) => line.variantId === book.variantId ? { ...line, ...book, quantity: Math.min(maximum, line.quantity + quantity) } : line) : [...current, { ...book, quantity: Math.min(maximum, Math.max(1, quantity)) }]; }); setDrawerOpen(true); }, []);
+  const addBook = useCallback((book: CartBook, quantity = 1, revealBag = true) => { setCart((current) => { const existing = current.find((line) => line.variantId === book.variantId), maximum = book.deliveryKind === "digital" ? 1 : book.inventoryCount; return existing ? current.map((line) => line.variantId === book.variantId ? { ...line, ...book, quantity: Math.min(maximum, line.quantity + quantity) } : line) : [...current, { ...book, quantity: Math.min(maximum, Math.max(1, quantity)) }]; }); if (revealBag) setDrawerOpen(true); }, []);
   const removeBook = useCallback((variantId: number) => setCart((current) => current.filter((line) => line.variantId !== variantId)), []);
   const setQuantity = useCallback((variantId: number, quantity: number) => setCart((current) => current.map((line) => line.variantId === variantId ? { ...line, quantity: line.deliveryKind === "digital" ? 1 : Math.max(1, Math.min(line.inventoryCount, quantity)) } : line)), []);
   const toggleWishlist = useCallback((bookId: number) => setWishlist((current) => current.includes(bookId) ? current.filter((value) => value !== bookId) : [...current, bookId]), []);
@@ -41,5 +41,16 @@ export function useStore() { const value = use(StoreContext); if (!value) throw 
 
 export function StoreSubnav() {
   const { cartCount, wishlistCount, openCart } = useStore();
-  return <div className="sticky top-[69px] z-40 border-b border-navy/10 bg-ink text-paper xl:top-[77px]"><div className="shell flex min-h-12 items-center justify-between gap-3"><Link href="/bookstore" className="font-serif text-sm font-semibold sm:text-base"><span className="text-gold">Purpose</span> Bookstore</Link><nav aria-label="Bookstore" className="flex items-center gap-1"><Link href="/bookstore" className="hidden rounded-full px-3 py-2 text-xs text-paper/75 hover:bg-white/10 hover:text-white md:inline-flex">Browse books</Link><Link href="/bookstore/library" className="hidden items-center gap-1.5 rounded-full px-3 py-2 text-xs text-paper/75 hover:bg-white/10 hover:text-white sm:inline-flex"><BookOpen className="h-4 w-4" />My PDFs</Link><Link href="/bookstore/wishlist" className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs text-paper/75 hover:bg-white/10 hover:text-white"><Heart className="h-4 w-4" /><span className="hidden sm:inline">Saved</span>{wishlistCount ? <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">{wishlistCount}</span> : null}</Link><button type="button" onClick={openCart} className="inline-flex items-center gap-1.5 rounded-full bg-gold px-3 py-2 text-xs font-bold text-ink"><ShoppingBag className="h-4 w-4" /><span>Bag</span>{cartCount ? <span className="rounded-full bg-ink px-1.5 py-0.5 text-[10px] text-white">{cartCount}</span> : null}</button></nav></div></div>;
+  return <div className="sticky top-[69px] z-40 border-b border-navy/10 bg-white/95 text-navy shadow-[0_10px_30px_-28px_rgba(7,25,45,.5)] backdrop-blur-xl xl:top-[77px]">
+    <div className="h-[3px] bg-gradient-to-r from-gold-dark via-gold to-gold-dark" />
+    <div className="shell flex min-h-11 items-center justify-between gap-3">
+      <Link href="/bookstore" className="flex items-center gap-2 font-serif text-sm font-semibold sm:text-base"><BookOpen className="h-4 w-4 text-gold-dark" />Purpose Bookstore</Link>
+      <nav aria-label="Bookstore" className="flex items-center gap-1">
+        <Link href="/bookstore" className="hidden rounded-lg px-3 py-2 text-xs text-stone-500 hover:bg-cream hover:text-navy md:inline-flex">Browse books</Link>
+        <Link href="/bookstore/library" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-stone-500 hover:bg-cream hover:text-navy sm:inline-flex"><BookOpen className="h-4 w-4" />My PDFs</Link>
+        <Link href="/bookstore/wishlist" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs text-stone-500 hover:bg-cream hover:text-navy"><Heart className="h-4 w-4" /><span className="hidden sm:inline">Saved</span>{wishlistCount ? <span className="rounded-full bg-cream px-1.5 py-0.5 text-[10px] font-semibold text-navy">{wishlistCount}</span> : null}</Link>
+        <button type="button" onClick={openCart} className="inline-flex items-center gap-1.5 rounded-lg bg-navy px-3 py-2 text-xs font-bold text-white transition hover:bg-source"><ShoppingBag className="h-4 w-4" /><span>Bag</span>{cartCount ? <span className="rounded-full bg-gold px-1.5 py-0.5 text-[10px] text-ink">{cartCount}</span> : null}</button>
+      </nav>
+    </div>
+  </div>;
 }
