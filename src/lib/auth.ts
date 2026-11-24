@@ -148,6 +148,9 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   }
 });
 
+/** Same scrypt cost for unknown accounts, so response time does not reveal which emails exist. */
+const UNKNOWN_ACCOUNT_HASH = `scrypt:${"0".repeat(32)}:${"0".repeat(128)}`;
+
 export async function authenticate(email: string, password: string) {
   const rows = await db
     .select({ id: users.id, passwordHash: users.passwordHash, isActive: users.isActive })
@@ -155,7 +158,10 @@ export async function authenticate(email: string, password: string) {
     .where(eq(users.email, email.toLowerCase().trim()))
     .limit(1);
   const user = rows[0];
-  if (!user || !user.isActive) return null;
+  if (!user || !user.isActive) {
+    verifyPassword(password, UNKNOWN_ACCOUNT_HASH);
+    return null;
+  }
   if (!verifyPassword(password, user.passwordHash)) return null;
   return user.id;
 }

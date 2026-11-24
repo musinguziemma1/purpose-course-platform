@@ -1,6 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { contactRateKey } from "@/lib/contact";
+import { hashLoginEmail, loginBlocked, recordLoginAttempt } from "@/db/login-throttle";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { profiles, roles } from "@/db/schema";
@@ -30,8 +33,20 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     return { error: "Enter your email address and password." };
   }
 
+  const emailHash = hashLoginEmail(email);
+  let rateKey: string | null = null;
+  try {
+    rateKey = contactRateKey(await headers());
+  } catch {
+    rateKey = null; // no trusted client address: the per-account limit still applies
+  }
+  if (await loginBlocked({ emailHash, rateKey })) {
+    return { error: "Too many unsuccessful sign-in attempts. Wait 15 minutes, then try again." };
+  }
+
   await ensureDemoAccounts().catch(() => undefined);
   const userId = await authenticate(email, password);
+  await recordLoginAttempt({ emailHash, rateKey, succeeded: Boolean(userId) });
   if (!userId) {
     return { error: "Those credentials do not match an active account." };
   }

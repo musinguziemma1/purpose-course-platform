@@ -25,7 +25,7 @@ test("a missing table or column switches a feature off instead of failing the pa
 
 test("the readiness report names each optional feature and any missing table", async () => {
   const report = await readiness.getSchemaReadiness();
-  assert.deepEqual(report.map((item) => item.feature).sort(), ["Announcements", "Purpose Profile and Journey"]);
+  assert.deepEqual(report.map((item) => item.feature).sort(), ["Announcements", "Purpose Profile and Journey", "Sign-in throttling"]);
   for (const item of report) assert.equal(item.ready, item.missing.length === 0);
 });
 
