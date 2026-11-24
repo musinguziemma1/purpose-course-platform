@@ -33,7 +33,7 @@ export default async function VideoRoomPage({ params }: Params) {
   const backHref =
     user.roleSlug === "student"
       ? `/learn/live/${record.session.id}`
-      : user.roleSlug === "mentor"
+      : user.roleSlug === "mentor" || user.roleSlug === "instructor"
         ? `/mentor/live/${record.session.id}`
         : "/admin/academy/live";
 
@@ -77,12 +77,12 @@ export default async function VideoRoomPage({ params }: Params) {
           />
           <div className="rounded-xl border border-navy/10 bg-paper p-3.5 text-[11px] leading-relaxed text-stone-600">
             <p className="inline-flex items-center gap-1.5 font-semibold text-navy">
-              <Video className="h-3.5 w-3.5 text-gold-dark" /> How this room stays fast
+              <Video className="h-3.5 w-3.5 text-gold-dark" /> Getting the best call
             </p>
             <p className="mt-1">
-              Use a stable connection and headphones. Interactive seats support camera and microphone;
-              observers receive the host&apos;s stream. Call quality depends on participants&apos; connections and the host&apos;s
-              upload capacity and the platform conference relay. The live feed supports questions and group work without leaving the system.
+              Use headphones and a stable connection. Up to {Number(process.env.CONFERENCE_MAX_SEATS ?? 8) || 8} people can be on
+              camera; anyone beyond that joins the audience and sees the host until the host gives them a seat. If your
+              connection drops, the room reconnects automatically. Use the live feed beside the call for questions and group work.
             </p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-stone-500">
               <Lock className="h-3 w-3" /> Room code <span className="font-mono text-navy">{code}</span> · only signed-in

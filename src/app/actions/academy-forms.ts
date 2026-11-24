@@ -1,5 +1,6 @@
 "use server";
 
+import { setModulePrinciple } from "@/db/principle-tags";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, max } from "drizzle-orm";
@@ -79,9 +80,10 @@ export async function saveModuleForm(formData: FormData) {
         isPreview: formData.get("isPreview") === "on",
       })
       .where(eq(courseModules.id, moduleId));
+    if (formData.has("principle")) await setModulePrinciple(moduleId, formData.get("principle"));
   } else {
     const [orderRow] = await db.select({ value: max(courseModules.sortOrder) }).from(courseModules).where(eq(courseModules.courseId, courseId));
-    await db
+    const [created] = await db
       .insert(courseModules)
       .values({
         courseId,
@@ -93,7 +95,9 @@ export async function saveModuleForm(formData: FormData) {
         isPreview: formData.get("isPreview") === "on",
         sortOrder: Number(orderRow?.value ?? 0) + 1,
       })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ id: courseModules.id });
+    if (created) await setModulePrinciple(created.id, formData.get("principle"));
   }
   refresh(courseId);
   redirect(`/admin/academy/courses/${courseId}`);

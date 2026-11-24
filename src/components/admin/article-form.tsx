@@ -132,7 +132,7 @@ export function ArticleForm({
               name="coverImageUrl"
               defaultValue={article?.coverImageUrl ?? ""}
               placeholder="https://…"
-              className="text-[12px]"
+              
             />
             <MediaPickerButton inputName="coverImageUrl" kind="image" />
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -157,7 +157,7 @@ export function ArticleForm({
             </p>
             <div className="mt-3">
               <Field label="Cover alt text">
-                <Input name="coverAlt" defaultValue={article?.coverAlt ?? ""} placeholder="Describe the image" className="text-[12px]" />
+                <Input name="coverAlt" defaultValue={article?.coverAlt ?? ""} placeholder="Describe the image" />
               </Field>
             </div>
           </div>
@@ -166,7 +166,7 @@ export function ArticleForm({
             <p className="mb-3 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-stone-500">SEO</p>
             <div className="grid gap-3">
               <Field label="SEO title">
-                <Input name="seoTitle" defaultValue={article?.seoTitle ?? ""} placeholder="Defaults to the article title" className="text-[12px]" />
+                <Input name="seoTitle" defaultValue={article?.seoTitle ?? ""} placeholder="Defaults to the article title" />
               </Field>
               <Field label="Meta description">
                 <Textarea
@@ -174,7 +174,7 @@ export function ArticleForm({
                   rows={3}
                   defaultValue={article?.seoDescription ?? ""}
                   placeholder="Up to 160 characters."
-                  className="text-[12px]"
+                  
                 />
               </Field>
             </div>

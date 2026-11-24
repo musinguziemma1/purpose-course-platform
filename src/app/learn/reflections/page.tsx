@@ -3,12 +3,14 @@ import { ReflectionForm } from "@/components/learn/forms";
 import { getStudentWorkspace } from "@/db/academy";
 import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
+import { isPrincipleKey } from "@/lib/purpose-journey";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Reflections" };
 
-export default async function StudentReflectionsPage() {
+export default async function StudentReflectionsPage({ searchParams }: { searchParams: Promise<{ principle?: string }> }) {
+  const { principle } = await searchParams;
   const user = await getSessionUser();
   const workspace = user ? await getStudentWorkspace(user.profileId) : null;
   if (!workspace) return null;
@@ -34,7 +36,7 @@ export default async function StudentReflectionsPage() {
             <NotebookPen className="h-3.5 w-3.5 text-gold-dark" /> New reflection
           </p>
           <div className="mt-3">
-            <ReflectionForm sessions={sessionsForLevel} />
+            <ReflectionForm sessions={sessionsForLevel} defaultPrinciple={isPrincipleKey(principle) ? principle : ""} />
           </div>
           <p className="mt-3 inline-flex items-start gap-1.5 text-[10.5px] leading-relaxed text-stone-500">
             <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0" /> Private entries are visible only to you. Mentor-shared

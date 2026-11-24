@@ -42,7 +42,7 @@ export function RoleForm({
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="profileId" value={profileId} />
-      <Select name="roleSlug" defaultValue={currentRole} disabled={disabled} className="h-9 w-32 text-[11.5px]">
+      <Select name="roleSlug" defaultValue={currentRole} disabled={disabled} className="h-9 w-32">
         {roles.map((role) => (
           <option key={role.slug} value={role.slug}>
             {role.name}
@@ -65,11 +65,11 @@ export function InviteForm({ roles, configurationError }: { roles: { slug: strin
       </div>
       <div>
         <Label htmlFor="invite-email">Email address</Label>
-        <Input id="invite-email" name="email" type="email" required maxLength={255} autoComplete="email" disabled={pending} placeholder="new.colleague@example.org" className="text-[12.5px]" />
+        <Input id="invite-email" name="email" type="email" required maxLength={255} autoComplete="email" disabled={pending} placeholder="new.colleague@example.org" />
       </div>
       <div>
         <Label htmlFor="invite-role">Workspace role</Label>
-        <Select id="invite-role" name="roleSlug" defaultValue="student" disabled={pending} className="text-[12.5px]">
+        <Select id="invite-role" name="roleSlug" defaultValue="student" disabled={pending}>
           {roles.map((role) => (
             <option key={role.slug} value={role.slug}>
               {role.name}

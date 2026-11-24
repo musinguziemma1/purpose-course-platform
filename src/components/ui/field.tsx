@@ -3,8 +3,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/* 16px on phones stops iOS Safari zooming into focused fields; 14px from sm up. */
 const fieldBase =
-  "w-full rounded-lg border border-navy/15 bg-paper px-3.5 text-[13px] text-ink shadow-xs outline-none transition-all duration-200 placeholder:text-stone-400 hover:border-navy/25 focus:border-gold focus:ring-4 focus:ring-gold/15 disabled:cursor-not-allowed disabled:bg-cream/50 disabled:opacity-70 aria-[invalid=true]:border-rose-400 aria-[invalid=true]:ring-rose-100";
+  "w-full rounded-lg border border-navy/15 bg-paper px-3.5 text-[16px] text-ink shadow-xs outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-stone-500 hover:border-navy/25 focus:border-gold-dark focus:ring-4 focus:ring-gold/20 disabled:cursor-not-allowed disabled:bg-cream/50 disabled:opacity-70 aria-[invalid=true]:border-rose-500 aria-[invalid=true]:ring-rose-100 sm:text-[14px]";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => <input ref={ref} className={cn(fieldBase, "h-11", className)} {...props} />,
@@ -56,7 +57,7 @@ export function Label({
         {children}
         {required ? <span className="ml-0.5 text-rose-600">*</span> : null}
       </span>
-      {hint ? <span className="text-[10.5px] font-normal text-stone-500">{hint}</span> : null}
+      {hint ? <span className="text-[12px] font-normal text-stone-600">{hint}</span> : null}
     </label>
   );
 }
@@ -89,9 +90,9 @@ export function Field({
       <Label required={required} htmlFor={controlId}>
         {label}
       </Label>
-      {hint ? <p id={hintId} className="mb-1 text-[10.5px] text-stone-500">{hint}</p> : null}
+      {hint ? <p id={hintId} className="mb-1 text-[13px] text-stone-600">{hint}</p> : null}
       {control ? React.cloneElement(control, { id: controlId, "aria-describedby": describedBy, "aria-invalid": error ? true : control.props["aria-invalid"], required: required || control.props.required }) : children}
-      {error ? <p id={errorId} role="alert" className="mt-1 text-[11px] font-medium text-rose-600">{error}</p> : null}
+      {error ? <p id={errorId} role="alert" className="mt-1 text-[13px] font-medium text-rose-700">{error}</p> : null}
     </div>
   );
 }
@@ -125,7 +126,7 @@ export function CheckboxRow({
       />
       <span>
         <span className="font-medium text-navy">{label}</span>
-        {hint ? <span className="mt-0.5 block text-[10.5px] text-stone-500">{hint}</span> : null}
+        {hint ? <span className="mt-0.5 block text-[13px] text-stone-600">{hint}</span> : null}
       </span>
     </label>
   );

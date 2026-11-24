@@ -125,7 +125,7 @@ export function WorkflowPanel({
           name="comment"
           rows={3}
           placeholder="Feedback, rejection reason or revision notes visible in the history."
-          className="text-[12.5px]"
+          
         />
         {canReview ? (
           <div className="mt-3">

@@ -799,6 +799,72 @@ export const reflections = pgTable(
   (table) => [index("reflections_author_idx").on(table.authorProfileId, table.createdAt)],
 );
 
+/* ------------------------------------------------------------------ *
+ * Purpose Profile — the learner's evolving self-understanding (README §3)
+ * ------------------------------------------------------------------ */
+
+export const purposeProfiles = pgTable(
+  "purpose_profiles",
+  {
+    profileId: uuid("profile_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
+    identityStatement: text("identity_statement"),
+    coreValues: jsonb("core_values").$type<string[]>().notNull().default([]),
+    strengths: jsonb("strengths").$type<string[]>().notNull().default([]),
+    interests: jsonb("interests").$type<string[]>().notNull().default([]),
+    story: text("story"),
+    influences: text("influences"),
+    purposeStatement: text("purpose_statement"),
+    contribution: text("contribution"),
+    skills: jsonb("skills").$type<string[]>().notNull().default([]),
+    developmentAreas: jsonb("development_areas").$type<string[]>().notNull().default([]),
+    developmentObjectives: text("development_objectives"),
+    vision: text("vision"),
+    careerDirection: text("career_direction"),
+    impactAspirations: text("impact_aspirations"),
+    sharedWithMentor: boolean("shared_with_mentor").notNull().default(false),
+    version: integer("version").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("purpose_profiles_version_check", sql`${table.version} >= 0`)],
+).enableRLS();
+
+export const purposeProfileSnapshots = pgTable(
+  "purpose_profile_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("purpose_profile_snapshots_version_idx").on(table.profileId, table.version)],
+).enableRLS();
+
+/*
+ * Principle tags live in side tables rather than new columns on course_modules
+ * and reflections: existing queries never depend on them, so the application
+ * keeps working on a database where this migration has not been applied yet.
+ */
+export const modulePrinciples = pgTable(
+  "module_principles",
+  {
+    moduleId: integer("module_id").primaryKey().references((): AnyPgColumn => courseModules.id, { onDelete: "cascade" }),
+    principle: varchar("principle", { length: 16 }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("module_principles_principle_check", sql`${table.principle} in ('identity','source','purpose','potential','destiny')`)],
+).enableRLS();
+
+export const reflectionPrinciples = pgTable(
+  "reflection_principles",
+  {
+    reflectionId: integer("reflection_id").primaryKey().references(() => reflections.id, { onDelete: "cascade" }),
+    principle: varchar("principle", { length: 16 }).notNull(),
+  },
+  (table) => [check("reflection_principles_principle_check", sql`${table.principle} in ('identity','source','purpose','potential','destiny')`)],
+).enableRLS();
+
 export const assignments = pgTable("assignments", {
   id: serial("id").primaryKey(),
   curriculumKey: varchar("curriculum_key", { length: 240 }).unique(),
@@ -2145,3 +2211,34 @@ export type Testimonial = typeof testimonials.$inferSelect;
 export type DiscussionThread = typeof discussionThreads.$inferSelect;
 export type DiscussionPost = typeof discussionPosts.$inferSelect;
 export type Category = typeof categories.$inferSelect;
+
+/* ------------------------------------------------------------------ *
+ * Announcements — staff messages to an audience (README §9, §15)
+ * ------------------------------------------------------------------ */
+
+export const announcements = pgTable(
+  "announcements",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 160 }).notNull(),
+    body: text("body").notNull(),
+    audience: varchar("audience", { length: 16 }).notNull().default("everyone"),
+    cohortId: integer("cohort_id").references(() => cohorts.id, { onDelete: "cascade" }),
+    href: varchar("href", { length: 240 }),
+    status: varchar("status", { length: 16 }).notNull().default("draft"),
+    pinned: boolean("pinned").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    authorId: uuid("author_id").references(() => profiles.id, { onDelete: "set null" }),
+    version: integer("version").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("announcements_active_idx").on(table.status, table.publishedAt),
+    check("announcements_audience_check", sql`${table.audience} in ('everyone','learners','mentors','staff','cohort')`),
+    check("announcements_status_check", sql`${table.status} in ('draft','published','archived')`),
+    check("announcements_cohort_check", sql`(${table.audience} = 'cohort') = (${table.cohortId} is not null)`),
+    check("announcements_version_check", sql`${table.version} >= 0`),
+  ],
+).enableRLS();

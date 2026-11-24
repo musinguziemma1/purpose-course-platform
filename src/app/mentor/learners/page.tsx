@@ -74,9 +74,12 @@ export default async function MentorLearnersPage() {
             <div key={student.studentId} className="admin-card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-serif text-[16px] text-navy">{student.fullName}</p>
-                  <p className="text-[10.5px] uppercase tracking-[0.08em] text-stone-500">{student.title ?? "Learner"}</p>
-                  {student.focus ? <p className="text-[11px] text-stone-600">Focus: {student.focus}</p> : null}
+                  <p className="font-serif text-[17px] text-navy">{student.fullName}</p>
+                  <p className="text-[12px] uppercase tracking-[0.08em] text-stone-600">{student.title ?? "Learner"}</p>
+                  {student.focus ? <p className="text-[13px] text-stone-600">Focus: {student.focus}</p> : null}
+                  <Link href={`/mentor/learners/${student.studentId}`} className="mt-1.5 inline-flex min-h-10 items-center gap-1 text-[13px] font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 hover:text-gold-dark">
+                    Purpose Journey &amp; profile →
+                  </Link>
                 </div>
                 <div className="flex flex-wrap gap-1.5 text-[9.5px] uppercase tracking-[0.08em]">
                   <span className="rounded-full bg-cream px-2 py-0.5 text-stone-600">{student.activeGoals} active goals</span>

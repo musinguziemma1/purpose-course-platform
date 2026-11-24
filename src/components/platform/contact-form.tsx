@@ -53,21 +53,21 @@ export function ContactForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="contact-name">Your name</Label>
-          <Input id="contact-name" name="name" autoComplete="name" maxLength={160} required defaultValue={defaultName} placeholder="Your name" className="text-[12.5px]" />
+          <Input id="contact-name" name="name" autoComplete="name" maxLength={160} required defaultValue={defaultName} placeholder="Your name" />
         </div>
         <div>
           <Label htmlFor="contact-email">Email</Label>
-          <Input id="contact-email" name="email" type="email" autoComplete="email" maxLength={255} required defaultValue={defaultEmail} placeholder="you@example.com" className="text-[12.5px]" />
+          <Input id="contact-email" name="email" type="email" autoComplete="email" maxLength={255} required defaultValue={defaultEmail} placeholder="you@example.com" />
         </div>
       </div>
       <div>
         <Label htmlFor="contact-subject">Subject</Label>
-        <Input id="contact-subject" name="subject" minLength={4} maxLength={240} required placeholder="Cohort dates, partnership, or a question" className="text-[12.5px]" />
+        <Input id="contact-subject" name="subject" minLength={4} maxLength={240} required placeholder="Cohort dates, partnership, or a question" />
       </div>
       <div>
         <Label htmlFor="contact-body">Message</Label>
         <p id="contact-body-hint" className="mb-1 text-[10.5px] text-stone-500">30 to 10,000 characters</p>
-        <Textarea id="contact-body" name="body" aria-describedby="contact-body-hint" rows={5} minLength={30} maxLength={10000} required placeholder="Tell us what you need." className="text-[12.5px]" />
+        <Textarea id="contact-body" name="body" aria-describedby="contact-body-hint" rows={5} minLength={30} maxLength={10000} required placeholder="Tell us what you need." />
       </div>
       <p className="text-[10.5px] leading-relaxed text-stone-500">We store your enquiry in a staff inbox and use your email address to respond. Please avoid including passwords or sensitive personal information.</p>
       {state.error ? <p role="alert" className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11.5px] text-rose-700">{state.error}</p> : null}

@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/learning";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { PRINCIPLE_INFO, PRINCIPLE_KEYS } from "@/lib/purpose-journey";
 import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/media/file-upload";
 
@@ -103,7 +104,7 @@ export function AssignmentForm({
         rows={4}
         defaultValue={existingBody ?? ""}
         placeholder="Write your response. Be concrete — evidence beats adjectives."
-        className="text-[12.5px]"
+        
       />
       </Field>
       {status !== "reviewed" ? <FileUpload purpose="submission" onUploaded={asset => setAttachmentId(asset.id)} onBusyChange={setUploading} /> : null}
@@ -136,12 +137,12 @@ export function AssignmentForm({
   );
 }
 
-export function ReflectionForm({ sessions }: { sessions: { id: number; code: string; title: string }[] }) {
+export function ReflectionForm({ sessions, defaultPrinciple = "" }: { sessions: { id: number; code: string; title: string }[]; defaultPrinciple?: string }) {
   const [state, formAction] = useActionState<LearningState, FormData>(saveReflection, {});
   return (
     <form action={formAction} className="space-y-3">
       <Field label="Prompt or title">
-        <Input name="prompt" required placeholder="What shifted for me this week?" className="text-[12.5px]" />
+        <Input name="prompt" required placeholder="What shifted for me this week?" />
       </Field>
       <Field label="Reflection" hint="minimum 40 characters">
         <Textarea
@@ -149,12 +150,12 @@ export function ReflectionForm({ sessions }: { sessions: { id: number; code: str
           rows={5}
           required
           placeholder="Write honestly. This is a learning record, not a performance."
-          className="text-[12.5px]"
+          
         />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Related session">
-          <Select name="sessionId" defaultValue="" className="text-[12.5px]">
+          <Select name="sessionId" defaultValue="">
             <option value="">General reflection</option>
             {sessions.map((session) => (
               <option key={session.id} value={session.id}>
@@ -163,8 +164,18 @@ export function ReflectionForm({ sessions }: { sessions: { id: number; code: str
             ))}
           </Select>
         </Field>
+        <Field label="Principle" hint="Optional: which principle were you reflecting on?">
+          <Select name="principle" defaultValue={defaultPrinciple}>
+            <option value="">Not specific to one principle</option>
+            {PRINCIPLE_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {PRINCIPLE_INFO[key].name} — {PRINCIPLE_INFO[key].question}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="Visibility">
-          <Select name="visibility" defaultValue="mentor" className="text-[12.5px]">
+          <Select name="visibility" defaultValue="mentor">
             <option value="private">Private — only me</option>
             <option value="mentor">Share with my mentor</option>
             <option value="cohort">Share with the cohort</option>
@@ -185,10 +196,10 @@ export function CoachingRequestForm() {
   return (
     <form action={formAction} className="space-y-3">
       <Field label="Session title">
-        <Input name="title" required placeholder="Clarity session — purpose statement" className="text-[12.5px]" />
+        <Input name="title" required placeholder="Clarity session — purpose statement" />
       </Field>
       <Field label="What do you want to work on?" hint="optional">
-        <Textarea name="focus" rows={2} placeholder="Bring the two drafts and the gifting evidence." className="text-[12.5px]" />
+        <Textarea name="focus" rows={2} placeholder="Bring the two drafts and the gifting evidence." />
       </Field>
       <Field label="Preferred date & time">
         <Input
@@ -196,7 +207,7 @@ export function CoachingRequestForm() {
           name="scheduledFor"
           required
           defaultValue={defaultScheduledFor}
-          className="text-[12.5px]"
+          
         />
       </Field>
       <StateNote state={state} />

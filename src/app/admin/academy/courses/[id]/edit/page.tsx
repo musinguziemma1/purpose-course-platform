@@ -7,6 +7,8 @@ import { ArrowLeft, Plus, Save } from "lucide-react";
 import { getAcademyTree } from "@/db/courses";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { saveCourseForm, saveLessonForm, saveModuleForm } from "@/app/actions/academy-forms";
+import { PRINCIPLE_INFO, PRINCIPLE_KEYS, inferPrinciple } from "@/lib/purpose-journey";
+import { getModulePrinciple } from "@/db/principle-tags";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,7 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
   const settingsModule = !isNewLesson && moduleParam && moduleParam !== "new"
     ? course.modules.find((module) => module.id === Number(moduleParam)) ?? null
     : null;
+  const settingsPrinciple = settingsModule ? await getModulePrinciple(settingsModule.id) : null;
   const showCourse = !lessonParam && !moduleParam;
   const showNewModule = moduleParam === "new";
 
@@ -140,6 +143,14 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
               <label className={label} htmlFor="course-edit-summary">Summary</label>
               <textarea id="course-edit-summary" name="summary" rows={2} className={area} />
             </div>
+            <div>
+              <label className={label} htmlFor="course-edit-principle">Principle this module develops</label>
+              <select id="course-edit-principle" name="principle" defaultValue={""} className={input}>
+                <option value="">{"Work it out from the title"}</option>
+                {PRINCIPLE_KEYS.map((key) => <option key={key} value={key}>{PRINCIPLE_INFO[key].name} — {PRINCIPLE_INFO[key].question}</option>)}
+              </select>
+              <p className="mt-1 text-[13px] text-stone-600">Counts toward learners&apos; Purpose Journey for this principle.</p>
+            </div>
             <label className="flex items-center gap-2 text-[12px] text-navy">
               <input type="checkbox" name="isPreview" className="h-4 w-4 rounded border-navy/30" /> Free preview module
             </label>
@@ -168,6 +179,14 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
             <div>
               <label className={label} htmlFor="course-edit-summary">Summary</label>
               <textarea id="course-edit-summary" name="summary" rows={2} defaultValue={settingsModule.summary ?? ""} className={area} />
+            </div>
+            <div>
+              <label className={label} htmlFor="course-edit-principle">Principle this module develops</label>
+              <select id="course-edit-principle" name="principle" defaultValue={settingsPrinciple ?? ""} className={input}>
+                <option value="">{`Work it out from the title${inferPrinciple(settingsModule.title) ? ` (currently ${PRINCIPLE_INFO[inferPrinciple(settingsModule.title)!].name})` : " (no match)"}`}</option>
+                {PRINCIPLE_KEYS.map((key) => <option key={key} value={key}>{PRINCIPLE_INFO[key].name} — {PRINCIPLE_INFO[key].question}</option>)}
+              </select>
+              <p className="mt-1 text-[13px] text-stone-600">Counts toward learners&apos; Purpose Journey for this principle.</p>
             </div>
             <label className="flex items-center gap-2 text-[12px] text-navy">
               <input type="checkbox" name="isPreview" defaultChecked={settingsModule.isPreview} className="h-4 w-4 rounded border-navy/30" /> Free preview module

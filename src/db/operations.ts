@@ -1,16 +1,19 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLogs, conferenceParticipants, conferenceSignals, liveSessions } from "@/db/schema";
-import { sessionWithinEndWindow } from "@/db/live-lifecycle";
+import { sessionOpen, sessionWithinEndWindow } from "@/db/live-lifecycle";
 import { nativeConferenceAvailable } from "@/lib/conference-config";
 import { emailConfigurationError } from "@/lib/email";
+import { getSchemaReadiness } from "@/db/schema-readiness";
 
 export async function expireLiveSessions(onlyIds?: number[]) {
   return db.transaction(async tx => {
     const expired = await tx.update(liveSessions).set({ status: "ended", updatedAt: new Date() })
       .where(and(eq(liveSessions.status, "live"), sql`not (${sessionWithinEndWindow()})`, onlyIds ? inArray(liveSessions.id, onlyIds) : undefined)).returning({ id: liveSessions.id });
     if (expired.length) await tx.insert(activityLogs).values(expired.map(row => ({ action: "live.expired", entityType: "live_session", entityId: String(row.id), description: "Ended automatically after the scheduled duration and 15-minute overrun window." })));
-    await tx.delete(conferenceParticipants).where(sql`${conferenceParticipants.lastSeenAt} < now() - interval '2 minutes'`);
+    // Removal markers outlive presence so a removed participant cannot rejoin until the session closes.
+    await tx.delete(conferenceParticipants).where(and(sql`${conferenceParticipants.lastSeenAt} < now() - interval '2 minutes'`,
+      or(ne(conferenceParticipants.mode, "removed"), sql`not exists (select 1 from ${liveSessions} where ${liveSessions.roomCode} = ${conferenceParticipants.roomCode} and ${sessionOpen()})`)));
     await tx.delete(conferenceSignals).where(sql`${conferenceSignals.createdAt} < now() - interval '2 minutes'`);
     return { ended: expired.length };
   });
@@ -29,5 +32,6 @@ export async function getOperationsStatus() {
     (select count(*)::int from articles where status='scheduled' and scheduled_for < now()-interval '5 minutes') as overdue_publications,
     (select count(*)::int from notification_outbox where channel='email' and status in ('failed','needs_review','bounced','complained')) as email_attention,
     (select count(*)::int from notification_outbox where channel='email' and status='queued' and created_at < now()-interval '15 minutes') as old_queued_email`);
-  return { checkedAt: new Date().toISOString(), counts: result.rows[0], emailConfigured: !emailConfigurationError(), nativeVideoReady: nativeConferenceAvailable() };
+  const features = await getSchemaReadiness().catch(() => []);
+  return { checkedAt: new Date().toISOString(), counts: result.rows[0], emailConfigured: !emailConfigurationError(), nativeVideoReady: nativeConferenceAvailable(), features };
 }
