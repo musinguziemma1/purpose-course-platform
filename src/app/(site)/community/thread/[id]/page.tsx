@@ -25,7 +25,7 @@ export default async function ThreadPage({ params }: Params) {
   const path = `/community/thread/${thread.id}`;
 
   return (
-    <div className="min-h-screen bg-[#f6f2e9]">
+    <div className="bg-[#f6f2e9]">
       <div className="mx-auto max-w-3xl space-y-4 px-4 py-6">
         <Link
           href={communitySlug ? `/community/${communitySlug}` : "/community"}

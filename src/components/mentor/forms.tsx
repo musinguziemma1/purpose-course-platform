@@ -47,7 +47,7 @@ export function CompleteSessionForm({ sessionId, existingNotes }: { sessionId: n
         rows={3}
         defaultValue={existingNotes ?? ""}
         placeholder="What did you hear, what did you name, and what is the homework?"
-        className="text-[12.5px]"
+        
       />
       </Field>
       <StateNote state={state} />
@@ -64,7 +64,7 @@ export function ReviewSubmissionForm({ submissionId, version }: { submissionId: 
       <input type="hidden" name="version" value={version} />
       <Field label="Score out of 100"><Input name="score" type="number" required min={0} max={100} step={1} /></Field>
       <Field label="Feedback" hint="be specific">
-      <Textarea name="feedback" rows={3} required minLength={20} maxLength={10000} placeholder="One strength, one gap, one next action." className="text-[12.5px]" />
+      <Textarea name="feedback" rows={3} required minLength={20} maxLength={10000} placeholder="One strength, one gap, one next action." />
       </Field>
       <StateNote state={state} />
       <Submit label="Share feedback" pendingLabel="Sending…" />
@@ -87,10 +87,10 @@ export function ScheduleSessionForm({ students }: { students: { profileId: strin
         </Select>
       </Field>
       <Field label="Session title">
-        <Input name="title" required placeholder="Clarity session — story review" className="text-[12.5px]" />
+        <Input name="title" required placeholder="Clarity session — story review" />
       </Field>
       <Field label="Focus & preparation" hint="optional">
-        <Textarea name="focus" rows={2} placeholder="What should they bring?" className="text-[12.5px]" />
+        <Textarea name="focus" rows={2} placeholder="What should they bring?" />
       </Field>
       <Field label="Date & time">
         <Input
@@ -98,7 +98,7 @@ export function ScheduleSessionForm({ students }: { students: { profileId: strin
           name="scheduledFor"
           required
           defaultValue={defaultScheduledFor}
-          className="text-[12.5px]"
+          
         />
       </Field>
       <StateNote state={state} />

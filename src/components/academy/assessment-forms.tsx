@@ -45,7 +45,7 @@ export function GroupSubmissionForm({
     <form action={action} className="space-y-2.5">
       <input type="hidden" name="groupId" value={groupId} />
       <Field label="Deliverable title">
-        <Input name="title" required defaultValue={existingTitle ?? ""} placeholder="Gifting evidence panel — group 2" className="text-[12.5px]" />
+        <Input name="title" required defaultValue={existingTitle ?? ""} placeholder="Gifting evidence panel — group 2" />
       </Field>
       <Field label="Group output" hint="one group voice">
         <Textarea
@@ -54,7 +54,7 @@ export function GroupSubmissionForm({
           required
           defaultValue={existingBody ?? ""}
           placeholder="Summarise your group's work: what you found, what you disagreed on, and what you recommend."
-          className="text-[12.5px]"
+          
         />
       </Field>
       <Note state={state} />
@@ -77,10 +77,10 @@ export function GroupScoreForm({ submissionId }: { submissionId: number }) {
       <input type="hidden" name="submissionId" value={submissionId} />
       <div className="grid grid-cols-[5rem_1fr] items-end gap-2">
         <Field label="Score">
-          <Input name="score" type="number" min={0} max={100} defaultValue={80} className="h-9 text-[12.5px]" />
+          <Input name="score" type="number" min={0} max={100} defaultValue={80} className="h-9" />
         </Field>
         <Field label="Informative feedback" hint="visible to the group">
-          <Textarea name="feedback" rows={3} placeholder="One strength, one gap, one next action." className="text-[12.5px]" />
+          <Textarea name="feedback" rows={3} placeholder="One strength, one gap, one next action." />
         </Field>
       </div>
       <Note state={state} />
@@ -94,10 +94,10 @@ export function GroupForm({ courses, students }: { courses: { id: number; title:
   return (
     <form action={action} className="space-y-3">
       <Field label="Group name">
-        <Input name="name" required placeholder="Clarity Panel B" className="text-[12.5px]" />
+        <Input name="name" required placeholder="Clarity Panel B" />
       </Field>
       <Field label="Course" hint="optional">
-        <Select name="courseId" defaultValue="" className="text-[12.5px]">
+        <Select name="courseId" defaultValue="">
           <option value="">No specific course</option>
           {courses.map((course) => (
             <option key={course.id} value={course.id}>
@@ -111,7 +111,7 @@ export function GroupForm({ courses, students }: { courses: { id: number; title:
           name="brief"
           rows={3}
           placeholder="What the group must produce together — one deliverable, shared score."
-          className="text-[12.5px]"
+          
         />
       </Field>
       <fieldset className="min-w-0">
@@ -144,22 +144,22 @@ export function AssessmentForm({
   return (
     <form action={action} className="space-y-3">
       <Field label="Assessment title">
-        <Input name="title" required placeholder="PURP 201 — session check" className="text-[12.5px]" />
+        <Input name="title" required placeholder="PURP 201 — session check" />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Type">
-          <Select name="kind" defaultValue="session" className="text-[12.5px]">
+          <Select name="kind" defaultValue="session">
             <option value="session">Session quiz (5 questions)</option>
             <option value="level">Level exam (20 questions)</option>
           </Select>
         </Field>
         <Field label="Pass mark %">
-          <Input name="passMark" type="number" min={50} max={100} defaultValue={80} className="text-[12.5px]" />
+          <Input name="passMark" type="number" min={50} max={100} defaultValue={80} />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Level">
-          <Select name="levelId" defaultValue={levels[0]?.id ?? ""} className="text-[12.5px]">
+          <Select name="levelId" defaultValue={levels[0]?.id ?? ""}>
             {levels.map((level) => (
               <option key={level.id} value={level.id}>
                 {level.name}
@@ -168,7 +168,7 @@ export function AssessmentForm({
           </Select>
         </Field>
         <Field label="Course" hint="optional">
-          <Select name="courseId" defaultValue={courses[0]?.id ?? ""} className="text-[12.5px]">
+          <Select name="courseId" defaultValue={courses[0]?.id ?? ""}>
             <option value="">None</option>
             {courses.map((course) => (
               <option key={course.id} value={course.id}>
@@ -179,7 +179,7 @@ export function AssessmentForm({
         </Field>
       </div>
       <Field label="Module" hint="session quizzes only">
-        <Select name="moduleId" defaultValue={modules[0]?.id ?? ""} className="text-[12.5px]">
+        <Select name="moduleId" defaultValue={modules[0]?.id ?? ""}>
           <option value="">None</option>
           {modules.map((module) => (
             <option key={module.id} value={module.id}>
@@ -189,14 +189,14 @@ export function AssessmentForm({
         </Select>
       </Field>
       <Field label="Instructions">
-        <Textarea name="description" rows={2} className="text-[12.5px]" />
+        <Textarea name="description" rows={2} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Time limit (min)">
-          <Input name="timeLimitMinutes" type="number" min={5} defaultValue={15} className="text-[12.5px]" />
+          <Input name="timeLimitMinutes" type="number" min={5} defaultValue={15} />
         </Field>
         <Field label="Max attempts">
-          <Input name="maxAttempts" type="number" min={1} max={10} defaultValue={3} className="text-[12.5px]" />
+          <Input name="maxAttempts" type="number" min={1} max={10} defaultValue={3} />
         </Field>
       </div>
       <Note state={state} />
@@ -211,13 +211,13 @@ export function QuestionForm({ assessmentId, nextIndex }: { assessmentId: number
     <form action={action} className="space-y-3">
       <input type="hidden" name="assessmentId" value={assessmentId} />
       <Field label={`Question ${nextIndex}`}>
-        <Textarea name="prompt" rows={2} required placeholder="In PURP 101, purpose is best described as…" className="text-[12.5px]" />
+        <Textarea name="prompt" rows={2} required placeholder="In PURP 101, purpose is best described as…" />
       </Field>
       <div className="space-y-2">
         {[0, 1, 2, 3, 4].map((index) => (
           <div key={index} className="flex items-center gap-2">
             <span className="w-5 text-[11px] font-semibold text-stone-500">{String.fromCharCode(65 + index)}</span>
-            <Input name={`option${index}`} placeholder={index < 2 ? "Required option" : "Optional option"} className="text-[12.5px]" />
+            <Input name={`option${index}`} placeholder={index < 2 ? "Required option" : "Optional option"}  />
             <label className="inline-flex items-center gap-1 text-[10.5px] text-stone-600">
               <input type="radio" name="correctIndex" value={index} defaultChecked={index === 0} className="h-3.5 w-3.5" />
               correct
@@ -226,7 +226,7 @@ export function QuestionForm({ assessmentId, nextIndex }: { assessmentId: number
         ))}
       </div>
       <Field label="Explanation" hint="shown after submission">
-        <Textarea name="explanation" rows={2} className="text-[12.5px]" />
+        <Textarea name="explanation" rows={2} />
       </Field>
       <Note state={state} />
       <Submit label="Add question" icon="check" />

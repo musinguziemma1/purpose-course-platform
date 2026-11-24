@@ -20,8 +20,8 @@ const buttonVariants = cva(
         link: "text-navy underline decoration-gold decoration-2 underline-offset-4 hover:text-gold-dark rounded-none px-0",
       },
       size: {
-        xs: "h-7 px-2.5 text-[11px] [&_svg]:size-3",
-        sm: "h-9 px-4 text-[12.5px] [&_svg]:size-3.5",
+        xs: "h-8 px-3 text-[12px] [&_svg]:size-3.5",
+        sm: "h-9 px-4 text-[13px] [&_svg]:size-3.5",
         default: "h-11 px-6 text-sm [&_svg]:size-4",
         lg: "h-12 px-7 text-[14.5px] [&_svg]:size-4",
         icon: "h-9 w-9 [&_svg]:size-4",

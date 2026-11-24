@@ -47,21 +47,21 @@ export function MentorAssignForm({
   return (
     <form action={action} className="space-y-2.5">
       <Field label="Learner">
-        <Select name="studentId" defaultValue={learners[0]?.id ?? ""} className="text-[12.5px]">
+        <Select name="studentId" defaultValue={learners[0]?.id ?? ""}>
           {learners.map((learner) => (
             <option key={learner.id} value={learner.id}>{learner.fullName}</option>
           ))}
         </Select>
       </Field>
       <Field label="Mentor">
-        <Select name="mentorId" defaultValue={mentors[0]?.id ?? ""} className="text-[12.5px]">
+        <Select name="mentorId" defaultValue={mentors[0]?.id ?? ""}>
           {mentors.map((mentor) => (
             <option key={mentor.id} value={mentor.id}>{mentor.fullName}</option>
           ))}
         </Select>
       </Field>
       <Field label="Focus" hint="optional">
-        <Input name="focus" placeholder="Purpose statement and gifting evidence" className="text-[12.5px]" />
+        <Input name="focus" placeholder="Purpose statement and gifting evidence" />
       </Field>
       <Note state={state} />
       <Go label="Assign mentor" pending="Assigning…" />
@@ -77,13 +77,13 @@ export function GoalForm({ studentId, learnerName }: { studentId: string; learne
       <input type="hidden" name="studentId" value={studentId} />
       <p className="text-[11.5px] text-stone-600">Set a development goal for <strong className="text-navy">{learnerName}</strong>.</p>
       <Field label="Goal">
-        <Input name="title" required placeholder="Write and test a purpose statement" className="text-[12.5px]" />
+        <Input name="title" required placeholder="Write and test a purpose statement" />
       </Field>
       <Field label="How it will be evidenced">
-        <Textarea name="description" rows={2} placeholder="What does finished look like?" className="text-[12.5px]" />
+        <Textarea name="description" rows={2} placeholder="What does finished look like?" />
       </Field>
       <Field label="Review date">
-        <Input type="date" name="dueAt" defaultValue={defaultDueAt} className="text-[12.5px]" />
+        <Input type="date" name="dueAt" defaultValue={defaultDueAt} />
       </Field>
       <Note state={state} />
       <Go label="Set goal" pending="Saving…" />
@@ -116,7 +116,7 @@ export function NoteForm({ studentId }: { studentId: string }) {
   return (
     <form action={action} className="mt-1.5 space-y-1.5">
       <input type="hidden" name="studentId" value={studentId} />
-      <Textarea name="body" rows={2} placeholder="Session notes: what you heard, what you named, homework agreed." className="text-[12px]" />
+      <Textarea name="body" rows={2} placeholder="Session notes: what you heard, what you named, homework agreed." />
       <Note state={state} />
       <Go label="Save note" pending="Saving…" />
     </form>
@@ -129,7 +129,7 @@ export function FlagForm({ studentId }: { studentId: string }) {
     <form action={action} className="mt-1.5 space-y-1.5">
       <input type="hidden" name="studentId" value={studentId} />
       <div className="flex flex-wrap gap-1.5">
-        <Select name="severity" defaultValue="attention" className="h-8 w-28 text-[11.5px]">
+        <Select name="severity" defaultValue="attention" className="h-8 w-28">
           <option value="attention">attention</option>
           <option value="urgent">urgent</option>
           <option value="encouragement">encouragement</option>
@@ -148,13 +148,13 @@ export function ThreadForm({ communityId }: { communityId: number }) {
     <form action={action} className="space-y-2">
       <input type="hidden" name="communityId" value={communityId} />
       <div className="grid gap-2 sm:grid-cols-[1fr_9rem]">
-        <Input name="title" required placeholder="Give the discussion a clear title" className="text-[12.5px]" />
-        <Select name="threadType" defaultValue="discussion" className="text-[12.5px]">
+        <Input name="title" required placeholder="Give the discussion a clear title" />
+        <Select name="threadType" defaultValue="discussion">
           <option value="discussion">Discussion</option>
           <option value="question">Question</option>
         </Select>
       </div>
-      <Textarea name="prompt" rows={2} required placeholder="Add context so the room can respond well." className="text-[12.5px]" />
+      <Textarea name="prompt" rows={2} required placeholder="Add context so the room can respond well." />
       <Note state={state} />
       <Go label="Open discussion" pending="Posting…" />
     </form>
@@ -179,7 +179,7 @@ export function ReportForm({ targetType, targetId }: { targetType: string; targe
       <input type="hidden" name="targetType" value={targetType} />
       <input type="hidden" name="targetId" value={targetId} />
       <div className="flex flex-wrap gap-1.5">
-        <Select name="reason" defaultValue="Harmful or disrespectful" className="h-8 w-44 text-[11.5px]">
+        <Select name="reason" defaultValue="Harmful or disrespectful" className="h-8 w-44">
           <option>Harmful or disrespectful</option>
           <option>Spam or promotion</option>
           <option>Breach of confidence</option>
@@ -204,7 +204,7 @@ export function AttendanceForm({
   return (
     <form action={action} className="space-y-2.5">
       <Field label="Session">
-        <Select name="sessionId" defaultValue={sessions[0]?.id ?? ""} className="text-[12.5px]">
+        <Select name="sessionId" defaultValue={sessions[0]?.id ?? ""}>
           {sessions.map((session) => (
             <option key={session.id} value={session.id}>{session.title}</option>
           ))}
@@ -212,7 +212,7 @@ export function AttendanceForm({
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Status">
-          <Select name="status" defaultValue="present" className="text-[12.5px]">
+          <Select name="status" defaultValue="present">
             <option value="present">present</option>
             <option value="late">late</option>
             <option value="absent">absent</option>
@@ -220,7 +220,7 @@ export function AttendanceForm({
           </Select>
         </Field>
         <Field label="Minutes">
-          <Input name="minutes" type="number" min={0} defaultValue={90} className="text-[12.5px]" />
+          <Input name="minutes" type="number" min={0} defaultValue={90} />
         </Field>
       </div>
       <fieldset className="min-w-0">
@@ -245,29 +245,29 @@ export function CohortForm({ levels }: { levels: { id: number; name: string }[] 
   return (
     <form action={action} className="space-y-2.5">
       <Field label="Cohort name">
-        <Input name="name" required placeholder="Purpose Course — Cohort 05 · 2026" className="text-[12.5px]" />
+        <Input name="name" required placeholder="Purpose Course — Cohort 05 · 2026" />
       </Field>
       <Field label="Description">
-        <Textarea name="description" rows={2} required placeholder="Who it is for and what it will do." className="text-[12.5px]" />
+        <Textarea name="description" rows={2} required placeholder="Who it is for and what it will do." />
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Starts">
-          <Input type="date" name="startsAt" required className="text-[12.5px]" />
+          <Input type="date" name="startsAt" required />
         </Field>
         <Field label="Ends">
-          <Input type="date" name="endsAt" required className="text-[12.5px]" />
+          <Input type="date" name="endsAt" required />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Level">
-          <Select name="levelId" defaultValue={levels[0]?.id ?? ""} className="text-[12.5px]">
+          <Select name="levelId" defaultValue={levels[0]?.id ?? ""}>
             {levels.map((level) => (
               <option key={level.id} value={level.id}>{level.name}</option>
             ))}
           </Select>
         </Field>
         <Field label="Capacity">
-          <Input name="capacity" type="number" min={5} defaultValue={50} className="text-[12.5px]" />
+          <Input name="capacity" type="number" min={5} defaultValue={50} />
         </Field>
       </div>
       <Field label="Weeks" hint="one per line — Title | Theme">
@@ -275,7 +275,7 @@ export function CohortForm({ levels }: { levels: { id: number; name: string }[] 
           name="weeks"
           rows={4}
           defaultValue={"Identity | Identity\nSource | Source\nPurpose | Purpose\nPotential | Potential\nVision | Destiny\nRelationships | Potential\nAction | Purpose\nTransformation | Identity"}
-          className="text-[12.5px]"
+          
         />
       </Field>
       <Note state={state} />
@@ -289,11 +289,11 @@ export function OrgForm() {
   return (
     <form action={action} className="space-y-2.5">
       <Field label="Organisation name">
-        <Input name="name" required placeholder="Purpose Partners Kenya" className="text-[12.5px]" />
+        <Input name="name" required placeholder="Purpose Partners Kenya" />
       </Field>
       <div className="grid grid-cols-2 gap-2">
         <Field label="Plan">
-          <Select name="plan" defaultValue="partner" className="text-[12.5px]">
+          <Select name="plan" defaultValue="partner">
             <option value="platform">platform</option>
             <option value="partner">partner</option>
             <option value="church">church</option>
@@ -301,7 +301,7 @@ export function OrgForm() {
           </Select>
         </Field>
         <Field label="Country">
-          <Input name="country" placeholder="Kenya" className="text-[12.5px]" />
+          <Input name="country" placeholder="Kenya" />
         </Field>
       </div>
       <Note state={state} />

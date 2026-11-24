@@ -42,20 +42,20 @@ export function LevelForm() {
   return (
     <form action={action} className="space-y-3">
       <Field label="Level name">
-        <Input name="name" required placeholder="Advanced" className="text-[12.5px]" />
+        <Input name="name" required placeholder="Advanced" />
       </Field>
       <Field label="Tagline">
-        <Input name="tagline" required placeholder="Influence and Impact" className="text-[12.5px]" />
+        <Input name="tagline" required placeholder="Influence and Impact" />
       </Field>
       <Field label="Description">
-        <Textarea name="description" rows={3} required placeholder="What this level forms in the participant." className="text-[12.5px]" />
+        <Textarea name="description" rows={3} required placeholder="What this level forms in the participant." />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Weeks">
-          <Input name="weeks" type="number" min={1} max={20} defaultValue={5} className="text-[12.5px]" />
+          <Input name="weeks" type="number" min={1} max={20} defaultValue={5} />
         </Field>
         <Field label="Accent">
-          <Select name="accent" defaultValue="teal" className="text-[12.5px]">
+          <Select name="accent" defaultValue="teal">
             {ACCENTS.map((accent) => (
               <option key={accent} value={accent}>
                 {accent}
@@ -65,7 +65,7 @@ export function LevelForm() {
         </Field>
       </div>
       <Field label="Outcomes" hint="one per line">
-        <Textarea name="outcomes" rows={3} placeholder={"Articulate a purpose statement\nBuild a 12-month plan"} className="text-[12.5px]" />
+        <Textarea name="outcomes" rows={3} placeholder={"Articulate a purpose statement\nBuild a 12-month plan"} />
       </Field>
       <Note state={state} />
       <SaveButton label="Create level" icon="plus" />
@@ -78,7 +78,7 @@ export function CourseForm({ levels }: { levels: { id: number; name: string }[] 
   return (
     <form action={action} className="space-y-3">
       <Field label="Level">
-        <Select name="levelId" defaultValue={levels[0]?.id ?? ""} className="text-[12.5px]">
+        <Select name="levelId" defaultValue={levels[0]?.id ?? ""}>
           {levels.map((level) => (
             <option key={level.id} value={level.id}>
               {level.name}
@@ -87,20 +87,20 @@ export function CourseForm({ levels }: { levels: { id: number; name: string }[] 
         </Select>
       </Field>
       <Field label="Course title">
-        <Input name="title" required placeholder="Purpose Discovery and Clarity" className="text-[12.5px]" />
+        <Input name="title" required placeholder="Purpose Discovery and Clarity" />
       </Field>
       <Field label="Subtitle" hint="optional">
-        <Input name="subtitle" placeholder="From vague calling to a defensible statement" className="text-[12.5px]" />
+        <Input name="subtitle" placeholder="From vague calling to a defensible statement" />
       </Field>
       <Field label="Summary">
-        <Textarea name="summary" rows={3} required placeholder="What the course covers and who it serves." className="text-[12.5px]" />
+        <Textarea name="summary" rows={3} required placeholder="What the course covers and who it serves." />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Estimated hours">
-          <Input name="estimatedHours" type="number" min={1} max={60} defaultValue={4} className="text-[12.5px]" />
+          <Input name="estimatedHours" type="number" min={1} max={60} defaultValue={4} />
         </Field>
         <Field label="Accent">
-          <Select name="accent" defaultValue="green" className="text-[12.5px]">
+          <Select name="accent" defaultValue="green">
             {ACCENTS.map((accent) => (
               <option key={accent} value={accent}>
                 {accent}
@@ -143,13 +143,13 @@ export function CourseSettingsForm({
     <form action={action} className="space-y-3">
       <input type="hidden" name="courseId" value={course.id} />
       <Field label="Title">
-        <Input name="title" defaultValue={course.title} className="text-[12.5px]" />
+        <Input name="title" defaultValue={course.title} />
       </Field>
       <Field label="Subtitle">
-        <Input name="subtitle" defaultValue={course.subtitle ?? ""} className="text-[12.5px]" />
+        <Input name="subtitle" defaultValue={course.subtitle ?? ""} />
       </Field>
       <Field label="Summary">
-        <Textarea name="summary" rows={3} defaultValue={course.summary} className="text-[12.5px]" />
+        <Textarea name="summary" rows={3} defaultValue={course.summary} />
       </Field>
       <Field label="Description">
         <MediaEditor name="description" rows={6} defaultValue={course.description ?? ""} className="text-[12.5px]" />
@@ -159,7 +159,7 @@ export function CourseSettingsForm({
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Accent">
-          <Select name="accent" defaultValue={course.accent} className="text-[12.5px]">
+          <Select name="accent" defaultValue={course.accent}>
             {ACCENTS.map((accent) => (
               <option key={accent} value={accent}>
                 {accent}
@@ -168,7 +168,7 @@ export function CourseSettingsForm({
           </Select>
         </Field>
         <Field label="Status">
-          <Select name="status" defaultValue={course.status} className="text-[12.5px]">
+          <Select name="status" defaultValue={course.status}>
             <option value="draft">Draft</option>
             <option value="published">Published</option>
             <option value="archived">Archived</option>
@@ -176,7 +176,7 @@ export function CourseSettingsForm({
         </Field>
       </div>
       <Field label="Estimated hours">
-        <Input name="estimatedHours" type="number" min={1} defaultValue={course.estimatedHours} className="text-[12.5px]" />
+        <Input name="estimatedHours" type="number" min={1} defaultValue={course.estimatedHours} />
       </Field>
       <label className="flex items-center gap-2 text-[12px] text-navy">
         <input
@@ -199,18 +199,18 @@ export function ModuleForm({ courseId }: { courseId: number }) {
     <form action={action} className="space-y-3">
       <input type="hidden" name="courseId" value={courseId} />
       <Field label="Module title">
-        <Input name="title" required placeholder="Discovering Your Purpose" className="text-[12.5px]" />
+        <Input name="title" required placeholder="Discovering Your Purpose" />
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Session code" hint="optional">
-          <Input name="sessionCode" placeholder="PURP 201" className="text-[12.5px]" />
+          <Input name="sessionCode" placeholder="PURP 201" />
         </Field>
         <Field label="Minutes">
-          <Input name="estimatedMinutes" type="number" min={5} defaultValue={45} className="text-[12.5px]" />
+          <Input name="estimatedMinutes" type="number" min={5} defaultValue={45} />
         </Field>
       </div>
       <Field label="Summary" hint="optional">
-        <Textarea name="summary" rows={2} className="text-[12.5px]" />
+        <Textarea name="summary" rows={2} />
       </Field>
       <label className="flex items-center gap-2 text-[12px] text-navy">
         <input type="checkbox" name="isPreview" className="h-4 w-4 rounded border-navy/30 text-gold" />
@@ -234,11 +234,11 @@ export function ModuleSettingsForm({
     <form action={action} className="space-y-2.5">
       <input type="hidden" name="moduleId" value={module.id} />
       <input type="hidden" name="courseId" value={courseId} />
-      <Input name="title" defaultValue={module.title} className="text-[12.5px]" />
-      <Textarea name="summary" rows={2} defaultValue={module.summary ?? ""} placeholder="Module summary" className="text-[12.5px]" />
+      <Input name="title" defaultValue={module.title} />
+      <Textarea name="summary" rows={2} defaultValue={module.summary ?? ""} placeholder="Module summary" />
       <div className="grid grid-cols-2 gap-2">
-        <Input name="sessionCode" defaultValue={module.sessionCode ?? ""} placeholder="PURP 201" className="text-[12px]" />
-        <Input name="estimatedMinutes" type="number" min={5} defaultValue={module.estimatedMinutes} className="text-[12px]" />
+        <Input name="sessionCode" defaultValue={module.sessionCode ?? ""} placeholder="PURP 201" />
+        <Input name="estimatedMinutes" type="number" min={5} defaultValue={module.estimatedMinutes} />
       </div>
       <label className="flex items-center gap-2 text-[11.5px] text-navy">
         <input type="checkbox" name="isPreview" defaultChecked={module.isPreview} className="h-3.5 w-3.5 rounded border-navy/30 text-gold" />
@@ -286,10 +286,10 @@ export function LessonForm({
       {lesson ? <input type="hidden" name="lessonId" value={lesson.id} /> : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Lesson title">
-          <Input name="title" required defaultValue={lesson?.title} placeholder="Discovering Your Purpose" className="text-[12.5px]" />
+          <Input name="title" required defaultValue={lesson?.title} placeholder="Discovering Your Purpose" />
         </Field>
         <Field label="Format">
-          <Select name="kind" defaultValue={lesson?.kind ?? "reading"} className="text-[12.5px]">
+          <Select name="kind" defaultValue={lesson?.kind ?? "reading"}>
             {KINDS.map((kind) => (
               <option key={kind} value={kind}>
                 {kind}
@@ -299,7 +299,7 @@ export function LessonForm({
         </Field>
       </div>
       <Field label="Summary">
-        <Input name="summary" defaultValue={lesson?.summary ?? ""} placeholder="One line shown in the outline" className="text-[12.5px]" />
+        <Input name="summary" defaultValue={lesson?.summary ?? ""} placeholder="One line shown in the outline" />
       </Field>
       <Field label="Structured content" hint="markdown: ## headings, lists, quotes, :::callout">
         <MediaEditor name="body" rows={7} required defaultValue={lesson?.body} placeholder="Write the teaching in sections…" className="text-[12.5px]" />
@@ -315,27 +315,27 @@ export function LessonForm({
           <MediaField name="imageUrl" kind="image" defaultValue={lesson?.imageUrl ?? ""} placeholder="https://…jpg" />
         </Field>
         <Field label="Image alt text">
-          <Input name="imageAlt" defaultValue={lesson?.imageAlt ?? ""} className="text-[12px]" />
+          <Input name="imageAlt" defaultValue={lesson?.imageAlt ?? ""} />
         </Field>
         <Field label="Download URL" hint="worksheet / PDF">
           <MediaField name="downloadUrl" defaultValue={lesson?.downloadUrl ?? ""} placeholder="/api/resources/…/download" />
         </Field>
         <Field label="Download label">
-          <Input name="downloadLabel" defaultValue={lesson?.downloadLabel ?? ""} placeholder="Download the worksheet" className="text-[12px]" />
+          <Input name="downloadLabel" defaultValue={lesson?.downloadLabel ?? ""} placeholder="Download the worksheet" />
         </Field>
       </div>
       <Field label="Practice prompt">
-        <Textarea name="practicePrompt" rows={2} defaultValue={lesson?.practicePrompt ?? ""} className="text-[12.5px]" />
+        <Textarea name="practicePrompt" rows={2} defaultValue={lesson?.practicePrompt ?? ""} />
       </Field>
       <Field label="Transcript / teaching notes">
-        <Textarea name="transcript" rows={2} defaultValue={lesson?.transcript ?? ""} className="text-[12.5px]" />
+        <Textarea name="transcript" rows={2} defaultValue={lesson?.transcript ?? ""} />
       </Field>
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Minutes">
-          <Input name="durationMinutes" type="number" min={1} defaultValue={lesson?.durationMinutes ?? 10} className="text-[12.5px]" />
+          <Input name="durationMinutes" type="number" min={1} defaultValue={lesson?.durationMinutes ?? 10} />
         </Field>
         <Field label="Status">
-          <Select name="status" defaultValue={lesson?.status ?? "published"} className="text-[12.5px]">
+          <Select name="status" defaultValue={lesson?.status ?? "published"}>
             <option value="published">Published</option>
             <option value="draft">Draft</option>
             <option value="archived">Archived</option>

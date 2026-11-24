@@ -35,7 +35,7 @@ export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHead
 }
 
 export function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-[12.5px] leading-relaxed text-stone-600", className)} {...props} />;
+  return <p className={cn("text-[14px] leading-relaxed text-stone-600", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -87,7 +87,7 @@ export function Stat({
   return (
     <div className={cn("admin-card group relative overflow-hidden p-4", className)}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[9.5px] font-semibold uppercase leading-tight tracking-[0.1em] text-stone-500">{label}</p>
+        <p className="text-[12px] font-semibold uppercase leading-tight tracking-[0.08em] text-stone-600">{label}</p>
         {Icon ? (
           <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-md", tones[tone])}>
             <Icon className="h-3.5 w-3.5" />
@@ -95,7 +95,7 @@ export function Stat({
         ) : null}
       </div>
       <p className="numeric mt-2 font-serif text-2xl leading-none text-navy">{value}</p>
-      {hint ? <p className="mt-1.5 text-[10.5px] leading-snug text-stone-500">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-[12px] leading-snug text-stone-600">{hint}</p> : null}
     </div>
   );
 }
@@ -121,8 +121,8 @@ export function Progress({
     <div className={cn("w-full", className)}>
       {label || showValue ? (
         <div className="mb-1 flex items-baseline justify-between gap-2">
-          {label ? <span className="text-[11px] text-stone-600">{label}</span> : null}
-          {showValue ? <span className="numeric text-[10.5px] font-semibold text-navy">{clamped}%</span> : null}
+          {label ? <span className="text-[13px] text-stone-600">{label}</span> : null}
+          {showValue ? <span className="numeric text-[12px] font-semibold tabular-nums text-navy">{clamped}%</span> : null}
         </div>
       ) : null}
       <div
@@ -168,7 +168,7 @@ export function EmptyState({
       ) : null}
       <p className="mt-3 font-serif text-lg text-navy">{title}</p>
       {description ? (
-        <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-stone-600">{description}</p>
+        <p className="mx-auto mt-1 max-w-md text-[14px] leading-relaxed text-stone-600">{description}</p>
       ) : null}
       {action ? <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>
@@ -198,13 +198,13 @@ export function PageHeader({
       {image ? <HeroBackdrop src={image} /> : null}
       <div className="relative min-w-0">
         {eyebrow ? (
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold-dark">{eyebrow}</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-gold-dark">{eyebrow}</p>
         ) : null}
         <h1 className="mt-1.5 font-serif text-[1.6rem] leading-tight tracking-tight text-navy sm:text-[1.85rem]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-stone-600">{description}</p>
+          <p className="mt-1.5 max-w-2xl text-[15px] leading-relaxed text-stone-600">{description}</p>
         ) : null}
         {meta ? <div className="mt-2 flex flex-wrap items-center gap-2">{meta}</div> : null}
       </div>

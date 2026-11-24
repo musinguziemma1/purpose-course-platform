@@ -44,7 +44,6 @@ export default async function MentorOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <UpcomingEvents />
       <PageHeader
         image="/images/mentor-guidance.jpg"
         eyebrow={<span className="text-[#155e63]">Mentorship workspace</span>}
@@ -66,6 +65,7 @@ export default async function MentorOverviewPage() {
           </Link>
         }
       />
+      <UpcomingEvents />
 
       <div className="relative overflow-hidden rounded-xl border border-navy/10">
         <img

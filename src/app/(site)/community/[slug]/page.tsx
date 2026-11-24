@@ -19,7 +19,7 @@ export default async function CommunityPage({ params }: Params) {
   const { community, threads, members, joined } = record;
 
   return (
-    <div className="min-h-screen bg-[#f6f2e9]">
+    <div className="bg-[#f6f2e9]">
       <div className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         <Link href="/community" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
           <ArrowLeft className="h-3.5 w-3.5" /> All communities

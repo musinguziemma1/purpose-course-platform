@@ -32,7 +32,7 @@ export function MediaField({
         value={value}
         onChange={(event) => setValue(event.target.value)}
         placeholder={placeholder ?? "Choose a library file or enter its URL"}
-        className="text-[12px]"
+        
       />
       <button
         type="button"

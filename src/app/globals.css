@@ -93,11 +93,19 @@
   p {
     text-wrap: pretty;
   }
-  /* one consistent focus treatment for the whole product */
+  /* One consistent focus treatment for the whole product. gold-dark keeps at
+     least 3:1 against both the ivory surfaces and the navy sidebars. */
   :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-gold);
+    outline: 3px solid var(--color-gold-dark);
     outline-offset: 2px;
     border-radius: 6px;
+  }
+  /* Tailwind v4 no longer gives buttons a pointer cursor; clickable things should show one. */
+  :where(button, [role="button"], summary, label[for]):not(:disabled, [aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  :where(button, input, select, textarea):disabled {
+    cursor: not-allowed;
   }
   input[type="checkbox"],
   input[type="radio"] {

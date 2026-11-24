@@ -4,10 +4,11 @@ import { and, count, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { assignments, coachingSessions, liveSessions } from "@/db/schema";
 import { getSessionUser, homePathForRole } from "@/lib/auth";
-import { WorkspaceShell, type WorkspaceNavItem } from "@/components/workspace/workspace-shell";
+import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { liveReadable } from "@/db/learning-access";
 import { profileIsComplete } from "@/lib/profile";
 import { assignmentReadable } from "@/db/assignment-workflow";
+import { learnerNavigation, workspacesFor } from "@/lib/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -24,45 +25,25 @@ export default async function LearnLayout({ children }: { children: ReactNode })
 
   const [openAssignments, openSessions, upcomingLive] = await Promise.all([
     db.select({ value: count() }).from(assignments).where(assignmentReadable(user)),
-    db
-      .select({ value: count() })
-      .from(coachingSessions)
-      .where(eq(coachingSessions.studentId, user.profileId)),
-    db
-      .select({ value: count() })
-      .from(liveSessions)
-      .where(and(gte(liveSessions.startsAt, new Date()), liveReadable(user))),
+    db.select({ value: count() }).from(coachingSessions).where(and(eq(coachingSessions.studentId, user.profileId), eq(coachingSessions.status, "scheduled"))),
+    db.select({ value: count() }).from(liveSessions).where(and(gte(liveSessions.startsAt, new Date()), liveReadable(user))),
   ]);
-
-  const nav: WorkspaceNavItem[] = [
-    { href: "/learn", label: "Dashboard", icon: "home" },
-    { href: "/learn/courses", label: "Courses", icon: "book" },
-    { href: "/learn/live", label: "Live sessions", icon: "calendar", badge: Number(upcomingLive[0]?.value ?? 0) },
-    { href: "/learn/cohort", label: "My cohort", icon: "users" },
-    { href: "/learn/instruments", label: "Purpose assessments", icon: "target" },
-    { href: "/learn/goals", label: "Goals & mentor", icon: "award" },
-    { href: "/learn/notifications", label: "Inbox & achievements", icon: "bell" },
-    { href: "/learn/programme", label: "Programme", icon: "layers" },
-    { href: "/learn/assignments", label: "Assignments", icon: "clipboard", badge: Number(openAssignments[0]?.value ?? 0) },
-    { href: "/learn/assessments", label: "Quizzes & exams", icon: "target" },
-    { href: "/learn/groups", label: "Group work", icon: "users" },
-    { href: "/learn/reflections", label: "Reflections", icon: "notebook" },
-    { href: "/learn/mentor", label: "My mentor", icon: "user", badge: Number(openSessions[0]?.value ?? 0) },
-    { href: "/learn/certificates", label: "Certificates", icon: "award" },
-    { href: "/community", label: "Community", icon: "message" },
-    { href: "/learn/settings", label: "Profile & settings", icon: "user" },
-  ];
 
   return (
     <WorkspaceShell
-      nav={nav}
+      sections={learnerNavigation({
+        upcomingLive: Number(upcomingLive[0]?.value ?? 0),
+        openAssignments: Number(openAssignments[0]?.value ?? 0),
+        coaching: Number(openSessions[0]?.value ?? 0),
+      })}
       user={{ profileId: user.profileId, fullName: user.fullName, roleName: user.roleName, title: user.title }}
-      workspaceName="Academy"
-      workspaceTitle="My learning"
+      workspaceName="My learning"
+      workspaceHome="/learn"
+      workspaces={workspacesFor(user)}
       accent="gold"
       reviewMode={Boolean(user.isDemo)}
+      banner={user.isDemoAccount ? <p className="border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-navy sm:px-6">Demo student account · Practice work is kept separate from production learning reports.</p> : null}
     >
-      {user.isDemoAccount ? <p className="mb-4 rounded-lg border border-gold/30 bg-gold/10 p-3 text-sm text-navy">Demo Student · Your practice work is separate from production learning reports.</p> : null}
       {children}
     </WorkspaceShell>
   );

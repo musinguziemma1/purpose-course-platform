@@ -16,7 +16,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ code: s
   const record = await getCertificateByCode(code);
 
   return (
-    <div className="min-h-screen bg-cream/50">
+    <div className="bg-cream/50">
       <header className="border-b border-navy/10 bg-paper">
         <div className="shell flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">

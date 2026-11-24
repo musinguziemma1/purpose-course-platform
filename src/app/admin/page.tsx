@@ -47,7 +47,6 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <UpcomingEvents />
       <PageHeader
         image="/images/learning-together.jpg"
         eyebrow={`${workspaceLabelForRole(user?.roleSlug)} · ${user?.roleName ?? "Staff"}`}
@@ -82,6 +81,7 @@ export default async function AdminOverviewPage() {
           </>
         }
       />
+      <UpcomingEvents />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map((card) => (
