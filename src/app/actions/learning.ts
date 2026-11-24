@@ -1,5 +1,6 @@
 "use server";
 
+import { isPrincipleKey } from "@/lib/purpose-journey";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
@@ -52,6 +53,8 @@ export async function saveReflection(_prev: LearningState, formData: FormData): 
   const body = String(formData.get("body") ?? "").trim();
   const visibility = String(formData.get("visibility") ?? "mentor") as "private" | "mentor" | "cohort";
   const sessionIdRaw = String(formData.get("sessionId") ?? "");
+  const principleRaw = String(formData.get("principle") ?? "");
+  const principle = isPrincipleKey(principleRaw) ? principleRaw : null;
 
   if (!["private", "mentor", "cohort"].includes(visibility)) return { error: "Choose a valid sharing option." };
 
@@ -72,6 +75,7 @@ export async function saveReflection(_prev: LearningState, formData: FormData): 
     prompt: prompt.slice(0, 200),
     body: body.slice(0, 4000),
     visibility,
+    principle,
   });
 
   await db.insert(activityLogs).values({

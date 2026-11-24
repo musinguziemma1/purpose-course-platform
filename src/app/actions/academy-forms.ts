@@ -1,5 +1,6 @@
 "use server";
 
+import { isPrincipleKey } from "@/lib/purpose-journey";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, max } from "drizzle-orm";
@@ -67,6 +68,8 @@ export async function saveModuleForm(formData: FormData) {
   const moduleId = Number(formData.get("moduleId") ?? 0);
   const title = t(formData, "title");
   if (!courseId || title.length < 4) return;
+  const principleValue = String(formData.get("principle") ?? "");
+  const principle = isPrincipleKey(principleValue) ? principleValue : null;
 
   if (moduleId) {
     await db
@@ -77,6 +80,7 @@ export async function saveModuleForm(formData: FormData) {
         sessionCode: n(formData, "sessionCode"),
         estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
         isPreview: formData.get("isPreview") === "on",
+      ...(formData.has("principle") ? { principle } : {}),
       })
       .where(eq(courseModules.id, moduleId));
   } else {
@@ -91,6 +95,7 @@ export async function saveModuleForm(formData: FormData) {
         sessionCode: n(formData, "sessionCode"),
         estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
         isPreview: formData.get("isPreview") === "on",
+        principle,
         sortOrder: Number(orderRow?.value ?? 0) + 1,
       })
       .onConflictDoNothing();

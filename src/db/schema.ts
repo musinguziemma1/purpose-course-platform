@@ -794,10 +794,57 @@ export const reflections = pgTable(
     prompt: varchar("prompt", { length: 240 }).notNull(),
     body: text("body").notNull(),
     visibility: reflectionVisibilityEnum("visibility").notNull().default("mentor"),
+    /** Optional principle the learner was reflecting on; feeds the Purpose Journey. */
+    principle: varchar("principle", { length: 16 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("reflections_author_idx").on(table.authorProfileId, table.createdAt)],
+  (table) => [
+    index("reflections_author_idx").on(table.authorProfileId, table.createdAt),
+    check("reflections_principle_check", sql`${table.principle} is null or ${table.principle} in ('identity','source','purpose','potential','destiny')`),
+  ],
 );
+
+/* ------------------------------------------------------------------ *
+ * Purpose Profile — the learner's evolving self-understanding (README §3)
+ * ------------------------------------------------------------------ */
+
+export const purposeProfiles = pgTable(
+  "purpose_profiles",
+  {
+    profileId: uuid("profile_id").primaryKey().references(() => profiles.id, { onDelete: "cascade" }),
+    identityStatement: text("identity_statement"),
+    coreValues: jsonb("core_values").$type<string[]>().notNull().default([]),
+    strengths: jsonb("strengths").$type<string[]>().notNull().default([]),
+    interests: jsonb("interests").$type<string[]>().notNull().default([]),
+    story: text("story"),
+    influences: text("influences"),
+    purposeStatement: text("purpose_statement"),
+    contribution: text("contribution"),
+    skills: jsonb("skills").$type<string[]>().notNull().default([]),
+    developmentAreas: jsonb("development_areas").$type<string[]>().notNull().default([]),
+    developmentObjectives: text("development_objectives"),
+    vision: text("vision"),
+    careerDirection: text("career_direction"),
+    impactAspirations: text("impact_aspirations"),
+    sharedWithMentor: boolean("shared_with_mentor").notNull().default(false),
+    version: integer("version").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("purpose_profiles_version_check", sql`${table.version} >= 0`)],
+).enableRLS();
+
+export const purposeProfileSnapshots = pgTable(
+  "purpose_profile_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("purpose_profile_snapshots_version_idx").on(table.profileId, table.version)],
+).enableRLS();
 
 export const assignments = pgTable("assignments", {
   id: serial("id").primaryKey(),
@@ -985,9 +1032,14 @@ export const courseModules = pgTable(
     estimatedMinutes: integer("estimated_minutes").notNull().default(45),
     isPreview: boolean("is_preview").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
+    /** Which of the five principles this module develops; null means "infer from the title". */
+    principle: varchar("principle", { length: 16 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex("course_modules_slug_idx").on(table.courseId, table.slug)],
+  (table) => [
+    uniqueIndex("course_modules_slug_idx").on(table.courseId, table.slug),
+    check("course_modules_principle_check", sql`${table.principle} is null or ${table.principle} in ('identity','source','purpose','potential','destiny')`),
+  ],
 );
 
 export const lessons = pgTable(

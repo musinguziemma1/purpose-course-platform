@@ -17,6 +17,8 @@ import { EmptyState, PageHeader, Progress, Stat } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getStudentWorkspace } from "@/db/academy";
 import { getLearnerAnalytics } from "@/db/analytics";
+import { getPurposeJourney } from "@/db/purpose-journey";
+import { NextSteps, PrincipleProgress } from "@/components/learn/purpose-journey-view";
 import { getSessionUser } from "@/lib/auth";
 import { formatDate, formatDateTime, relativeTime } from "@/lib/utils";
 
@@ -56,7 +58,7 @@ export default async function StudentDashboardPage() {
   const user = await getSessionUser();
   const workspace = user ? await getStudentWorkspace(user.profileId) : null;
   if (!workspace || !user) return null;
-  const analytics = await getLearnerAnalytics(user.profileId);
+  const [analytics, journey] = await Promise.all([getLearnerAnalytics(user.profileId), getPurposeJourney(user.profileId, user)]);
 
   const {
     enrollment,
@@ -80,7 +82,6 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <UpcomingEvents />
       <PageHeader
         image="/images/study-partners.jpg"
         eyebrow="Purpose Course Academy"
@@ -102,12 +103,40 @@ export default async function StudentDashboardPage() {
         actions={
           <Link
             href="/learn/programme"
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-navy px-4 text-[12.5px] font-semibold text-paper shadow-sm transition-colors hover:bg-navy-700"
+            className="inline-flex h-11 items-center gap-2 rounded-full bg-navy px-5 text-[14px] font-semibold text-paper shadow-sm transition-[transform,background-color] duration-150 hover:bg-navy-700 active:scale-[0.97]"
           >
-            <BookOpen className="h-4 w-4" /> Open the programme
+            <BookOpen aria-hidden className="h-4 w-4" /> Open the programme
           </Link>
         }
       />
+
+      {journey ? (
+        <section aria-labelledby="journey-heading" className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
+          <div className="admin-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 id="journey-heading" className="font-serif text-2xl text-navy">My Purpose Journey</h2>
+                <p className="mt-1 text-[14px] text-stone-600">Identity → Source → Purpose → Potential → Destiny</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-stone-600">Overall development</p>
+                <p className="font-serif text-3xl tabular-nums text-navy">{journey.overall}%</p>
+              </div>
+            </div>
+            <div className="mt-5"><PrincipleProgress principles={journey.principles} /></div>
+            <Link href="/learn/journey" className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-[14px] font-semibold text-navy underline decoration-gold decoration-2 underline-offset-4 hover:text-gold-dark">
+              See what shapes each principle <ArrowRight aria-hidden className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="admin-card p-5 sm:p-6">
+            <h2 className="font-serif text-xl text-navy">Recommended for you</h2>
+            <p className="mt-1 text-[13px] text-stone-600">Next steps chosen from where you have the most room to grow.</p>
+            <div className="mt-3"><NextSteps items={journey.recommendations} /></div>
+          </div>
+        </section>
+      ) : null}
+
+      <UpcomingEvents />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <div className="admin-card relative overflow-hidden p-6">

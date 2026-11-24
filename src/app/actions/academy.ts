@@ -1,5 +1,6 @@
 "use server";
 
+import { isPrincipleKey } from "@/lib/purpose-journey";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, max } from "drizzle-orm";
@@ -228,6 +229,7 @@ export async function createModule(_prev: AcademyState, formData: FormData): Pro
       sessionCode: nullable(formData, "sessionCode"),
       estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
       isPreview: formData.get("isPreview") === "on",
+      principle: isPrincipleKey(formData.get("principle")) ? (formData.get("principle") as string) : null,
       sortOrder: Number(orderRow?.value ?? 0) + 1,
     });
   } catch {
@@ -255,6 +257,7 @@ export async function updateModule(_prev: AcademyState, formData: FormData): Pro
       sessionCode: nullable(formData, "sessionCode"),
       estimatedMinutes: Number(formData.get("estimatedMinutes") ?? 45) || 45,
       isPreview: formData.get("isPreview") === "on",
+      ...(formData.has("principle") ? { principle: isPrincipleKey(formData.get("principle")) ? (formData.get("principle") as string) : null } : {}),
     })
     .where(eq(courseModules.id, moduleId));
 
