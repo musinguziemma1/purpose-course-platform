@@ -1,7 +1,7 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { activityLogs, conferenceParticipants, conferenceSignals, liveSessions } from "@/db/schema";
-import { sessionWithinEndWindow } from "@/db/live-lifecycle";
+import { sessionOpen, sessionWithinEndWindow } from "@/db/live-lifecycle";
 import { nativeConferenceAvailable } from "@/lib/conference-config";
 import { emailConfigurationError } from "@/lib/email";
 
@@ -10,7 +10,9 @@ export async function expireLiveSessions(onlyIds?: number[]) {
     const expired = await tx.update(liveSessions).set({ status: "ended", updatedAt: new Date() })
       .where(and(eq(liveSessions.status, "live"), sql`not (${sessionWithinEndWindow()})`, onlyIds ? inArray(liveSessions.id, onlyIds) : undefined)).returning({ id: liveSessions.id });
     if (expired.length) await tx.insert(activityLogs).values(expired.map(row => ({ action: "live.expired", entityType: "live_session", entityId: String(row.id), description: "Ended automatically after the scheduled duration and 15-minute overrun window." })));
-    await tx.delete(conferenceParticipants).where(sql`${conferenceParticipants.lastSeenAt} < now() - interval '2 minutes'`);
+    // Removal markers outlive presence so a removed participant cannot rejoin until the session closes.
+    await tx.delete(conferenceParticipants).where(and(sql`${conferenceParticipants.lastSeenAt} < now() - interval '2 minutes'`,
+      or(ne(conferenceParticipants.mode, "removed"), sql`not exists (select 1 from ${liveSessions} where ${liveSessions.roomCode} = ${conferenceParticipants.roomCode} and ${sessionOpen()})`)));
     await tx.delete(conferenceSignals).where(sql`${conferenceSignals.createdAt} < now() - interval '2 minutes'`);
     return { ended: expired.length };
   });

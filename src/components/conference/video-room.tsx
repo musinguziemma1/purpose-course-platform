@@ -1,456 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Copy,
   Hand,
   Loader2,
-  LogOut,
   Mic,
   MicOff,
   MonitorUp,
   PhoneOff,
+  Pin,
+  PinOff,
+  RefreshCw,
   ScreenShare,
+  Settings2,
   ShieldCheck,
   Signal,
-  UserRound,
+  UserMinus,
+  UserPlus,
+  Users,
   Video,
   VideoOff,
-  Wifi,
+  Volume2,
+  WifiOff,
+  X,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import type { ConferencePeer } from "@/lib/conference-client";
+import { useConference, type LinkQuality, type RemoteMedia } from "@/components/conference/use-conference";
 
-type Peer = {
-  peerId: string;
-  displayName: string;
-  role: string;
-  mode: string;
-  audioEnabled: boolean;
-  videoEnabled: boolean;
-  sharingScreen: boolean;
-  handRaised: boolean;
-};
+type Props = { roomCode: string; selfName: string; isHostRole: boolean; onLeaveHref: string };
 
-type SignalEnvelope = { id: number; fromPeer: string; kind: string; payload: Record<string, unknown> };
-
-type Connection = {
-  pc: RTCPeerConnection;
-  pendingIce: RTCIceCandidateInit[];
-  remoteSet: boolean;
-  polite: boolean;
-};
-
-const POLL_MS = 2500;
-
-class ConferenceError extends Error {
-  constructor(message: string, public status: number) { super(message); }
-}
-
-export function VideoRoom({
-  roomCode,
-  selfName,
-  isHostRole,
-  onLeaveHref,
-}: {
-  roomCode: string;
-  selfName: string;
-  isHostRole: boolean;
-  onLeaveHref: string;
-}) {
-  const peerIdRef = useRef<string>("");
-  const [status, setStatus] = useState<"idle" | "connecting" | "joined" | "error">("idle");
-  const [error, setError] = useState("");
-  const [peers, setPeers] = useState<Peer[]>([]);
-  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [sharing, setSharing] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
-  const [mode, setMode] = useState<"mesh" | "viewer">("mesh");
-  const [role, setRole] = useState(isHostRole ? "host" : "student");
-  const [capacity, setCapacity] = useState({ meshSeats: 8, meshUsed: 1 });
+export function VideoRoom({ roomCode, selfName, isHostRole, onLeaveHref }: Props) {
+  const room = useConference({ roomCode });
+  const [panel, setPanel] = useState<"none" | "people" | "settings">("none");
+  const [pinned, setPinned] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [mediaError, setMediaError] = useState("");
-  const [latency, setLatency] = useState<number | null>(null);
-
-  const connections = useRef<Map<string, Connection>>(new Map());
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
-  const stateRef = useRef({ micOn: true, camOn: true, sharing: false, handRaised: false });
-  const leavingRef = useRef(false);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    stateRef.current = { micOn, camOn, sharing, handRaised };
-  }, [micOn, camOn, sharing, handRaised]);
-
-  /* -------------------------------------------------- signalling helpers */
-
-  const post = useCallback(
-    async (body: Record<string, unknown>) => {
-      const started = performance.now();
-      const response = await fetch(`/api/conference/${roomCode}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, peerId: peerIdRef.current }),
-        cache: "no-store",
-      });
-      setLatency(Math.round(performance.now() - started));
-      if (!response.ok) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new ConferenceError(data.error ?? "Signalling failed", response.status);
-      }
-      return (await response.json()) as Record<string, unknown>;
-    },
-    [roomCode],
-  );
-
-  const sendSignal = useCallback(
-    async (toPeer: string, kind: string, payload: Record<string, unknown>) => {
-      await post({ action: "signal", toPeer, kind, payload }).catch(() => undefined);
-    },
-    [post],
-  );
-
-  const closeConnection = useCallback((remotePeerId: string) => {
-    const entry = connections.current.get(remotePeerId);
-    if (entry) {
-      entry.pc.onicecandidate = null;
-      entry.pc.ontrack = null;
-      entry.pc.onconnectionstatechange = null;
-      entry.pc.close();
-      connections.current.delete(remotePeerId);
-    }
-    setRemoteStreams((current) => {
-      if (!(remotePeerId in current)) return current;
-      const next = { ...current };
-      delete next[remotePeerId];
-      return next;
-    });
-  }, []);
-
-  const ensureConnection = useCallback(
-    (remotePeerId: string, initiator: boolean) => {
-      const existing = connections.current.get(remotePeerId);
-      if (existing) return existing;
-
-      const pc = new RTCPeerConnection({
-        iceServers: iceServersRef.current,
-        bundlePolicy: "max-bundle",
-        rtcpMuxPolicy: "require",
-      });
-      const entry: Connection = { pc, pendingIce: [], remoteSet: false, polite: peerIdRef.current > remotePeerId };
-      connections.current.set(remotePeerId, entry);
-
-      const stream = localStreamRef.current;
-      if (stream) {
-        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-      }
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          void sendSignal(remotePeerId, "ice", { candidate: event.candidate.toJSON() });
-        }
-      };
-
-      pc.ontrack = (event) => {
-        const [remote] = event.streams;
-        if (remote) {
-          setRemoteStreams((current) => ({ ...current, [remotePeerId]: remote }));
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === "failed") {
-          try {
-            pc.restartIce();
-          } catch {
-            /* ignore */
-          }
-        }
-        if (pc.connectionState === "closed") closeConnection(remotePeerId);
-      };
-
-      if (initiator) {
-        void (async () => {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await sendSignal(remotePeerId, "offer", { sdp: pc.localDescription?.sdp, type: pc.localDescription?.type });
-        })();
-      }
-      return entry;
-    },
-    [closeConnection, sendSignal],
-  );
-
-  const iceServersRef = useRef<RTCIceServer[]>([]);
-
-  /* ------------------------------------------------------------- lifecycle */
-
-  useEffect(() => {
-    let cancelled = false;
-    let polling = false;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
-    peerIdRef.current = crypto.randomUUID();
-
-    async function start() {
-      setStatus("connecting");
-      try {
-        let stream: MediaStream | null = null;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } },
-          });
-        } catch {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            setCamOn(false);
-            setMediaError("Camera unavailable — joined with audio only.");
-          } catch {
-            setMediaError("No camera or microphone available — you joined as an observer.");
-            setMicOn(false);
-            setCamOn(false);
-          }
-        }
-        if (cancelled) return;
-        localStreamRef.current = stream;
-        setLocalStream(stream);
-        cameraTrackRef.current = stream?.getVideoTracks()[0] ?? null;
-        if (localVideoRef.current && stream) localVideoRef.current.srcObject = stream;
-
-        const joined = await post({ action: "join", displayName: selfName });
-        if (cancelled) return;
-
-        const servers = (joined.iceServers as RTCIceServer[] | undefined) ?? [];
-        if (servers.length) iceServersRef.current = servers;
-        setMode(((joined.self as { mode?: string } | undefined)?.mode as "mesh" | "viewer") ?? "mesh");
-        setRole(((joined.self as { role?: string } | undefined)?.role as string) ?? "student");
-        setCapacity((joined.capacity as { meshSeats: number; meshUsed: number }) ?? { meshSeats: 8, meshUsed: 1 });
-        setStatus("joined");
-
-        const existing = (joined.peers as Peer[] | undefined) ?? [];
-        setPeers(existing);
-        const selfMode = (joined.self as { mode?: string } | undefined)?.mode ?? "mesh";
-        const hostPeerId = (joined.hostPeerId as string | null) ?? null;
-
-        if (selfMode === "mesh") {
-          for (const peer of existing) {
-            const shouldInitiate = peer.mode === "viewer" ? false : peerIdRef.current < peer.peerId;
-            if (shouldInitiate) ensureConnection(peer.peerId, true);
-          }
-        } else if (hostPeerId) {
-          ensureConnection(hostPeerId, true);
-        }
-
-        pollTimer = setInterval(() => void poll(), POLL_MS);
-      } catch (cause) {
-        if (!cancelled) {
-          setStatus("error");
-          setError(cause instanceof Error ? cause.message : "Could not join the room.");
-        }
-      }
-    }
-
-    async function poll() {
-      if (cancelled || polling) return;
-      polling = true;
-      try {
-        const data = await post({
-          action: "poll",
-          audioEnabled: stateRef.current.micOn,
-          videoEnabled: stateRef.current.camOn,
-          sharingScreen: stateRef.current.sharing,
-          handRaised: stateRef.current.handRaised,
-        });
-        if (cancelled) return;
-
-        const nextPeers = (data.peers as Peer[] | undefined) ?? [];
-        const self = data.self as { mode?: string; role?: string } | null;
-        if (self?.mode) setMode(self.mode as "mesh" | "viewer");
-        if (self?.role) setRole(self.role);
-        if (data.capacity) setCapacity(data.capacity as { meshSeats: number; meshUsed: number });
-
-        setPeers(nextPeers);
-        const known = new Set(nextPeers.map((peer) => peer.peerId));
-        Array.from(connections.current.keys()).forEach((remotePeerId) => {
-          if (!known.has(remotePeerId)) closeConnection(remotePeerId);
-        });
-
-        for (const peer of nextPeers) {
-          const selfMode = self?.mode ?? "mesh";
-          const hostPeer = nextPeers.find((candidate) => candidate.role === "host");
-          if (selfMode === "viewer") {
-            if (hostPeer && hostPeer.peerId === peer.peerId && !connections.current.has(peer.peerId)) {
-              ensureConnection(peer.peerId, true);
-            }
-            continue;
-          }
-          if (peer.mode === "viewer") continue;
-          if (peerIdRef.current < peer.peerId && !connections.current.has(peer.peerId)) {
-            ensureConnection(peer.peerId, true);
-          }
-        }
-
-        const signals = (data.signals as SignalEnvelope[] | undefined) ?? [];
-        for (const signal of signals) {
-          await handleSignal(signal);
-        }
-      } catch (cause) {
-        if (cause instanceof ConferenceError && [401, 403, 404, 503].includes(cause.status)) {
-          cancelled = true;
-          if (pollTimer) clearInterval(pollTimer);
-          Array.from(connections.current.keys()).forEach(closeConnection);
-          localStreamRef.current?.getTracks().forEach((track) => track.stop());
-          screenStreamRef.current?.getTracks().forEach((track) => track.stop());
-          setError("This session ended or your room access was removed.");
-          setStatus("error");
-        }
-      } finally { polling = false; }
-    }
-
-    async function handleSignal(signal: SignalEnvelope) {
-      const remotePeerId = signal.fromPeer;
-      if (signal.kind === "control") {
-        if (signal.payload.action === "mute-all") {
-          localStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = false; });
-          stateRef.current.micOn = false;
-          setMicOn(false);
-        }
-        if (signal.payload.action === "lower-hands") {
-          stateRef.current.handRaised = false;
-          setHandRaised(false);
-        }
-        return;
-      }
-      if (signal.kind === "offer") {
-        const entry = ensureConnection(remotePeerId, false);
-        const sdp = signal.payload.sdp as string | undefined;
-        const type = signal.payload.type as RTCSdpType | undefined;
-        if (!sdp || !type) return;
-        await entry.pc.setRemoteDescription({ type, sdp });
-        entry.remoteSet = true;
-        for (const candidate of entry.pendingIce) await entry.pc.addIceCandidate(candidate).catch(() => undefined);
-        entry.pendingIce = [];
-        const answer = await entry.pc.createAnswer();
-        await entry.pc.setLocalDescription(answer);
-        await sendSignal(remotePeerId, "answer", { sdp: entry.pc.localDescription?.sdp, type: entry.pc.localDescription?.type });
-        return;
-      }
-      if (signal.kind === "answer") {
-        const entry = connections.current.get(remotePeerId);
-        if (!entry) return;
-        const sdp = signal.payload.sdp as string | undefined;
-        const type = signal.payload.type as RTCSdpType | undefined;
-        if (!sdp || !type) return;
-        if (entry.pc.signalingState === "have-local-offer") {
-          await entry.pc.setRemoteDescription({ type, sdp });
-          entry.remoteSet = true;
-          for (const candidate of entry.pendingIce) await entry.pc.addIceCandidate(candidate).catch(() => undefined);
-          entry.pendingIce = [];
-        }
-        return;
-      }
-      if (signal.kind === "ice") {
-        const entry = connections.current.get(remotePeerId);
-        if (!entry) return;
-        const candidate = signal.payload.candidate as RTCIceCandidateInit | undefined;
-        if (!candidate) return;
-        if (entry.remoteSet) await entry.pc.addIceCandidate(candidate).catch(() => undefined);
-        else entry.pendingIce.push(candidate);
-        return;
-      }
-      if (signal.kind === "bye") {
-        closeConnection(remotePeerId);
-      }
-    }
-
-    void start();
-
-    return () => {
-      cancelled = true;
-      if (pollTimer) clearInterval(pollTimer);
-      leavingRef.current = true;
-      Array.from(connections.current.keys()).forEach((remotePeerId) => closeConnection(remotePeerId));
-      localStreamRef.current?.getTracks().forEach((track) => track.stop());
-      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
-      if (peerIdRef.current) {
-        void fetch(`/api/conference/${roomCode}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "leave", peerId: peerIdRef.current }),
-          keepalive: true,
-        }).catch(() => undefined);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /* ---------------------------------------------------------------- controls */
-
-  function toggleMic() {
-    const stream = localStreamRef.current;
-    const next = !micOn;
-    stream?.getAudioTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setMicOn(next);
-  }
-
-  function toggleCam() {
-    const stream = localStreamRef.current;
-    const next = !camOn;
-    stream?.getVideoTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setCamOn(next);
-  }
-
-  async function toggleShare() {
-    if (sharing) {
-      screenStreamRef.current?.getTracks().forEach((track) => track.stop());
-      screenStreamRef.current = null;
-      const camera = cameraTrackRef.current;
-      connections.current.forEach(({ pc }) => {
-        const sender = pc.getSenders().find((item) => item.track?.kind === "video");
-        if (sender && camera) void sender.replaceTrack(camera);
-      });
-      const stream = localStreamRef.current;
-      if (stream && camera) {
-        stream.getVideoTracks().forEach((track) => stream.removeTrack(track));
-        stream.addTrack(camera);
-        if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-      }
-      setSharing(false);
-      return;
-    }
-    try {
-      const display = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false });
-      const [screenTrack] = display.getVideoTracks();
-      if (!screenTrack) return;
-      screenStreamRef.current = display;
-      connections.current.forEach(({ pc }) => {
-        const sender = pc.getSenders().find((item) => item.track?.kind === "video");
-        if (sender) void sender.replaceTrack(screenTrack);
-      });
-      if (localVideoRef.current) {
-        const preview = new MediaStream([screenTrack]);
-        localVideoRef.current.srcObject = preview;
-      }
-      screenTrack.onended = () => void toggleShare();
-      setSharing(true);
-      setCamOn(true);
-    } catch {
-      setMediaError("Screen sharing was cancelled or unsupported in this browser.");
-    }
-  }
-
-  async function hostControl(control: "mute-all" | "grant-seat" | "remove" | "lower-hands", targetPeerId?: string) {
-    await post({ action: "host", control, targetPeerId }).catch(() => undefined);
-  }
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   async function copyInvite() {
     try {
@@ -462,26 +49,70 @@ export function VideoRoom({
     }
   }
 
-  const isHost = role === "host";
-  const remoteList = peers.filter((peer) => peer.peerId in remoteStreams);
+  if (room.phase === "lobby" || room.phase === "joining") {
+    return <Lobby room={room} selfName={selfName} isHostRole={isHostRole} onLeaveHref={onLeaveHref} />;
+  }
+
+  if (room.phase === "ended" || room.phase === "removed") {
+    return (
+      <div className="rounded-2xl border border-navy/15 bg-ink px-6 py-14 text-center text-paper">
+        <p className="font-serif text-2xl">{room.phase === "removed" ? "You were removed from this session" : "You have left the room"}</p>
+        <p className="mx-auto mt-2 max-w-md text-[13px] text-paper/65">{room.message}</p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {room.phase === "ended" ? (
+            <button type="button" onClick={() => window.location.reload()} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-gold px-5 text-[12px] font-semibold text-ink hover:bg-gold-soft">
+              <RefreshCw className="h-3.5 w-3.5" /> Rejoin
+            </button>
+          ) : null}
+          <Link href={onLeaveHref} className="inline-flex h-10 items-center rounded-full border border-white/20 px-5 text-[12px] font-semibold text-paper hover:border-gold hover:text-gold">
+            Back to the session
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isHost = room.self.isHost;
+  const everyone: TileModel[] = [
+    { id: "self", name: `${selfName} (you)`, isSelf: true, isHost, peer: null },
+    ...room.peers.map((peer) => ({ id: peer.peerId, name: peer.displayName, isSelf: false, isHost: peer.role === "host", peer })),
+  ];
+  const sharer = room.sharing ? "self" : room.peers.find((peer) => peer.sharingScreen)?.peerId ?? null;
+  const spotlightId = pinned && everyone.some((tile) => tile.id === pinned) ? pinned : sharer;
+  const spotlight = spotlightId ? everyone.find((tile) => tile.id === spotlightId) ?? null : null;
+  const others = spotlight ? everyone.filter((tile) => tile.id !== spotlight.id) : everyone;
+  const raisedHands = room.peers.filter((peer) => peer.handRaised);
+
+  const renderTile = (tile: TileModel, size: "stage" | "grid" | "strip") => (
+    <Tile
+      key={tile.id}
+      tile={tile}
+      size={size}
+      room={room}
+      pinned={pinned === tile.id}
+      onPin={() => setPinned((current) => (current === tile.id ? null : tile.id))}
+      onAutoplayBlocked={() => setAutoplayBlocked(true)}
+    />
+  );
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-navy/15 bg-ink text-paper">
+    <div className="relative overflow-hidden rounded-2xl border border-navy/15 bg-ink text-paper">
+      {/* Status bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-2 text-[10.5px] uppercase tracking-[0.1em]">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/80">
-            <span className={cn("h-2 w-2 rounded-full", status === "joined" ? "live-pulse bg-source" : "bg-amber-400")} />
-            {status === "joined" ? (mode === "viewer" ? "audience" : "interactive") : "connecting"}
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/85">
+            <span className={cn("h-2 w-2 rounded-full", room.phase === "joined" && !room.connectionIssue ? "live-pulse bg-source" : "bg-amber-400")} />
+            {room.phase === "rejoining" ? "reconnecting" : room.self.mode === "viewer" ? "audience" : "on stage"}
           </span>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/70">
-            <UserRound className="h-3 w-3" /> {peers.length + 1} here
+            <Users className="h-3 w-3" /> {room.peers.length + 1} here
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/70">
-            <Wifi className="h-3 w-3 text-gold" /> {capacity.meshUsed}/{capacity.meshSeats} seats
+          <span className="hidden items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/70 sm:inline-flex" title="Interactive seats in use">
+            <Video className="h-3 w-3 text-gold" /> {room.capacity.meshUsed}/{room.capacity.meshSeats} seats
           </span>
-          {latency !== null ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/60">
-              <Signal className="h-3 w-3 text-gold" /> {latency} ms
+          {room.latency !== null ? (
+            <span className="hidden items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-paper/60 sm:inline-flex" title="Time for the platform to respond">
+              <Signal className="h-3 w-3 text-gold" /> {room.latency} ms
             </span>
           ) : null}
           {isHost ? (
@@ -490,230 +121,479 @@ export function VideoRoom({
             </span>
           ) : null}
         </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={copyInvite}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[10.5px] font-medium text-paper/80 hover:border-gold hover:text-gold"
-          >
-            <Copy className="h-3 w-3" /> {copied ? "Link copied" : "Copy invite"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={copyInvite}
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[11px] font-medium text-paper/80 hover:border-gold hover:text-gold"
+        >
+          <Copy className="h-3 w-3" /> {copied ? "Link copied" : "Copy room link"}
+        </button>
       </div>
 
-      {mediaError ? (
-        <p className="border-b border-white/10 bg-amber-500/10 px-4 py-2 text-[11px] text-amber-200">{mediaError}</p>
+      {room.connectionIssue ? (
+        <p role="status" className="flex items-center gap-2 border-b border-white/10 bg-amber-500/15 px-4 py-2 text-[12px] text-amber-100">
+          <WifiOff className="h-3.5 w-3.5" /> Trouble reaching the platform. Your call continues while we retry.
+        </p>
       ) : null}
-      {status === "error" ? (
-        <div className="px-4 py-10 text-center">
-          <p className="font-serif text-xl">Could not join the room</p>
-          <p className="mx-auto mt-1 max-w-md text-[12px] text-paper/60">{error}</p>
-          <Link href={onLeaveHref} className="mt-3 inline-flex text-[11.5px] font-semibold text-gold hover:underline">
-            Back to the session →
-          </Link>
-        </div>
+      {room.mediaError ? (
+        <p role="status" className="border-b border-white/10 bg-amber-500/10 px-4 py-2 text-[12px] text-amber-100">{room.mediaError}</p>
+      ) : null}
+      {autoplayBlocked ? (
+        <button
+          type="button"
+          onClick={() => {
+            document.querySelectorAll<HTMLVideoElement>("video[data-remote]").forEach((element) => void element.play().catch(() => undefined));
+            setAutoplayBlocked(false);
+          }}
+          className="flex w-full items-center justify-center gap-2 border-b border-white/10 bg-gold/20 px-4 py-2 text-[12px] font-semibold text-gold-soft hover:bg-gold/30"
+        >
+          <Volume2 className="h-4 w-4" /> Your browser paused the audio. Select here to hear everyone.
+        </button>
+      ) : null}
+      {isHost && raisedHands.length ? (
+        <p className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-gold/10 px-4 py-2 text-[12px] text-gold-soft">
+          <Hand className="h-3.5 w-3.5" /> {raisedHands.map((peer) => peer.displayName).join(", ")} {raisedHands.length === 1 ? "has" : "have"} a hand raised.
+          <button type="button" onClick={() => void room.hostAction("lower-hands")} className="font-semibold underline underline-offset-2">Lower all</button>
+        </p>
       ) : null}
 
-      <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/60">
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className={cn("aspect-video w-full object-cover", (!camOn && !sharing) || !localStream ? "opacity-0" : "")}
-          />
-          {!localStream || (!camOn && !sharing) ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-[#162f52] to-[#0a1a30]">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 font-serif text-base">
-                {initials(selfName)}
-              </span>
-              <p className="text-[11px] text-paper/60">camera off</p>
+      <div className="flex">
+        {/* Stage */}
+        <div className="min-w-0 flex-1 p-2">
+          {spotlight ? (
+            <div className="space-y-2">
+              {renderTile(spotlight, "stage")}
+              {others.length ? <div className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">{others.map((tile) => renderTile(tile, "strip"))}</div> : null}
             </div>
-          ) : null}
-          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-2.5 py-2">
-            <p className="truncate text-[11px] font-medium">
-              You {sharing ? "· sharing screen" : ""}
-              {mode === "viewer" ? " · audience" : ""}
-            </p>
-            <span className="flex items-center gap-1">
-              {!micOn ? <MicOff className="h-3 w-3 text-rose-400" /> : <Mic className="h-3 w-3 text-paper/70" />}
-              {handRaised ? <Hand className="h-3 w-3 text-gold" /> : null}
-            </span>
-          </div>
+          ) : (
+            <div className={cn("grid gap-2", gridColumns(everyone.length))}>
+              {everyone.map((tile) => renderTile(tile, "grid"))}
+              {room.peers.length === 0 ? (
+                <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.03] px-4 text-center">
+                  <div>
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-gold" />
+                    <p className="mt-2 text-[12px] text-paper/70">Waiting for others to join…</p>
+                    <p className="text-[11px] text-paper/45">Share the room link with participants who have access to this session.</p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
-        {peers.map((peer) => (
-          <RemoteTile
-            key={peer.peerId}
-            peer={peer}
-            stream={remoteStreams[peer.peerId]}
-            isHost={peer.role === "host"}
-            selfIsHost={isHost}
-            onGrant={() => void hostControl("grant-seat", peer.peerId)}
-            onRemove={() => void hostControl("remove", peer.peerId)}
-          />
-        ))}
-
-        {peers.length === 0 ? (
-          <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.03] text-center">
-            <div className="px-4">
-              <Loader2 className="mx-auto h-5 w-5 animate-spin text-gold" />
-              <p className="mt-2 text-[11.5px] text-paper/60">Waiting for others to join…</p>
-              <p className="text-[10px] text-paper/40">Share the invite link to bring people in.</p>
+        {panel !== "none" ? (
+          <aside className="absolute inset-y-0 right-0 z-20 w-full max-w-xs overflow-y-auto border-l border-white/10 bg-[#0d2138] sm:relative sm:w-80">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-paper/80">{panel === "people" ? `People (${room.peers.length + 1})` : "Audio & video"}</p>
+              <button type="button" aria-label="Close panel" onClick={() => setPanel("none")} className="rounded-full p-1 text-paper/60 hover:bg-white/10 hover:text-paper">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-          </div>
+            {panel === "people" ? <PeoplePanel room={room} selfName={selfName} /> : <DeviceSettings room={room} />}
+          </aside>
         ) : null}
       </div>
 
+      {/* Controls */}
       <div className="flex flex-wrap items-center justify-center gap-2 border-t border-white/10 px-3 py-3">
-        <ControlButton active={micOn} onClick={toggleMic} label={micOn ? "Mute" : "Unmute"} icon={micOn ? Mic : MicOff} />
-        <ControlButton active={camOn} onClick={toggleCam} label={camOn ? "Camera off" : "Camera on"} icon={camOn ? Video : VideoOff} />
         <ControlButton
-          active={sharing}
-          onClick={() => void toggleShare()}
-          label={sharing ? "Stop sharing" : "Share screen"}
-          icon={sharing ? MonitorUp : ScreenShare}
+          on={room.micOn && room.hasMicrophone}
+          onClick={() => void room.toggleMic()}
+          label={room.micOn && room.hasMicrophone ? "Mute" : "Unmute"}
+          icon={room.micOn && room.hasMicrophone ? Mic : MicOff}
+          danger={!room.micOn || !room.hasMicrophone}
         />
         <ControlButton
-          active={handRaised}
-          onClick={() => setHandRaised((value) => !value)}
-          label={handRaised ? "Lower hand" : "Raise hand"}
-          icon={Hand}
+          on={room.camOn}
+          onClick={() => void room.toggleCam()}
+          label={room.camOn ? "Stop video" : "Start video"}
+          icon={room.camOn ? Video : VideoOff}
+          danger={!room.camOn}
         />
-        {isHost ? (
-          <>
-            <button
-              type="button"
-              onClick={() => void hostControl("mute-all")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[10.5px] font-medium text-paper/80 hover:border-gold hover:text-gold"
-            >
-              <MicOff className="h-3.5 w-3.5" /> Mute all
-            </button>
-            <button
-              type="button"
-              onClick={() => void hostControl("lower-hands")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[10.5px] font-medium text-paper/80 hover:border-gold hover:text-gold"
-            >
-              Lower hands
-            </button>
-          </>
+        {room.self.mode !== "viewer" || isHost ? (
+          <ControlButton
+            on={room.sharing}
+            onClick={() => void room.toggleShare()}
+            label={room.sharing ? "Stop sharing" : "Share screen"}
+            icon={room.sharing ? MonitorUp : ScreenShare}
+            className="hidden sm:inline-flex"
+          />
         ) : null}
+        <ControlButton on={room.handRaised} onClick={room.toggleHand} label={room.handRaised ? "Lower hand" : "Raise hand"} icon={Hand} />
+        <ControlButton on={panel === "people"} onClick={() => setPanel((current) => (current === "people" ? "none" : "people"))} label="People" icon={Users} />
+        <ControlButton on={panel === "settings"} onClick={() => setPanel((current) => (current === "settings" ? "none" : "settings"))} label="Settings" icon={Settings2} />
         <Link
           href={onLeaveHref}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-rose-600 px-4 text-[11px] font-semibold text-white hover:bg-rose-700"
+          onClick={() => room.leave()}
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-rose-600 px-4 text-[12px] font-semibold text-white hover:bg-rose-700"
         >
-          <PhoneOff className="h-3.5 w-3.5" /> Leave
+          <PhoneOff className="h-4 w-4" /> Leave
         </Link>
       </div>
 
-      {mode === "viewer" ? (
-        <p className="border-t border-white/10 bg-white/[0.04] px-4 py-2 text-[10.5px] leading-relaxed text-paper/60">
-          All {capacity.meshSeats} interactive seats are taken, so you are watching the stage. Ask the host for a seat to
-          join with your camera and microphone.
+      {room.self.mode === "viewer" ? (
+        <p className="border-t border-white/10 bg-white/[0.04] px-4 py-2 text-[11.5px] leading-relaxed text-paper/65">
+          All {room.capacity.meshSeats} interactive seats are taken, so you are in the audience and see the host. Raise your hand and the host can give you a seat.
         </p>
       ) : null}
-      <p className="border-t border-white/10 px-4 py-2 text-[10px] leading-relaxed text-paper/35">
-        Secure in-platform WebRTC · connectivity provided by the platform conference relay
-        {Object.keys(remoteStreams).length > 0 ? ` · ${Object.keys(remoteStreams).length} live connection${Object.keys(remoteStreams).length === 1 ? "" : "s"}` : ""}
-      </p>
+
+      {/* Toasts */}
+      <div aria-live="polite" className="pointer-events-none absolute left-1/2 top-14 z-30 flex w-full max-w-sm -translate-x-1/2 flex-col items-center gap-1.5 px-3">
+        {room.notices.map((notice) => (
+          <button
+            key={notice.id}
+            type="button"
+            onClick={() => room.dismissNotice(notice.id)}
+            className="pointer-events-auto rounded-full bg-paper/95 px-4 py-1.5 text-[12px] font-medium text-ink shadow-lg"
+          >
+            {notice.text}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function ControlButton({
-  active,
-  onClick,
-  label,
-  icon: Icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon: typeof Mic;
+type Room = ReturnType<typeof useConference>;
+type TileModel = { id: string; name: string; isSelf: boolean; isHost: boolean; peer: ConferencePeer | null };
+
+function gridColumns(count: number) {
+  if (count <= 1) return "grid-cols-1";
+  if (count <= 4) return "grid-cols-1 sm:grid-cols-2";
+  if (count <= 9) return "grid-cols-2 lg:grid-cols-3";
+  return "grid-cols-2 md:grid-cols-3 xl:grid-cols-4";
+}
+
+function Lobby({ room, selfName, isHostRole, onLeaveHref }: { room: Room; selfName: string; isHostRole: boolean; onLeaveHref: string }) {
+  const presence = room.presence;
+  const joining = room.phase === "joining";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-navy/15 bg-ink text-paper">
+      <div className="grid gap-0 lg:grid-cols-[1.35fr_1fr]">
+        <div className="p-3">
+          <div className="relative overflow-hidden rounded-xl bg-black/60">
+            <LocalVideo stream={room.previewStream} mirrored={!room.sharing} className={cn("aspect-video w-full object-cover", room.camOn ? "" : "opacity-0")} />
+            {!room.camOn ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#162f52] to-[#0a1a30]">
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 font-serif text-xl">{initials(selfName)}</span>
+                <p className="text-[12px] text-paper/60">{room.mediaReady ? "Camera is off" : "Starting your camera…"}</p>
+              </div>
+            ) : null}
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-gradient-to-t from-black/70 to-transparent p-3">
+              <ControlButton on={room.micOn && room.hasMicrophone} onClick={() => void room.toggleMic()} label={room.micOn && room.hasMicrophone ? "Mute" : "Unmute"} icon={room.micOn && room.hasMicrophone ? Mic : MicOff} danger={!room.micOn || !room.hasMicrophone} />
+              <ControlButton on={room.camOn} onClick={() => void room.toggleCam()} label={room.camOn ? "Stop video" : "Start video"} icon={room.camOn ? Video : VideoOff} danger={!room.camOn} />
+            </div>
+          </div>
+          <MicLevel stream={room.previewStream} active={room.micOn && room.hasMicrophone} />
+        </div>
+        <div className="flex flex-col justify-center gap-4 border-t border-white/10 p-6 lg:border-l lg:border-t-0">
+          <div>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold">Ready to join?</p>
+            <p className="mt-1 font-serif text-2xl leading-tight">{selfName}</p>
+            <p className="mt-1.5 text-[12.5px] text-paper/65">
+              {presence === null
+                ? "Checking who is in the room…"
+                : presence.count === 0
+                  ? isHostRole ? "No one is here yet. Participants will see you as the host when they arrive." : "No one is here yet. You can wait inside for the host."
+                  : `${presence.count} ${presence.count === 1 ? "person is" : "people are"} in the room${presence.hostPresent ? ", including the host" : ""}.`}
+            </p>
+          </div>
+          {room.mediaError ? (
+            <div className="rounded-lg border border-amber-300/30 bg-amber-500/10 p-3 text-[12px] leading-relaxed text-amber-100">
+              {room.mediaError}
+              <button type="button" onClick={() => void room.retryMedia()} className="mt-2 flex items-center gap-1.5 font-semibold text-gold-soft underline underline-offset-2">
+                <RefreshCw className="h-3 w-3" /> Try camera and microphone again
+              </button>
+            </div>
+          ) : null}
+          <DeviceSettings room={room} compact />
+          {room.message ? <p role="alert" className="rounded-lg bg-rose-500/15 p-3 text-[12px] text-rose-100">{room.message}</p> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={joining || !room.mediaReady}
+              onClick={() => void room.join()}
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-gold px-6 text-[13px] font-semibold text-ink transition-colors hover:bg-gold-soft disabled:cursor-wait disabled:opacity-60"
+            >
+              {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
+              {joining ? "Joining…" : "Join now"}
+            </button>
+            <Link href={onLeaveHref} className="inline-flex h-11 items-center rounded-full border border-white/20 px-5 text-[12.5px] font-medium text-paper/80 hover:border-gold hover:text-gold">
+              Not now
+            </Link>
+          </div>
+          <p className="text-[11px] leading-relaxed text-paper/45">Headphones prevent echo. Your camera and microphone are only shared after you join.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeviceSettings({ room, compact = false }: { room: Room; compact?: boolean }) {
+  const select = "mt-1 h-9 w-full rounded-lg border border-white/15 bg-white/5 px-2 text-[12px] text-paper focus:border-gold focus:outline-none";
+  const label = (device: MediaDeviceInfo, index: number, fallback: string) => device.label || `${fallback} ${index + 1}`;
+  if (!room.devices.audio.length && !room.devices.video.length) {
+    return compact ? null : <p className="p-4 text-[12px] text-paper/60">Allow camera or microphone access to choose devices.</p>;
+  }
+  return (
+    <div className={cn("space-y-3", compact ? "" : "p-4")}>
+      {room.devices.video.length ? (
+        <label className="block text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">
+          Camera
+          <select className={select} value={room.selectedVideo} onChange={(event) => void room.selectDevice("video", event.target.value)}>
+            {room.devices.video.map((device, index) => (
+              <option key={device.deviceId || index} value={device.deviceId} className="bg-ink">{label(device, index, "Camera")}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {room.devices.audio.length ? (
+        <label className="block text-[11px] font-medium uppercase tracking-[0.1em] text-paper/55">
+          Microphone
+          <select className={select} value={room.selectedAudio} onChange={(event) => void room.selectDevice("audio", event.target.value)}>
+            {room.devices.audio.map((device, index) => (
+              <option key={device.deviceId || index} value={device.deviceId} className="bg-ink">{label(device, index, "Microphone")}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {!compact ? <MicLevel stream={room.previewStream} active={room.micOn && room.hasMicrophone} /> : null}
+    </div>
+  );
+}
+
+function PeoplePanel({ room, selfName }: { room: Room; selfName: string }) {
+  const isHost = room.self.isHost;
+  const seatsFree = room.capacity.meshUsed < room.capacity.meshSeats;
+  return (
+    <div>
+      {isHost ? (
+        <div className="flex flex-wrap gap-2 border-b border-white/10 px-4 py-3">
+          <button type="button" onClick={() => void room.hostAction("mute-all")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[11px] font-medium hover:border-gold hover:text-gold">
+            <MicOff className="h-3.5 w-3.5" /> Mute everyone
+          </button>
+          <button type="button" onClick={() => void room.hostAction("lower-hands")} className="inline-flex h-8 items-center gap-1.5 rounded-full border border-white/20 px-3 text-[11px] font-medium hover:border-gold hover:text-gold">
+            <Hand className="h-3.5 w-3.5" /> Lower hands
+          </button>
+        </div>
+      ) : null}
+      <ul className="divide-y divide-white/5">
+        <li className="flex items-center gap-2.5 px-4 py-2.5">
+          <Avatar name={selfName} speaking={Boolean(room.speaking.self)} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[12.5px] font-medium">{selfName} (you)</p>
+            <p className="text-[10.5px] text-paper/50">{isHost ? "Host" : room.self.mode === "viewer" ? "Audience" : "On stage"}</p>
+          </div>
+          <StatusIcons micOn={room.micOn && room.hasMicrophone} hand={room.handRaised} />
+        </li>
+        {room.peers.map((peer) => (
+          <li key={peer.peerId} className="px-4 py-2.5">
+            <div className="flex items-center gap-2.5">
+              <Avatar name={peer.displayName} speaking={Boolean(room.speaking[peer.peerId])} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[12.5px] font-medium">{peer.displayName}</p>
+                <p className="text-[10.5px] text-paper/50">
+                  {peer.role === "host" ? "Host" : peer.mode === "viewer" ? "Audience" : "On stage"}
+                  {room.quality[peer.peerId]?.relayed ? " · via relay" : ""}
+                </p>
+              </div>
+              <StatusIcons micOn={peer.audioEnabled} hand={peer.handRaised} />
+            </div>
+            {isHost && peer.role !== "host" ? (
+              <div className="mt-2 flex flex-wrap gap-1.5 pl-9">
+                {peer.audioEnabled ? (
+                  <button type="button" onClick={() => void room.hostAction("mute", peer.peerId)} className="inline-flex h-7 items-center gap-1 rounded-full border border-white/15 px-2.5 text-[10.5px] hover:border-gold hover:text-gold">
+                    <MicOff className="h-3 w-3" /> Mute
+                  </button>
+                ) : null}
+                {peer.mode === "viewer" ? (
+                  <button type="button" disabled={!seatsFree} onClick={() => void room.hostAction("grant-seat", peer.peerId)} className="inline-flex h-7 items-center gap-1 rounded-full bg-gold px-2.5 text-[10.5px] font-semibold text-ink disabled:opacity-40" title={seatsFree ? "Bring onto the stage" : "All seats are taken"}>
+                    <UserPlus className="h-3 w-3" /> Give seat
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Remove ${peer.displayName} from this session? They will not be able to rejoin until it ends.`)) void room.hostAction("remove", peer.peerId);
+                  }}
+                  className="inline-flex h-7 items-center gap-1 rounded-full border border-rose-400/40 px-2.5 text-[10.5px] text-rose-200 hover:bg-rose-600 hover:text-white"
+                >
+                  <UserMinus className="h-3 w-3" /> Remove
+                </button>
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Tile({ tile, size, room, pinned, onPin, onAutoplayBlocked }: {
+  tile: TileModel; size: "stage" | "grid" | "strip"; room: Room; pinned: boolean; onPin: () => void; onAutoplayBlocked: () => void;
+}) {
+  const media: RemoteMedia | undefined = tile.isSelf ? undefined : room.remote[tile.id];
+  const peer = tile.peer;
+  const showVideo = tile.isSelf ? room.camOn || room.sharing : Boolean(media?.hasVideo && peer?.videoEnabled);
+  const screen = tile.isSelf ? room.sharing : Boolean(peer?.sharingScreen);
+  const speaking = tile.isSelf ? Boolean(room.speaking.self) : Boolean(room.speaking[tile.id]);
+  const linkState = tile.isSelf ? "connected" : room.linkStates[tile.id];
+  const quality: LinkQuality | undefined = tile.isSelf ? undefined : room.quality[tile.id];
+  const micOn = tile.isSelf ? room.micOn && room.hasMicrophone : Boolean(peer?.audioEnabled);
+  const hand = tile.isSelf ? room.handRaised : Boolean(peer?.handRaised);
+  const status = tile.isSelf ? null
+    : !media ? (peer?.mode === "viewer" && room.self.mode === "viewer" ? "In the audience" : "Connecting…")
+    : linkState === "disconnected" || linkState === "failed" ? "Reconnecting…" : null;
+
+  return (
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-xl border bg-black/60 transition-shadow",
+        speaking ? "border-gold shadow-[0_0_0_2px_var(--color-gold)]" : "border-white/10",
+        size === "strip" ? "w-44 shrink-0 sm:w-52" : "",
+      )}
+    >
+      {tile.isSelf ? (
+        <LocalVideo stream={room.previewStream} mirrored={!room.sharing} className={cn("aspect-video w-full", screen ? "object-contain" : "object-cover", showVideo ? "" : "opacity-0")} />
+      ) : (
+        <RemoteVideo stream={media?.stream} className={cn("aspect-video w-full", screen ? "object-contain" : "object-cover", showVideo ? "" : "opacity-0")} onAutoplayBlocked={onAutoplayBlocked} />
+      )}
+      {!showVideo ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-[#162f52] to-[#0a1a30]">
+          <span className={cn("flex items-center justify-center rounded-full bg-white/10 font-serif", size === "strip" ? "h-10 w-10 text-sm" : "h-14 w-14 text-lg")}>{initials(tile.name)}</span>
+          <p className="text-[11px] text-paper/60">{status ?? "Camera off"}</p>
+        </div>
+      ) : status ? (
+        <p className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10.5px] text-amber-100">{status}</p>
+      ) : null}
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/75 to-transparent px-2.5 py-2">
+        <p className="min-w-0 truncate text-[11.5px] font-medium">
+          {tile.name}
+          {tile.isHost ? " · host" : peer?.mode === "viewer" ? " · audience" : ""}
+          {screen ? " · presenting" : ""}
+        </p>
+        <span className="flex shrink-0 items-center gap-1.5">
+          {quality && quality.level !== "unknown" ? (
+            <span title={`${quality.rttMs ?? "?"} ms round trip${quality.relayed ? " via relay" : ""}`} className={cn("h-1.5 w-1.5 rounded-full", quality.level === "good" ? "bg-emerald-400" : quality.level === "fair" ? "bg-amber-300" : "bg-rose-400")} />
+          ) : null}
+          {hand ? <Hand className="h-3.5 w-3.5 text-gold" aria-label="Hand raised" /> : null}
+          {micOn ? <Mic className="h-3.5 w-3.5 text-paper/70" aria-label="Microphone on" /> : <MicOff className="h-3.5 w-3.5 text-rose-400" aria-label="Muted" />}
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onPin}
+        aria-label={pinned ? `Unpin ${tile.name}` : `Pin ${tile.name}`}
+        className="absolute right-1.5 top-1.5 rounded-full bg-black/55 p-1.5 text-paper/80 opacity-0 transition-opacity hover:text-gold focus:opacity-100 group-hover:opacity-100"
+      >
+        {pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+      </button>
+    </div>
+  );
+}
+
+function LocalVideo({ stream, mirrored, className }: { stream: MediaStream | null; mirrored: boolean; className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream;
+  }, [stream]);
+  return <video ref={ref} autoPlay playsInline muted className={cn(className, mirrored ? "-scale-x-100" : "")} />;
+}
+
+function RemoteVideo({ stream, className, onAutoplayBlocked }: { stream: MediaStream | undefined; className?: string; onAutoplayBlocked: () => void }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    if (element.srcObject !== (stream ?? null)) element.srcObject = stream ?? null;
+    if (stream) {
+      element.play().catch((error: unknown) => {
+        if (error && typeof error === "object" && "name" in error && (error as { name: string }).name === "NotAllowedError") onAutoplayBlocked();
+      });
+    }
+  }, [stream, onAutoplayBlocked]);
+  return <video ref={ref} data-remote autoPlay playsInline className={className} />;
+}
+
+function MicLevel({ stream, active }: { stream: MediaStream | null; active: boolean }) {
+  const bar = useRef<HTMLSpanElement>(null);
+  const track = stream?.getAudioTracks()[0];
+  const trackId = track?.id;
+  useEffect(() => {
+    if (!track || !active) {
+      if (bar.current) bar.current.style.width = "0%";
+      return;
+    }
+    const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Context) return;
+    const context = new Context();
+    const source = context.createMediaStreamSource(new MediaStream([track]));
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    const samples = new Uint8Array(analyser.fftSize);
+    let frame = 0;
+    const draw = () => {
+      analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
+      const level = Math.min(1, Math.sqrt(sum / samples.length) * 4);
+      if (bar.current) bar.current.style.width = `${Math.round(level * 100)}%`;
+      frame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => {
+      cancelAnimationFrame(frame);
+      source.disconnect();
+      void context.close().catch(() => undefined);
+    };
+    // The track id identifies the device; the track object itself is stable for that id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackId, active]);
+  return (
+    <div className="mt-2 flex items-center gap-2 px-1" aria-hidden>
+      <Mic className="h-3.5 w-3.5 text-paper/50" />
+      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+        <span ref={bar} className="block h-full w-0 rounded-full bg-gold transition-[width] duration-75" />
+      </span>
+    </div>
+  );
+}
+
+function Avatar({ name, speaking }: { name: string; speaking: boolean }) {
+  return (
+    <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 font-serif text-[11px]", speaking ? "ring-2 ring-gold" : "")}>
+      {initials(name)}
+    </span>
+  );
+}
+
+function StatusIcons({ micOn, hand }: { micOn: boolean; hand: boolean }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {hand ? <Hand className="h-3.5 w-3.5 text-gold" aria-label="Hand raised" /> : null}
+      {micOn ? <Mic className="h-3.5 w-3.5 text-paper/60" aria-label="Microphone on" /> : <MicOff className="h-3.5 w-3.5 text-rose-400" aria-label="Muted" />}
+    </span>
+  );
+}
+
+function ControlButton({ on, onClick, label, icon: Icon, danger = false, className }: {
+  on: boolean; onClick: () => void; label: string; icon: typeof Mic; danger?: boolean; className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={on}
+      title={label}
       className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[10.5px] font-semibold transition-colors",
-        active ? "bg-paper text-ink hover:bg-white" : "border border-white/20 text-paper/70 hover:border-gold hover:text-gold",
+        "inline-flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[11.5px] font-semibold transition-colors",
+        danger ? "bg-rose-600/90 text-white hover:bg-rose-600" : on ? "bg-paper text-ink hover:bg-white" : "border border-white/20 text-paper/80 hover:border-gold hover:text-gold",
+        className,
       )}
     >
-      <Icon className="h-3.5 w-3.5" /> {label}
+      <Icon className="h-4 w-4" />
+      <span className="hidden md:inline">{label}</span>
     </button>
-  );
-}
-
-function RemoteTile({
-  peer,
-  stream,
-  isHost,
-  selfIsHost,
-  onGrant,
-  onRemove,
-}: {
-  peer: Peer;
-  stream: MediaStream | undefined;
-  isHost: boolean;
-  selfIsHost: boolean;
-  onGrant: () => void;
-  onRemove: () => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-      void videoRef.current.play().catch(() => undefined);
-    }
-  }, [stream]);
-
-  const hasVideo = Boolean(stream && stream.getVideoTracks().length > 0 && peer.videoEnabled);
-
-  return (
-    <div className="group relative overflow-hidden rounded-xl border border-white/10 bg-black/60">
-      <video ref={videoRef} autoPlay playsInline className={cn("aspect-video w-full object-cover", hasVideo ? "" : "opacity-0")} />
-      {!hasVideo ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-[#162f52] to-[#0a1a30]">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 font-serif text-base">
-            {initials(peer.displayName)}
-          </span>
-          <p className="text-[10.5px] text-paper/60">{stream ? "camera off" : "connecting…"}</p>
-        </div>
-      ) : null}
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-2.5 py-2">
-        <p className="truncate text-[11px] font-medium text-paper">
-          {peer.displayName}
-          {isHost ? " · host" : peer.mode === "viewer" ? " · audience" : ""}
-          {peer.sharingScreen ? " · sharing" : ""}
-        </p>
-        <span className="flex items-center gap-1">
-          {peer.handRaised ? <Hand className="h-3 w-3 text-gold" /> : null}
-          {peer.audioEnabled ? <Mic className="h-3 w-3 text-paper/60" /> : <MicOff className="h-3 w-3 text-rose-400" />}
-        </span>
-      </div>
-      {selfIsHost && !isHost ? (
-        <div className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          {peer.mode === "viewer" ? (
-            <button
-              type="button"
-              onClick={onGrant}
-              className="rounded-full bg-gold px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-ink"
-            >
-              Give seat
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded-full bg-rose-600 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-white"
-          >
-            Remove
-          </button>
-        </div>
-      ) : null}
-    </div>
   );
 }

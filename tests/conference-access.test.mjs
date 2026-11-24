@@ -89,6 +89,38 @@ test("host moderation works and participant removal invalidates further polls", 
   assert.equal(await conference.sendSignal({ code, fromPeer: studentPeer, toPeer: hostPeer, viewer: actors.student, kind: "control", payload: { action: "mute-all" } }), false);
   assert.equal(await conference.hostControl({ code, actorPeerId: hostPeer, viewer: actors.host, action: "remove", targetPeerId: studentPeer }), true);
   assert.equal(await heartbeat(actors.student, studentPeer), null);
+  assert.equal(await conference.participantStatus(code, studentPeer, actors.student), "removed");
+  assert.deepEqual(await conference.joinRoom({ code, peerId: randomUUID(), viewer: actors.student }), { removed: true }, "A removed participant cannot rejoin with a new peer id.");
+  assert.equal((await heartbeat(actors.host, hostPeer)).peers.some((peer) => peer.peerId === studentPeer), false);
+  assert.equal(await conference.sendSignal({ code, fromPeer: hostPeer, toPeer: studentPeer, viewer: actors.host, kind: "offer", payload: {} }), false);
+  // Markers last until the session closes; clear it to simulate a later session for the remaining tests.
+  await client.query("delete from conference_participants where room_code=$1 and mode='removed'", [code]);
+});
+
+test("a participant whose presence lapsed is told to rejoin and keeps its peer id", async () => {
+  const peerId = randomUUID();
+  assert.ok((await conference.joinRoom({ code, peerId, viewer: actors.mentor })).self);
+  await client.query("delete from conference_participants where peer_id=$1", [peerId]);
+  assert.equal(await heartbeat(actors.mentor, peerId), null);
+  assert.equal(await conference.participantStatus(code, peerId, actors.mentor), "missing");
+  assert.equal(await conference.participantStatus(code, hostPeer, actors.mentor), "forbidden", "Another account's peer id is never reported as rejoinable.");
+  assert.equal((await conference.joinRoom({ code, peerId, viewer: actors.mentor })).self.peerId, peerId);
+  assert.equal(await conference.leaveRoom(code, peerId, actors.mentor), true);
+  assert.equal(await conference.participantStatus(code, peerId, actors.outsider), "closed");
+});
+
+test("polled signals arrive in stored order with presence counts for the lobby", async () => {
+  const listener = randomUUID();
+  await conference.joinRoom({ code, peerId: listener, viewer: actors.student });
+  for (const kind of ["offer", "ice", "ice"]) assert.equal(await conference.sendSignal({ code, fromPeer: hostPeer, toPeer: listener, viewer: actors.host, kind, payload: { kind } }), true);
+  const polled = await heartbeat(actors.student, listener);
+  assert.deepEqual(polled.signals.map((signal) => signal.kind), ["offer", "ice", "ice"]);
+  assert.deepEqual(polled.signals.map((signal) => signal.id), [...polled.signals.map((signal) => signal.id)].sort((a, b) => a - b));
+  assert.equal(polled.hostPeerId, hostPeer);
+  const presence = await conference.roomPresence(code);
+  assert.ok(presence.count >= 2 && presence.hostPresent);
+  assert.equal(await conference.sendSignal({ code, fromPeer: hostPeer, toPeer: listener, viewer: actors.host, kind: "offer", payload: { sdp: "x".repeat(40_000) } }), false, "Oversized signals are rejected.");
+  await conference.leaveRoom(code, listener, actors.student);
 });
 
 test("concurrent joins and seat grants cannot overfill the mesh", async () => {
