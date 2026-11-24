@@ -32,6 +32,47 @@ browser never sees a reusable relay password. Keep the shared secret in the
 deployment platform's encrypted environment settings, never in Git,
 screenshots, client-side variables or `NEXT_PUBLIC_*` values.
 
+### Example Coturn configuration (`/etc/turnserver.conf`)
+
+```text
+listening-port=3478
+tls-listening-port=5349
+realm=relay.example.org
+use-auth-secret
+static-auth-secret=<same value as TURN_SECRET>
+cert=/etc/turnserver/fullchain.pem
+pkey=/etc/turnserver/privkey.pem
+min-port=49160
+max-port=49200
+external-ip=<public IPv4>            # use PUBLIC/PRIVATE if the host is behind NAT
+fingerprint
+stale-nonce=600
+no-cli
+no-multicast-peers
+# Never relay into private or loopback networks
+denied-peer-ip=0.0.0.0-0.255.255.255
+denied-peer-ip=10.0.0.0-10.255.255.255
+denied-peer-ip=100.64.0.0-100.127.255.255
+denied-peer-ip=127.0.0.0-127.255.255.255
+denied-peer-ip=169.254.0.0-169.254.255.255
+denied-peer-ip=172.16.0.0-172.31.255.255
+denied-peer-ip=192.168.0.0-192.168.255.255
+```
+
+Generate the shared secret with `openssl rand -hex 32`. To test the relay before
+configuring the application, create a one-hour credential on any machine:
+
+```bash
+SECRET='<shared secret>'
+USERNAME="$(( $(date +%s) + 3600 )):relay-test"
+PASSWORD="$(printf '%s' "$USERNAME" | openssl dgst -sha1 -hmac "$SECRET" -binary | base64)"
+echo "$USERNAME"; echo "$PASSWORD"
+```
+
+Enter `turn:relay.example.org:3478` with that username and password in
+<https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/> and
+select **Gather candidates**: a `relay` candidate proves the relay works.
+
 ## Application settings
 
 Set these server-only production variables and redeploy the application:

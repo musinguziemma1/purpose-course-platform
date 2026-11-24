@@ -7,7 +7,8 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 export const dynamic = "force-dynamic";
-export default async function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
+  const { google } = await searchParams;
   const user = await getSessionUser();
   if (user) redirect(homePathForRole(user.roleSlug));
   return (
@@ -24,6 +25,12 @@ export default async function SignupPage() {
         Apply to join a community of learners finding clarity and putting it
         into practice.
       </p>
+      {google === "no-account" ? (
+        <p role="status" className="mt-5 rounded-xl border border-gold/40 bg-gold/10 p-3 text-sm leading-relaxed text-navy">
+          There is no Purpose Course account for that Google address yet. Apply below: staff review every new student, and once
+          you are approved you can sign in with Google using the same email address.
+        </p>
+      ) : null}
       <SignupForm />
     </AuthShell>
   );
