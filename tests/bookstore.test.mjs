@@ -8,9 +8,10 @@ import pg from "pg";
 const key = randomUUID();
 const actors = {};
 const orderIds = [];
+const reviewIds = [];
 let bookstore, helpers, client, pool, books;
 const rateKey = () => randomBytes(32).toString("hex");
-const orderInput = (overrides = {}) => ({ orderId: randomUUID(), customerName: "Bookstore fixture", email: `${key}@example.invalid`, phone: "+256 700 000 000", deliveryMethod: "pickup", addressLine: "", city: "", notes: "Integration fixture", items: [{ bookId: books[0].id, quantity: 1 }], ...overrides });
+const orderInput = (overrides = {}) => ({ orderId: randomUUID(), customerName: "Bookstore fixture", email: `${key}@example.invalid`, phone: "+256 700 000 000", deliveryMethod: "pickup", addressLine: "", city: "", notes: "Integration fixture", items: [{ variantId: books[0].variant_id, quantity: 1 }], ...overrides });
 
 before(async () => {
   const env = dotenv.parse(readFileSync(".env"));
@@ -22,9 +23,11 @@ before(async () => {
   pool = (await import("../src/db/index.ts")).pool;
   client = new pg.Client({ connectionString: env.DATABASE_URL });
   await client.connect();
-  books = (await client.query("select id,title,inventory_count from store_books where status='active' order by id limit 2")).rows;
+  books = (await client.query("select b.id,b.title,b.inventory_count,v.id variant_id,v.inventory_count variant_inventory from store_books b join store_book_variants v on v.book_id=b.id and v.code='paperback' and v.is_active where b.status='active' order by b.id limit 2")).rows;
   assert.equal(books.length, 2);
-  for (const [name, slug] of [["admin", "super_admin"], ["learner", "student"]]) {
+  const admin = (await client.query("select p.id profile_id,u.id user_id,u.email,p.full_name,r.slug role_slug,r.permissions from profiles p join users u on u.id=p.user_id join roles r on r.id=p.role_id where r.slug='super_admin' and u.is_active order by p.created_at limit 1")).rows[0];
+  assert.ok(admin); actors.admin = { profileId: admin.profile_id, userId: admin.user_id, email: admin.email, fullName: admin.full_name, roleSlug: admin.role_slug, permissions: admin.permissions };
+  for (const [name, slug] of [["learner", "student"]]) {
     const userId = (await client.query("insert into users(email,password_hash,is_active) values($1,'unused',true) returning id", [`${key}-${name}@example.invalid`])).rows[0].id;
     const role = (await client.query("select * from roles where slug=$1", [slug])).rows[0];
     const profileId = (await client.query("insert into profiles(user_id,role_id,full_name,slug) values($1,$2,$3,$3) returning id", [userId, role.id, `${key}-${name}`])).rows[0].id;
@@ -33,11 +36,12 @@ before(async () => {
 });
 
 test("cart parsing, delivery pricing and trusted rate keys fail closed", () => {
-  assert.deepEqual(helpers.parseCartLines(JSON.stringify([{ bookId: 3, quantity: 2 }, { bookId: 3, quantity: 1 }])), [{ bookId: 3, quantity: 3 }]);
-  for (const value of ["not-json", "[]", JSON.stringify([{ bookId: 0, quantity: 1 }]), JSON.stringify([{ bookId: 1, quantity: 26 }])]) assert.equal(helpers.parseCartLines(value), null);
+  assert.deepEqual(helpers.parseCartLines(JSON.stringify([{ variantId: 3, quantity: 2 }, { variantId: 3, quantity: 1 }])), [{ variantId: 3, quantity: 3 }]);
+  for (const value of ["not-json", "[]", JSON.stringify([{ variantId: 0, quantity: 1 }]), JSON.stringify([{ variantId: 1, quantity: 26 }])]) assert.equal(helpers.parseCartLines(value), null);
   assert.equal(helpers.deliveryFeeUgx("pickup"), 0);
   assert.equal(helpers.deliveryFeeUgx("kampala_delivery"), 10000);
   assert.equal(helpers.deliveryFeeUgx("uganda_delivery"), 15000);
+  assert.equal(helpers.deliveryFeeUgx("digital_delivery"), 0);
   const original = process.env.VERCEL; process.env.VERCEL = "1";
   try {
     const first = helpers.storeRateKey(new Headers({ "x-forwarded-for": "192.0.2.10" }));
@@ -55,7 +59,7 @@ test("invalid checkout input persists no order", async () => {
 });
 
 test("order placement snapshots prices, reserves stock and is idempotent", async () => {
-  const input = orderInput({ items: [{ bookId: books[0].id, quantity: 2 }, { bookId: books[1].id, quantity: 1 }] }); orderIds.push(input.orderId);
+  const input = orderInput({ items: [{ variantId: books[0].variant_id, quantity: 2 }, { variantId: books[1].variant_id, quantity: 1 }] }); orderIds.push(input.orderId);
   const rate = rateKey(); const results = await Promise.all(Array.from({ length: 3 }, () => bookstore.createStoreOrder(input, actors.learner, rate)));
   assert.ok(results.every((result) => result.ok)); assert.equal(new Set(results.map((result) => result.orderNumber)).size, 1);
   const order = (await client.query("select * from store_orders where id=$1", [input.orderId])).rows[0];
@@ -63,18 +67,21 @@ test("order placement snapshots prices, reserves stock and is idempotent", async
   assert.equal(items.length, 2); assert.equal(order.total_ugx, order.subtotal_ugx); assert.equal(order.payment_method, "pay_on_pickup"); assert.equal(order.profile_id, actors.learner.profileId);
   assert.equal(items.reduce((sum, item) => sum + item.line_total_ugx, 0), order.subtotal_ugx);
   assert.equal(Number((await client.query("select inventory_count from store_books where id=$1", [books[0].id])).rows[0].inventory_count), books[0].inventory_count - 2);
+  assert.equal(Number((await client.query("select inventory_count from store_book_variants where id=$1", [books[0].variant_id])).rows[0].inventory_count), books[0].variant_inventory - 2);
   assert.equal((await client.query("select * from activity_logs where entity_id=$1 and action='store.order_placed'", [input.orderId])).rowCount, 1);
   assert.ok((await client.query("select * from notifications where dedupe_key like $1", [`store-order:${input.orderId}:%`])).rowCount >= 1);
 });
 
 test("row locks prevent concurrent orders from overselling the last copy", async () => {
   await client.query("update store_books set inventory_count=1 where id=$1", [books[1].id]);
-  const first = orderInput({ orderId: randomUUID(), items: [{ bookId: books[1].id, quantity: 1 }] });
-  const second = orderInput({ orderId: randomUUID(), items: [{ bookId: books[1].id, quantity: 1 }] });
+  await client.query("update store_book_variants set inventory_count=1 where id=$1", [books[1].variant_id]);
+  const first = orderInput({ orderId: randomUUID(), items: [{ variantId: books[1].variant_id, quantity: 1 }] });
+  const second = orderInput({ orderId: randomUUID(), items: [{ variantId: books[1].variant_id, quantity: 1 }] });
   orderIds.push(first.orderId, second.orderId);
   const results = await Promise.all([bookstore.createStoreOrder(first, null, rateKey()), bookstore.createStoreOrder(second, null, rateKey())]);
   assert.equal(results.filter((result) => result.ok).length, 1); assert.equal(results.filter((result) => result.error).length, 1);
   assert.equal(Number((await client.query("select inventory_count from store_books where id=$1", [books[1].id])).rows[0].inventory_count), 0);
+  assert.equal(Number((await client.query("select inventory_count from store_book_variants where id=$1", [books[1].variant_id])).rows[0].inventory_count), 0);
   assert.equal((await client.query("select * from store_orders where id=any($1::uuid[])", [[first.orderId, second.orderId]])).rowCount, 1);
 });
 
@@ -83,8 +90,10 @@ test("staff authorization, optimistic updates and cancellation restocking are en
   const id = orderIds[0];
   assert.match((await bookstore.updateStoreOrder({ id, version: 0, status: "cancelled", paymentStatus: "pending" }, actors.learner)).error, /permission/);
   const beforeStock = Number((await client.query("select inventory_count from store_books where id=$1", [books[0].id])).rows[0].inventory_count);
+  const beforeVariantStock = Number((await client.query("select inventory_count from store_book_variants where id=$1", [books[0].variant_id])).rows[0].inventory_count);
   assert.ok((await bookstore.updateStoreOrder({ id, version: 0, status: "cancelled", paymentStatus: "pending" }, actors.admin)).ok);
   assert.equal(Number((await client.query("select inventory_count from store_books where id=$1", [books[0].id])).rows[0].inventory_count), beforeStock + 2);
+  assert.equal(Number((await client.query("select inventory_count from store_book_variants where id=$1", [books[0].variant_id])).rows[0].inventory_count), beforeVariantStock + 2);
   assert.match((await bookstore.updateStoreOrder({ id, version: 0, status: "confirmed", paymentStatus: "pending" }, actors.admin)).error, /another window/);
   assert.match((await bookstore.updateStoreOrder({ id, version: 1, status: "confirmed", paymentStatus: "pending" }, actors.admin)).error, /cannot be reopened/);
 });
@@ -100,22 +109,50 @@ test("a late audit failure rolls back the order, notifications and stock reserva
   assert.equal(Number((await client.query("select inventory_count from store_books where id=$1", [books[0].id])).rows[0].inventory_count), beforeStock);
 });
 
-test("migration secures every bookstore table from the public Data API roles", () => {
-  const sql = readFileSync("supabase/migrations/20261124065745_bookstore_commerce.sql", "utf8");
-  for (const table of ["store_books", "store_orders", "store_order_items"]) {
-    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
-    assert.match(sql, new RegExp(`create policy ${table}_backend_access`, "i"));
-  }
-  assert.match(sql, /revoke all on table[\s\S]+from public, anon, authenticated/i);
-  assert.match(sql, /store_orders_payment_delivery_match_check/i);
+test("reviews are moderated and verified purchase status is calculated from completed paid orders", async () => {
+  const invalidId = randomUUID();
+  assert.ok((await bookstore.submitStoreReview({ id: invalidId, bookId: books[0].id, reviewerName: "Fixture", email: "", rating: 0, title: "", body: "Too short" }, null, rateKey())).error);
+  assert.equal((await client.query("select 1 from store_reviews where id=$1", [invalidId])).rowCount, 0);
+
+  const guestReviewId = randomUUID(); reviewIds.push(guestReviewId);
+  const guest = await bookstore.submitStoreReview({ id: guestReviewId, bookId: books[0].id, reviewerName: "Guest reader", email: `${key}@example.invalid`, rating: 4, title: "Practical guide", body: "The exercises were clear, thoughtful and immediately useful." }, null, rateKey());
+  assert.ok(guest.ok); assert.equal(guest.verified, false);
+  let saved = (await client.query("select * from store_reviews where id=$1", [guestReviewId])).rows[0];
+  assert.equal(saved.status, "pending"); assert.equal(saved.is_verified_purchase, false);
+  assert.ok((await bookstore.moderateStoreReview({ id: guestReviewId, version: 0, status: "approved" }, actors.admin)).ok);
+  assert.equal((await bookstore.getApprovedStoreReviews(books[0].id)).length, 1);
+
+  const purchase = orderInput({ orderId: randomUUID(), email: actors.learner.email }); orderIds.push(purchase.orderId);
+  assert.ok((await bookstore.createStoreOrder(purchase, actors.learner, rateKey())).ok);
+  assert.ok((await bookstore.updateStoreOrder({ id: purchase.orderId, version: 0, status: "completed", paymentStatus: "paid" }, actors.admin)).ok);
+  const verifiedReviewId = randomUUID(); reviewIds.push(verifiedReviewId);
+  const verified = await bookstore.submitStoreReview({ id: verifiedReviewId, bookId: books[0].id, reviewerName: "Verified learner", email: "different@example.invalid", rating: 5, title: "Excellent", body: "A strong, well structured resource that helped me apply each concept." }, actors.learner, rateKey());
+  assert.ok(verified.ok); assert.equal(verified.verified, true);
+  saved = (await client.query("select * from store_reviews where id=$1", [verifiedReviewId])).rows[0];
+  assert.equal(saved.is_verified_purchase, true); assert.ok(saved.order_item_id);
+  assert.ok((await bookstore.moderateStoreReview({ id: verifiedReviewId, version: 0, status: "approved" }, actors.admin)).ok);
+  const stats = (await client.query("select rating_tenths,review_count from store_books where id=$1", [books[0].id])).rows[0];
+  assert.equal(stats.review_count, 2); assert.equal(stats.rating_tenths, 45);
+});
+
+test("migrations secure every bookstore table from the public Data API roles", () => {
+  const initial = readFileSync("supabase/migrations/20261124065745_bookstore_commerce.sql", "utf8");
+  const expansion = readFileSync("supabase/migrations/20261124120132_bookstore_variants_reviews_media.sql", "utf8");
+  for (const table of ["store_books", "store_orders", "store_order_items"]) assert.match(initial, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
+  for (const table of ["store_book_variants", "store_reviews"]) { assert.match(expansion, new RegExp(`alter table public\\.${table} enable row level security`, "i")); assert.match(expansion, new RegExp(`create policy ${table}_backend_access`, "i")); }
+  assert.match(expansion, /revoke all on table[\s\S]+from public, anon, authenticated/i);
+  assert.match(expansion, /store_orders_payment_delivery_match_check/i);
 });
 
 after(async () => {
   if (client) {
+    await client.query("delete from store_reviews where id=any($1::uuid[])", [reviewIds]);
+    await client.query("delete from notifications where dedupe_key like 'store-review:%' or dedupe_key like 'store-review-moderated:%'");
+    await client.query("delete from activity_logs where entity_id=any($1::text[])", [reviewIds]);
     await client.query("delete from store_orders where id=any($1::uuid[])", [orderIds]);
     await client.query("delete from notifications where dedupe_key like 'store-order:%' and dedupe_key similar to $1", [`store-order:(${orderIds.join("|")}):%`]);
     await client.query("delete from activity_logs where entity_id=any($1::text[])", [orderIds]);
-    for (const book of books ?? []) await client.query("update store_books set inventory_count=$2 where id=$1", [book.id, book.inventory_count]);
+    for (const book of books ?? []) { await client.query("update store_books set inventory_count=$2,rating_tenths=0,review_count=0 where id=$1", [book.id, book.inventory_count]); await client.query("update store_book_variants set inventory_count=$2 where id=$1", [book.variant_id, book.variant_inventory]); }
     await client.query("delete from users where email like $1", [`${key}-%`]);
     await client.end();
   }

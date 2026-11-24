@@ -4,21 +4,21 @@ import { ArrowRight, BookMarked, Search, ShieldCheck, Sparkles, Truck } from "lu
 import { BookCard, type BookCardBook } from "@/components/bookstore/book-card";
 import { BookCover } from "@/components/bookstore/book-cover";
 import { BookPurchase } from "@/components/bookstore/book-purchase";
-import { getStoreCatalogue, getStoreCategories, type StoreBook } from "@/db/bookstore";
+import { getStoreCatalogue, getStoreCategories, type StorefrontBook } from "@/db/bookstore";
 import { formatUgx } from "@/lib/bookstore-shared";
 import { publicUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Bookstore", description: "Purpose-led books, workbooks and journals for personal growth, leadership and meaningful impact.", alternates: { canonical: publicUrl("/bookstore") } };
 
-function cardBook(book: StoreBook): BookCardBook {
-  return { id: book.id, slug: book.slug, title: book.title, authorName: book.authorName, format: book.format, priceUgx: book.priceUgx, inventoryCount: book.inventoryCount, coverTone: book.coverTone, subtitle: book.subtitle, category: book.category, shortDescription: book.shortDescription, compareAtPriceUgx: book.compareAtPriceUgx, ratingTenths: book.ratingTenths, reviewCount: book.reviewCount, isNew: book.isNew };
+function cardBook(book: StorefrontBook): BookCardBook {
+  return { id: book.id, slug: book.slug, title: book.title, authorName: book.authorName, coverTone: book.coverTone, coverImageUrl: book.coverImageUrl, subtitle: book.subtitle, category: book.category, shortDescription: book.shortDescription, ratingTenths: book.ratingTenths, reviewCount: book.reviewCount, isNew: book.isNew, variants: book.variants.map(({ id, code, label, deliveryKind, priceUgx, compareAtPriceUgx, inventoryCount, isDefault }) => ({ id, code, label, deliveryKind: deliveryKind as "physical" | "digital", priceUgx, compareAtPriceUgx, inventoryCount, isDefault })) };
 }
 
 export default async function BookstorePage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; format?: string; sort?: string }> }) {
   const filters = await searchParams;
   const [books, allBooks, categories] = await Promise.all([getStoreCatalogue(filters), getStoreCatalogue(), getStoreCategories()]);
-  const featured = allBooks.find((book) => book.isFeatured && book.inventoryCount > 0) ?? allBooks[0];
+  const featured = allBooks.find((book) => book.isFeatured && book.variants.length) ?? allBooks[0];
   const isFiltered = Boolean(filters.q || filters.category || filters.format || filters.sort);
   return <>
     <section className="relative isolate overflow-hidden bg-ink text-paper"><div className="absolute inset-0 ink-grid opacity-25" /><div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-source/25 blur-3xl" /><div className="shell relative grid gap-10 py-14 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:py-20"><div><p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-gold"><Sparkles className="h-3.5 w-3.5" />Read with intention</p><h1 className="mt-5 max-w-3xl font-serif text-4xl leading-[.98] tracking-tight sm:text-6xl">Books that help you understand <span className="text-gold">who you are</span> and what to do next.</h1><p className="mt-6 max-w-xl text-[15px] leading-relaxed text-paper/68">Explore thoughtful books, practical workbooks and guided journals from the Purpose Course faculty. Built for discovery, disciplined growth and lasting contribution.</p><form role="search" className="mt-8 flex max-w-xl rounded-full bg-white p-1.5 shadow-xl"><label htmlFor="store-search" className="sr-only">Search books</label><Search className="ml-3 mt-2.5 h-4 w-4 shrink-0 text-stone-400" /><input id="store-search" name="q" defaultValue={filters.q} placeholder="Search by title, author or topic" className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-navy outline-none" /><button className="rounded-full bg-gold px-5 py-2 text-xs font-bold text-ink">Search</button></form><div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-xs text-paper/65"><span className="inline-flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-gold" />Secure order records</span><span className="inline-flex items-center gap-2"><Truck className="h-4 w-4 text-gold" />Pickup & Uganda delivery</span><span className="inline-flex items-center gap-2"><BookMarked className="h-4 w-4 text-gold" />Curated by educators</span></div></div>

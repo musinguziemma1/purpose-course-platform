@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, LayoutDashboard, LogIn } from "lucide-react";
+import { ChevronDown, Menu, X, LayoutDashboard, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,8 @@ const NAV = [
   { href: "/community", label: "Community" },
   { href: "/about", label: "About" },
 ];
+const PRIMARY_NAV = NAV.filter((item) => ["/", "/course", "/events", "/blog", "/bookstore"].includes(item.href));
+const MORE_NAV = NAV.filter((item) => ["/resources", "/community", "/about"].includes(item.href));
 
 export function SiteHeader({
   user,
@@ -71,8 +73,8 @@ export function SiteHeader({
           </span>
         </Link>
 
-        <nav aria-label="Main navigation" className="col-span-2 row-start-2 mt-3 hidden items-center justify-center gap-1 border-t border-navy/10 pt-2 lg:flex xl:col-span-1 xl:col-start-2 xl:row-start-1 xl:mt-0 xl:border-0 xl:pt-0">
-          {NAV.map((item) => {
+        <nav aria-label="Main navigation" className="col-start-2 hidden items-center justify-center gap-1 xl:flex">
+          {PRIMARY_NAV.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
@@ -94,6 +96,10 @@ export function SiteHeader({
               </Link>
             );
           })}
+          <details className="group relative">
+            <summary className="flex cursor-pointer list-none items-center gap-1 rounded-lg px-3 py-2.5 text-[13px] font-medium text-stone-600 hover:bg-cream/60 hover:text-navy">More <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" /></summary>
+            <div className="absolute right-0 top-full mt-2 w-44 rounded-xl border border-navy/10 bg-white p-2 shadow-xl">{MORE_NAV.map((item) => <Link key={item.href} href={item.href} className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-cream hover:text-navy">{item.label}</Link>)}</div>
+          </details>
         </nav>
 
         <div className="col-start-2 row-start-1 flex shrink-0 items-center justify-end gap-2 xl:col-start-3">
@@ -130,7 +136,7 @@ export function SiteHeader({
             aria-label="Toggle navigation"
             aria-expanded={open}
             aria-controls="mobile-navigation"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-navy/15 text-navy lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-navy/15 text-navy xl:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -146,7 +152,7 @@ export function SiteHeader({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden border-t border-navy/10 bg-paper lg:hidden"
+            className="overflow-hidden border-t border-navy/10 bg-paper xl:hidden"
           >
             <div className="shell flex flex-col gap-1 py-4">
               {NAV.map((item) => (

@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { createStoreOrder, saveStoreBook, updateStoreOrder, type StoreActionState } from "@/db/bookstore";
+import { createStoreOrder, moderateStoreReview, saveStoreBook, submitStoreReview, updateStoreOrder, type StoreActionState, type StoreReviewState } from "@/db/bookstore";
 import { getSessionUser } from "@/lib/auth";
 import { storeRateKey } from "@/lib/bookstore";
 import { parseCartLines } from "@/lib/bookstore-shared";
@@ -41,5 +41,25 @@ export async function saveStoreBookAction(_previous: StoreActionState, form: For
 export async function updateStoreOrderAction(_previous: StoreActionState, form: FormData): Promise<StoreActionState> {
   const result = await updateStoreOrder({ id: String(form.get("id") ?? ""), version: Number(form.get("version")), status: String(form.get("status") ?? ""), paymentStatus: String(form.get("paymentStatus") ?? "") }, await getSessionUser());
   if (result.ok) revalidatePath("/admin/store");
+  return result;
+}
+
+export async function submitStoreReviewAction(_previous: StoreReviewState, form: FormData): Promise<StoreReviewState> {
+  const result = await submitStoreReview({
+    id: String(form.get("id") ?? ""),
+    bookId: Number(form.get("bookId")),
+    reviewerName: String(form.get("reviewerName") ?? ""),
+    email: String(form.get("email") ?? ""),
+    rating: Number(form.get("rating")),
+    title: String(form.get("title") ?? ""),
+    body: String(form.get("body") ?? ""),
+  }, await getSessionUser(), storeRateKey(await headers()));
+  if (result.ok) { revalidatePath(`/bookstore/${String(form.get("bookSlug") ?? "")}`); revalidatePath("/admin/store"); }
+  return result;
+}
+
+export async function moderateStoreReviewAction(_previous: StoreActionState, form: FormData): Promise<StoreActionState> {
+  const result = await moderateStoreReview({ id: String(form.get("id") ?? ""), version: Number(form.get("version")), status: String(form.get("status") ?? "") }, await getSessionUser());
+  if (result.ok) { revalidatePath("/bookstore"); revalidatePath("/admin/store"); }
   return result;
 }

@@ -12,6 +12,10 @@ import {
   mediaAssets,
   profiles,
   resources,
+  storeBooks,
+  storeBookVariants,
+  storeOrderItems,
+  storeOrders,
 } from "@/db/schema";
 import { currentActor } from "@/db/actor";
 import { assignmentReadable } from "@/db/assignment-workflow";
@@ -266,7 +270,7 @@ export async function readableMedia(
       allowed = Boolean(submission);
     }
   } else if (!allowed) {
-    const [publicArticle, publicResource, publicCourse, avatar] =
+    const [publicArticle, publicResource, publicCourse, avatar, bookstoreCover] =
       await Promise.all([
         db
           .select({ id: articles.id })
@@ -303,12 +307,16 @@ export async function readableMedia(
               .where(eq(profiles.avatarUrl, asset.url))
               .limit(1)
           : [],
+        asset.kind === "image"
+          ? db.select({ id: storeBooks.id }).from(storeBooks).where(and(eq(storeBooks.status, "active"), eq(storeBooks.coverMediaId, asset.id))).limit(1)
+          : [],
       ]);
     allowed = Boolean(
       publicArticle.length ||
         publicResource.length ||
         publicCourse.length ||
-        avatar.length,
+        avatar.length ||
+        bookstoreCover.length,
     );
     if (!allowed && viewer) {
       const [lesson, assignment] = await Promise.all([
@@ -346,6 +354,10 @@ export async function readableMedia(
       const [courseDescription] = await db.select({id:courses.id}).from(courses).where(and(eq(courses.status,"published"), levelEnrolled(courses.levelId,viewer), sql`position(${asset.url} in coalesce(${courses.description},''))>0`)).limit(1);
       const [recording] = await db.select({id:liveSessions.id}).from(liveSessions).where(and(or(eq(liveSessions.status,"ended"),and(eq(liveSessions.status,"live"),sql`not (${sessionWithinEndWindow()})`)),eq(liveSessions.recordingUrl,asset.url),liveReadable(viewer))).limit(1);
       allowed = Boolean(lesson.length || assignment.length || courseDescription || recording);
+      if (!allowed) {
+        const [purchasedPdf] = await db.select({ id: storeOrderItems.id }).from(storeOrderItems).innerJoin(storeOrders, eq(storeOrderItems.orderId, storeOrders.id)).innerJoin(storeBookVariants, eq(storeOrderItems.variantId, storeBookVariants.id)).where(and(eq(storeOrders.profileId, viewer.profileId), eq(storeOrders.status, "completed"), eq(storeOrders.paymentStatus, "paid"), eq(storeOrderItems.deliveryKind, "digital"), eq(storeBookVariants.downloadMediaId, asset.id))).limit(1);
+        allowed = Boolean(purchasedPdf);
+      }
     }
   }
   if (!allowed) return null;

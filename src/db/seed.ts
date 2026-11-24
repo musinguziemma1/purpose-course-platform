@@ -89,8 +89,10 @@ import {
   siteSettings,
   subscribers,
   storeBooks,
+  storeBookVariants,
   storeOrderItems,
   storeOrders,
+  storeReviews,
   tags,
   testimonials,
   users,
@@ -143,7 +145,7 @@ async function main() {
   await db.execute(sql`
     truncate table
       ${activityLogs}, ${notifications}, ${discussionPosts}, ${discussionThreads},
-      ${storeOrderItems}, ${storeOrders}, ${storeBooks},
+      ${storeReviews}, ${storeOrderItems}, ${storeOrders}, ${storeBookVariants}, ${storeBooks},
       ${learnerAchievements}, ${achievements}, ${learningActivities}, ${scoringRules},
       ${rolePermissions}, ${permissions}, ${messages}, ${emailEvents},
       ${platformEvents}, ${learningEvents}, ${engagementSnapshots}, ${analyticsReports},
@@ -1816,7 +1818,12 @@ Cannot evidence yet: public speaking beyond a small room. I avoid it and I know 
     },
   ]);
 
-  await db.insert(storeBooks).values(STORE_BOOK_SEEDS.map((book) => ({ ...book, status: "active", publishedAt: new Date() })));
+  const storeBookRows = await db.insert(storeBooks).values(STORE_BOOK_SEEDS.map((book) => ({ ...book, ratingTenths: 0, reviewCount: 0, status: "active", publishedAt: new Date() }))).returning();
+  await db.insert(storeBookVariants).values(storeBookRows.flatMap((book) => [
+    { bookId: book.id, code: "digital_pdf", label: "PDF softcopy", deliveryKind: "digital", priceUgx: Math.max(0, book.priceUgx - 15000), compareAtPriceUgx: book.compareAtPriceUgx, inventoryCount: 0, isActive: false, isDefault: false, sortOrder: 10 },
+    { bookId: book.id, code: "paperback", label: "Paperback", deliveryKind: "physical", priceUgx: book.priceUgx, compareAtPriceUgx: book.compareAtPriceUgx, inventoryCount: book.inventoryCount, isActive: true, isDefault: book.format !== "hardcover", sortOrder: 20 },
+    { bookId: book.id, code: "hardcover", label: "Hardcover", deliveryKind: "physical", priceUgx: book.priceUgx + 20000, compareAtPriceUgx: null, inventoryCount: Math.floor(book.inventoryCount * 0.35), isActive: true, isDefault: book.format === "hardcover", sortOrder: 30 },
+  ]));
 
   const academy = await seedAcademyContent();
   const assessmentSeed = await seedAssessments();
