@@ -2242,3 +2242,22 @@ export const announcements = pgTable(
     check("announcements_version_check", sql`${table.version} >= 0`),
   ],
 ).enableRLS();
+
+/* ------------------------------------------------------------------ *
+ * Sign-in throttling — hashed identifiers only, never raw emails or IPs
+ * ------------------------------------------------------------------ */
+
+export const authAttempts = pgTable(
+  "auth_attempts",
+  {
+    id: serial("id").primaryKey(),
+    emailHash: varchar("email_hash", { length: 64 }).notNull(),
+    rateKey: varchar("rate_key", { length: 64 }),
+    succeeded: boolean("succeeded").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("auth_attempts_email_idx").on(table.emailHash, table.createdAt),
+    index("auth_attempts_rate_idx").on(table.rateKey, table.createdAt),
+  ],
+).enableRLS();

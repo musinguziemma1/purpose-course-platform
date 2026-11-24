@@ -38,6 +38,7 @@ export async function whenSchemaReady<T>(feature: string, run: () => Promise<T>,
 export const FEATURE_TABLES = {
   "Purpose Profile and Journey": ["purpose_profiles", "purpose_profile_snapshots", "module_principles", "reflection_principles"],
   Announcements: ["announcements"],
+  "Sign-in throttling": ["auth_attempts"],
 } as const;
 
 /** Which optional features have their tables in this database (for the operations page). */
