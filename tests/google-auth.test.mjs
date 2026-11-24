@@ -113,3 +113,17 @@ after(async () => {
   }
   if (appPool) await appPool.end();
 });
+
+test("a Google-verified applicant is carried to the application form only untampered and briefly", () => {
+  const sealed = google.sealApplicant({ name: "Ada Lovelace", email: "ada@example.org" }, "client-secret-fixture");
+  assert.deepEqual(Object.keys(google.openApplicant(sealed, "client-secret-fixture")).sort(), ["email", "exp", "name"]);
+  assert.equal(google.openApplicant(sealed, "client-secret-fixture").email, "ada@example.org");
+  assert.equal(google.openApplicant(sealed, "another-secret"), null);
+  assert.equal(google.openApplicant(sealed.replace(/^./, (c) => (c === "a" ? "b" : "a")), "client-secret-fixture"), null);
+  assert.equal(google.openApplicant(sealed, "client-secret-fixture", Date.now() + (google.APPLICANT_SECONDS + 5) * 1000), null);
+  // A flow cookie can never be replayed as an applicant cookie (different MAC domain).
+  const { flow } = google.startFlow("/learn", "apply");
+  assert.equal(flow.intent, "apply");
+  assert.equal(google.openApplicant(google.sealFlow(flow, "client-secret-fixture"), "client-secret-fixture"), null);
+  assert.equal(google.startFlow("/learn", "something-else").flow.intent, undefined);
+});
