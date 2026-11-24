@@ -80,10 +80,12 @@ async function recipientsFor(tx: Transaction, audience: Audience, cohortId: numb
   if (audience === "cohort") {
     if (!cohortId) return [];
     return tx.select({ id: profiles.id }).from(cohortMembers).innerJoin(profiles, eq(cohortMembers.profileId, profiles.id)).innerJoin(users, eq(profiles.userId, users.id))
-      .where(and(eq(cohortMembers.cohortId, cohortId), eq(cohortMembers.status, "active"), active));
+      .where(and(eq(cohortMembers.cohortId, cohortId), eq(cohortMembers.status, "active"), active))
+      .orderBy(profiles.id);
   }
   const query = tx.select({ id: profiles.id }).from(profiles).innerJoin(users, eq(profiles.userId, users.id)).innerJoin(roles, eq(profiles.roleId, roles.id));
-  return audience === "everyone" ? query.where(active) : query.where(and(active, inArray(roles.slug, AUDIENCE_ROLES[audience])));
+  // A fixed order means concurrent publishes lock recipient profiles in the same sequence (no deadlocks).
+  return (audience === "everyone" ? query.where(active) : query.where(and(active, inArray(roles.slug, AUDIENCE_ROLES[audience])))).orderBy(profiles.id);
 }
 
 export async function saveAnnouncement(input: Record<string, string>, viewer: SessionUser | null, publish: boolean): Promise<AnnouncementState> {
