@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import "./instruments.css";
 
 /*
  * Console instruments. All server-rendered: the motion is CSS keyframes that
- * play once on mount (see src/app/admin/console.css), so no client JS ships
+ * play once on mount (see ./instruments.css), so no client JS ships
  * for readings. Values that change after a server action glide via CSS
  * transitions instead of replaying the entrance.
  */

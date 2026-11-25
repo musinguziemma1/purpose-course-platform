@@ -1,14 +1,22 @@
-import { publicUrl } from "@/lib/site-url";
-import { HeroBackdrop } from "@/components/site/hero-backdrop";
-import { CoverImage } from "@/components/site/cover-image";
+import "../desk.css";
 import type { Metadata } from "next";
-import { Download, FileAudio, FileSpreadsheet, FileText, Layers } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { NewsletterForm } from "@/components/site/newsletter-form";
+import Link from "next/link";
+import { ArrowDown, Mail } from "lucide-react";
 import { Reveal } from "@/components/motion/reveal";
-import { cn } from "@/lib/utils";
+import { NewsletterForm } from "@/components/site/newsletter-form";
+import { rise } from "@/components/site/public-hero";
+import {
+  DeskStack,
+  RESOURCE_TYPES,
+  ResourceDoc,
+  ResourceFolder,
+  isResourceType,
+  type Resource,
+  type ResourceType,
+} from "@/components/resources/resource-desk";
 import { getResources } from "@/db/queries";
 import { resourceFileTarget } from "@/lib/resource-files";
+import { publicUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -19,158 +27,144 @@ export const metadata: Metadata = {
   alternates: { canonical: publicUrl("/resources") },
 };
 
-const ICONS = {
-  worksheet: FileSpreadsheet,
-  guide: FileText,
-  template: Layers,
-  audio: FileAudio,
-  video: FileText,
-} as const;
+const isReady = (resource: Resource) => Boolean(resourceFileTarget(resource.fileUrl));
 
-export default async function ResourcesPage() {
-  const resources = await getResources(20);
-  const available = resources.filter((resource) => resourceFileTarget(resource.fileUrl));
-  const featured = available.filter((resource) => resource.isFeatured);
+export default async function ResourcesPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
+  const { type } = await searchParams;
+  const activeType = isResourceType(type) ? type : null;
+  const resources = await getResources(40);
+  const available = resources.filter(isReady);
+  const featured = available.filter((resource) => resource.isFeatured).slice(0, 3);
   const featuredIds = new Set(featured.map((resource) => resource.id));
-  const rest = resources.filter((resource) => !featuredIds.has(resource.id));
   const totalDownloads = available.reduce((sum, resource) => sum + resource.downloadCount, 0);
+  const typesPresent = (Object.keys(RESOURCE_TYPES) as ResourceType[]).filter((kind) => resources.some((resource) => resource.type === kind));
+  // Ready files first; the sort is stable, so the editorial order holds within each group.
+  const shelf = resources
+    .filter((resource) => !activeType || resource.type === activeType)
+    .sort((a, b) => Number(isReady(b)) - Number(isReady(a)));
 
   return (
-    <>
-      <section className="relative overflow-hidden border-b border-navy/10 bg-cream/60">
-        <HeroBackdrop src="/images/learning-materials.jpg" />
-        <div className="shell relative grid gap-8 py-14 lg:grid-cols-[1.2fr_0.8fr] lg:items-end lg:py-20">
+    <div className="dk-linen">
+      <section className="relative isolate overflow-hidden">
+        <div className="shell grid grid-cols-1 items-center gap-14 py-14 sm:py-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:py-20">
           <div>
-            <p className="eyebrow">Resource library</p>
-            <h1 className="display mt-4 text-4xl text-navy sm:text-5xl">
-              Take the work home with you.
+            <p className="rise dk-plate" style={rise(0)}>Resource library</p>
+            <h1 className="rise display mt-5 text-[2.7rem] text-navy sm:text-6xl" style={rise(1)}>
+              Take the work <span className="dk-foil">home</span> with you.
             </h1>
-            <p className="mt-5 max-w-2xl text-[15.5px] leading-relaxed text-stone-600">
-              Practical starter worksheets, guides and planning canvases for your learning journey. Available files are free to download and use with your team, small group or class. More resources will be added as they are prepared.
+            <p className="rise mt-6 max-w-xl text-[16px] leading-relaxed text-stone-700" style={rise(2)}>
+              Practical starter worksheets, guides and planning canvases for your learning journey. Available files are free to
+              download and use with your team, small group or class. More resources will be added as they are prepared.
+            </p>
+            <div className="rise mt-8 flex flex-wrap gap-3" style={rise(3)}>
+              <a href="#library" className="dk-btn" data-variant="navy">
+                Open the library <ArrowDown aria-hidden />
+              </a>
+              <a href="#request" className="dk-btn">
+                New resources by email <Mail aria-hidden />
+              </a>
+            </div>
+            <ul className="rise mt-9 flex flex-wrap items-center gap-3" style={rise(4)} aria-label="The library at a glance">
+              <li className="dk-dymo">{available.length === 1 ? "1 file ready" : `${available.length} files ready`}</li>
+              <li className="dk-dymo">{totalDownloads === 1 ? "1 download" : `${totalDownloads.toLocaleString("en-GB")} downloads`}</li>
+              <li className="dk-dymo">Free, always</li>
+            </ul>
+          </div>
+          <DeskStack lead={featured[0] ?? available[0] ?? resources[0]} />
+        </div>
+      </section>
+
+      {featured.length && !activeType ? (
+        <section className="py-12 lg:py-16">
+          <div className="shell">
+            <Reveal className="max-w-2xl">
+              <p className="eyebrow">Start here</p>
+              <h2 className="mt-4 font-serif text-4xl leading-tight text-navy">The essentials</h2>
+              <p className="mt-3 text-[16px] leading-relaxed text-stone-700">Begin with these. Print them, write on them and bring them to your next session.</p>
+            </Reveal>
+            <ul className="mt-10 grid gap-x-6 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+              {featured.map((resource, index) => (
+                <Reveal as="li" key={resource.id} delay={index * 0.07} className="h-full">
+                  <ResourceFolder resource={resource} />
+                </Reveal>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
+
+      <section id="library" className="scroll-mt-28 pb-16 pt-6 lg:pb-20">
+        <div className="shell">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <Reveal className="max-w-2xl">
+              <p className="eyebrow">Full library</p>
+              <h2 className="mt-4 font-serif text-4xl leading-tight text-navy">Worksheets, guides and sessions</h2>
+            </Reveal>
+            <p className="dk-type text-[13px] text-stone-600" aria-live="polite">
+              {shelf.length === 1 ? "1 file" : `${shelf.length} files`}
+              {activeType ? ` · ${RESOURCE_TYPES[activeType].label.toLowerCase()}` : ""}
             </p>
           </div>
-          <div className="space-y-3">
-            <div className="relative hidden overflow-hidden rounded-xl border border-navy/10 sm:block">
-              <img
-                src="/images/learning-materials.jpg"
-                alt="An open notebook, pen and coloured study tabs on a wooden desk"
-                className="h-32 w-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-            {[
-              [String(available.length), "Available resources"],
-              [totalDownloads.toLocaleString(), "Download requests"],
-              ["3", "Levels covered"],
-              ["Free", "Always"],
-            ].map(([value, label]) => (
-              <div key={label} className="rounded-xl border border-navy/10 bg-paper px-4 py-3">
-                <p className="font-serif text-2xl text-navy">{value}</p>
-                <p className="text-[10.5px] uppercase tracking-[0.1em] text-stone-500">{label}</p>
-              </div>
-            ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="py-14">
-        <div className="shell">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="eyebrow">Start here</p>
-              <h2 className="mt-3 font-serif text-3xl text-navy">The essentials</h2>
-            </div>
-          </div>
-          <div className="mt-7 grid gap-5 lg:grid-cols-3">
-            {featured.map((resource, index) => {
-              const Icon = ICONS[resource.type] ?? FileText;
+          <nav aria-label="Filter the library by type" className="dk-tabs mt-8">
+            <Link href="/resources#library" aria-current={!activeType ? "page" : undefined} className="dk-tab" data-tone="all">
+              Everything <span className="dk-tab-count">{resources.length}</span>
+            </Link>
+            {typesPresent.map((kind) => {
+              const Icon = RESOURCE_TYPES[kind].icon;
               return (
-                <Reveal key={resource.id} delay={index * 0.07}>
-                  <div className="interactive flex h-full flex-col rounded-xl border border-navy/12 bg-navy p-6 text-paper">
-                    <div className="relative -mx-6 -mt-6 mb-6 h-40 overflow-hidden rounded-t-xl">
-                      <CoverImage src={resource.type === "audio" || resource.type === "video" ? "/images/online-learning.jpg" : "/images/learning-materials.jpg"} alt="" sizes="(min-width: 1024px) 33vw, 100vw" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-gold">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <span className="text-[10px] uppercase tracking-[0.12em] text-paper/50">
-                        {resourceFileTarget(resource.fileUrl) ? `${resource.fileFormat} · ${resource.fileSize}` : "Coming soon"}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 font-serif text-2xl leading-snug">{resource.title}</h3>
-                    <p className="mt-2 flex-1 text-[13px] leading-relaxed text-paper/65">{resource.description}</p>
-                    <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
-                      <span className="text-[10.5px] uppercase tracking-[0.12em] text-paper/40">
-                        {resource.level ?? "All levels"}
-                      </span>
-                      {resourceFileTarget(resource.fileUrl) ? <a
-                        download
-                        href={`/api/resources/${resource.slug}/download`}
-                        className="inline-flex items-center gap-2 rounded-full bg-gold px-4 py-2 text-[12px] font-semibold text-ink transition-colors hover:bg-paper"
-                      >
-                        <Download className="h-3.5 w-3.5" /> Download
-                      </a> : <span className="text-xs text-paper/65">Coming soon</span>}
-                    </div>
-                  </div>
-                </Reveal>
+                <Link
+                  key={kind}
+                  href={`/resources?type=${kind}#library`}
+                  aria-current={activeType === kind ? "page" : undefined}
+                  className="dk-tab"
+                  data-tone={kind}
+                >
+                  <Icon aria-hidden />
+                  {RESOURCE_TYPES[kind].label}
+                  <span className="dk-tab-count">{resources.filter((resource) => resource.type === kind).length}</span>
+                </Link>
               );
             })}
-          </div>
-
-          <div className="mt-14">
-            <p className="eyebrow">Full library</p>
-            <h2 className="mt-3 font-serif text-3xl text-navy">Worksheets, guides and sessions</h2>
-            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {rest.map((resource, index) => {
-                const Icon = ICONS[resource.type] ?? FileText;
-                return (
-                  <Reveal key={resource.id} delay={Math.min(index * 0.05, 0.3)}>
-                    <div className="interactive flex h-full flex-col rounded-xl border border-navy/10 bg-paper p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-cream text-gold-dark">
-                          <Icon className="h-4.5 w-4.5" />
-                        </span>
-                        <Badge variant="outline">{resource.type}</Badge>
-                      </div>
-                      <h3 className="mt-3.5 font-serif text-lg leading-snug text-navy">{resource.title}</h3>
-                      <p className="mt-1.5 flex-1 text-[12.5px] leading-relaxed text-stone-600">{resource.description}</p>
-                      <div className="mt-4 flex items-center justify-between border-t border-navy/8 pt-3">
-                        <span className="text-[10.5px] uppercase tracking-[0.1em] text-stone-400">
-                          {resourceFileTarget(resource.fileUrl) ? `${resource.fileFormat} · ${resource.fileSize}` : "Coming soon"}
-                        </span>
-                        {resourceFileTarget(resource.fileUrl) ? <a
-                          download
-                          href={`/api/resources/${resource.slug}/download`}
-                          className={cn(
-                            "inline-flex items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-[0.1em]",
-                            "text-navy hover:text-gold-dark",
-                          )}
-                        >
-                          <Download className="h-3.5 w-3.5" /> Get it
-                        </a> : <span className="text-xs text-stone-500">Coming soon</span>}
-                      </div>
-                    </div>
+          </nav>
+          <div className="dk-drawer">
+            {shelf.length ? (
+              <ul className="grid gap-x-7 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+                {shelf.map((resource, index) => (
+                  <Reveal as="li" key={resource.id} delay={Math.min(index * 0.05, 0.3)} className="h-full">
+                    <ResourceDoc resource={resource} starter={featuredIds.has(resource.id)} />
                   </Reveal>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-14 grid gap-6 rounded-2xl border border-navy/10 bg-cream/60 p-7 lg:grid-cols-[1fr_1.1fr] lg:items-center">
-            <div>
-              <Badge variant="gold">The Purpose Letter</Badge>
-              <h2 className="mt-3 font-serif text-2xl text-navy">New resources, sent when they are ready.</h2>
-              <p className="mt-2 text-sm leading-relaxed text-stone-600">
-                Join the list and we will send worksheets as they are released, plus one new article each Thursday.
-              </p>
-            </div>
-            <NewsletterForm source="resources" />
+                ))}
+              </ul>
+            ) : (
+              <div className="py-10 text-center">
+                <p className="font-serif text-2xl text-navy">This drawer is empty for now.</p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-stone-600">
+                  Nothing of this type has been published yet. Ask for new resources below and we will send them when they are ready.
+                </p>
+                <Link href="/resources#library" className="dk-btn mt-6" data-size="sm">Show everything</Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
-    </>
+
+      <section id="request" className="scroll-mt-28 pb-20 pt-4">
+        <div className="shell">
+          <Reveal>
+            <div className="dk-slip mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+              <div>
+                <p className="dk-type text-[12px] font-bold uppercase tracking-[0.22em] text-[#8c241c]">Request slip</p>
+                <h2 className="mt-3 font-serif text-3xl leading-tight text-navy">New resources, sent when they are ready.</h2>
+                <p className="mt-3 text-[15px] leading-relaxed text-stone-600">
+                  Join the list and we will send worksheets as they are released, plus one new article each Thursday.
+                </p>
+              </div>
+              <NewsletterForm source="resources" />
+            </div>
+          </Reveal>
+        </div>
+      </section>
+    </div>
   );
 }

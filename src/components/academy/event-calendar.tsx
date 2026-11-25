@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarClock, Radio, Users } from "lucide-react";
 import { eventDate } from "@/lib/event-time";
+import { EventTicketBoard } from "@/components/events/event-ticket-board";
 export type CalendarEvent = {
   id: number;
   title: string;
@@ -23,11 +24,14 @@ export function EventCalendar({
   past = false,
   compact = false,
   manage = false,
+  appearance = "card",
 }: {
   initialEvents: CalendarEvent[];
   past?: boolean;
   compact?: boolean;
   manage?: boolean;
+  /** "ticket" renders admission tickets (public /events page only; needs app/(site)/desk.css). */
+  appearance?: "card" | "ticket";
 }) {
   const [events, setEvents] = useState(initialEvents),
     [error, setError] = useState("");
@@ -67,6 +71,8 @@ export function EventCalendar({
     };
   }, [past, compact]);
   const visible = compact ? events.slice(0, 3) : events;
+  if (appearance === "ticket")
+    return <EventTicketBoard events={visible} past={past} manage={manage} error={error} />;
   return (
     <div className="space-y-3">
       {error ? (

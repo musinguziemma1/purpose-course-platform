@@ -1,0 +1,493 @@
+/* ==========================================================================
+ * The Purpose Journal as a broadsheet on a desk (/blog only, imported by
+ * app/(site)/blog/page.tsx). Classes are prefixed `jr-`.
+ *
+ * Materials: newsprint and ink (the front page), binder index tabs (the
+ * principle sections), newspaper clippings taped to the desk (the archive),
+ * a highlighter pen (the active topic) and a kraft envelope with a postage
+ * stamp (the Purpose Letter). Light falls from the top-left.
+ *
+ * Motion: transform, opacity and clip-path only. The masthead rules draw in
+ * once; clippings and the letter use CSS scroll-driven reveals where the
+ * browser supports them (no JavaScript; everything is visible without them).
+ * Hover motion is limited to fine pointers; reduced motion keeps it still.
+ * ========================================================================== */
+
+@layer properties, theme, base, components, utilities;
+
+:root {
+  --jr-ink: #1a1d24;
+  --jr-navy: #122a4d;
+  --jr-newsprint: #f6f1e3;
+  --jr-desk: #eee6d3;
+  --jr-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --jr-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 0 0.12  0 0 0 0.1 0'/></filter><rect width='100%25' height='100%25' filter='url(%23g)'/></svg>");
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- *
+   * Desk and broadsheet
+   * ---------------------------------------------------------------- */
+  .jr-desk {
+    background-color: var(--jr-desk);
+    background-image:
+      radial-gradient(90% 50% at 15% 0%, rgba(255, 253, 248, 0.85), transparent 60%),
+      radial-gradient(70% 45% at 95% 100%, rgba(201, 162, 39, 0.1), transparent 60%),
+      var(--jr-grain);
+  }
+  .jr-sheet {
+    position: relative;
+    color: var(--jr-ink);
+    background-color: var(--jr-newsprint);
+    background-image:
+      radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 70%),
+      var(--jr-grain);
+    border-radius: 3px;
+    box-shadow:
+      0 1px 1px rgba(60, 44, 16, 0.12),
+      0 2px 0 -1px #efe7d4,
+      0 3px 0 -1px rgba(120, 96, 52, 0.18),
+      0 28px 50px -30px rgba(10, 26, 48, 0.55);
+  }
+  /* The fold down the middle of a broadsheet. */
+  .jr-sheet::after {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 1px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.05) 20%, rgba(0, 0, 0, 0.05) 80%, rgba(0, 0, 0, 0));
+    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Masthead
+   * ---------------------------------------------------------------- */
+  .jr-dateline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem 1.25rem;
+    padding-block: 0.55rem;
+    border-block: 1px solid rgba(26, 29, 36, 0.55);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #3f3a30;
+  }
+  .jr-title {
+    font-family: var(--font-serif, "Fraunces", Georgia, serif);
+    font-weight: 600;
+    font-size: clamp(2.6rem, 8.2vw, 6.4rem);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    text-align: center;
+    color: var(--jr-ink);
+    text-wrap: balance;
+  }
+  .jr-title-ornament {
+    color: #a5811a;
+  }
+  /* Thick-thin rule pair, drawn in from the centre once. */
+  .jr-rule {
+    height: 6px;
+    border-top: 3px solid var(--jr-ink);
+    border-bottom: 1px solid var(--jr-ink);
+    transform-origin: center;
+    animation: jr-draw 820ms var(--jr-ease) 120ms backwards;
+  }
+  .jr-masthead-rise {
+    animation: jr-rise 620ms var(--jr-ease) backwards;
+    animation-delay: var(--jr-d, 0ms);
+  }
+  .jr-motto {
+    font-family: var(--font-serif, "Fraunces", Georgia, serif);
+    font-style: italic;
+    font-size: clamp(1rem, 1.9vw, 1.2rem);
+    color: #4a4438;
+    text-align: center;
+  }
+  /* The search box is set like a classified notice. */
+  .jr-classified {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    background: #fffdf6;
+    border: 1.5px solid var(--jr-ink);
+    box-shadow: 3px 3px 0 rgba(26, 29, 36, 0.85);
+  }
+  .jr-classified:focus-within {
+    box-shadow: 3px 3px 0 #a5811a;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Index tabs (principle sections) that sit on the sheet's top edge
+   * ---------------------------------------------------------------- */
+  .jr-tabs {
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding: 0.6rem 0.25rem 0;
+    scrollbar-width: none;
+  }
+  .jr-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .jr-tab {
+    --jr-tab: #122a4d;
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.9rem;
+    padding: 0.55rem 1rem 0.65rem;
+    border: 1px solid rgba(120, 96, 52, 0.25);
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2e2a22;
+    background: linear-gradient(180deg, #fbf6ea, #efe6d1);
+    box-shadow: inset 0 3px 0 var(--jr-tab), inset 0 4px 0 rgba(255, 255, 255, 0.4);
+    transform: translateY(5px);
+    transition: transform 200ms var(--jr-ease), background-color 200ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-tab:hover {
+      transform: translateY(1px);
+    }
+  }
+  .jr-tab[aria-current="page"] {
+    z-index: 1;
+    color: var(--jr-ink);
+    background: var(--jr-newsprint);
+    transform: translateY(1px);
+  }
+  .jr-tab-count {
+    min-width: 1.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    background: rgba(26, 29, 36, 0.08);
+  }
+
+  /* An active topic is marked with a highlighter; hovering one draws the pen across. */
+  .jr-topic {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.25rem;
+    padding: 0 0.45rem;
+    font-size: 14px;
+    color: #3f3a30;
+    background-image: linear-gradient(100deg, rgba(247, 220, 111, 0) 0.5%, #f6dc6c 3%, rgba(246, 220, 108, 0.85) 94%, rgba(247, 220, 111, 0) 99%);
+    background-repeat: no-repeat;
+    background-position: 0 60%;
+    background-size: 0% 72%;
+    transition: background-size 260ms var(--jr-ease), color 150ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-topic:hover {
+      background-size: 100% 72%;
+      color: var(--jr-ink);
+    }
+  }
+  .jr-topic[aria-current="page"] {
+    background-size: 100% 72%;
+    font-weight: 600;
+    color: var(--jr-ink);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Front-page lead story
+   * ---------------------------------------------------------------- */
+  .jr-print {
+    position: relative;
+    overflow: hidden;
+    background: #d9d2c0;
+  }
+  .jr-print img {
+    filter: grayscale(1) sepia(0.18) contrast(1.08);
+  }
+  /* Halftone dots printed over the photograph. */
+  .jr-print::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(26, 29, 36, 0.2) 0.9px, transparent 1.25px);
+    background-size: 4px 4px;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+  }
+  .jr-columns {
+    column-gap: 1.75rem;
+    column-rule: 1px solid rgba(26, 29, 36, 0.18);
+  }
+  .jr-dropcap::first-letter {
+    float: left;
+    margin: 0.04em 0.1em 0 0;
+    font-family: var(--font-serif, "Fraunces", Georgia, serif);
+    font-size: 3.5em;
+    font-weight: 600;
+    line-height: 0.82;
+    color: var(--jr-ink);
+  }
+  .jr-headline-link {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0% 1.5px;
+    transition: background-size 280ms var(--jr-ease);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .group:hover .jr-headline-link {
+      background-size: 100% 1.5px;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Clippings taped to the desk
+   * ---------------------------------------------------------------- */
+  .jr-clip-wrap {
+    filter: drop-shadow(0 1px 1px rgba(60, 44, 16, 0.18)) drop-shadow(0 12px 14px rgba(10, 26, 48, 0.16));
+  }
+  .jr-clip {
+    --jr-tilt: -0.6deg;
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    color: var(--jr-ink);
+    transform: rotate(var(--jr-tilt));
+    transition: transform 260ms var(--jr-ease);
+  }
+  /* The paper itself, with a torn, deckled bottom edge. It is its own layer
+     so the mask never clips the tape that overlaps the top edge. */
+  .jr-clip-paper {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--jr-newsprint);
+    background-image: var(--jr-grain);
+    -webkit-mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 7px repeat-x;
+    mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 14px 7px repeat-x;
+  }
+  .jr-clip-wrap:nth-child(3n + 2) .jr-clip {
+    --jr-tilt: 0.55deg;
+  }
+  .jr-clip-wrap:nth-child(3n) .jr-clip {
+    --jr-tilt: -0.2deg;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-clip:hover {
+      transform: rotate(0deg) translateY(-4px);
+    }
+  }
+  .jr-clip:active {
+    transform: rotate(0deg) translateY(-1px) scale(0.995);
+  }
+  /* A strip of translucent tape holding the clipping. */
+  .jr-tape {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    z-index: 2;
+    width: 88px;
+    height: 22px;
+    transform: translateX(-50%) rotate(-2.5deg);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(26, 29, 36, 0.05);
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.12);
+    pointer-events: none;
+  }
+  .jr-clip-wrap:nth-child(even) .jr-tape {
+    left: 28%;
+    transform: translateX(-50%) rotate(3deg);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Page numbers set like a newspaper folio
+   * ---------------------------------------------------------------- */
+  .jr-folio a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    font-family: var(--font-serif, "Fraunces", Georgia, serif);
+    font-size: 15px;
+    color: var(--jr-ink);
+    border: 1px solid rgba(26, 29, 36, 0.25);
+    background: #fffdf6;
+    transition: transform 140ms var(--jr-ease), background-color 150ms ease;
+  }
+  .jr-folio a:active {
+    transform: translateY(1px);
+  }
+  .jr-folio a[aria-current="page"] {
+    color: var(--jr-newsprint);
+    background: var(--jr-ink);
+    border-color: var(--jr-ink);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-folio a:not([aria-current="page"]):hover {
+      background: #f3ead6;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The Purpose Letter: a kraft envelope with the letter rising out
+   * ---------------------------------------------------------------- */
+  .jr-envelope {
+    position: relative;
+    isolation: isolate;
+    padding: 2.5rem 1.25rem 1.25rem;
+    border-radius: 10px;
+    background-color: #c9a774;
+    background-image:
+      var(--jr-grain),
+      linear-gradient(180deg, #d4b483, #c09c66);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 26px 44px -26px rgba(60, 40, 10, 0.6);
+  }
+  /* The open flap behind the letter. */
+  .jr-envelope::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: -1;
+    height: 62%;
+    background: linear-gradient(180deg, #b8925a, #c9a774);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    border-radius: 10px 10px 0 0;
+  }
+  .jr-letter {
+    position: relative;
+    padding: 1.75rem 1.5rem 1.5rem;
+    color: var(--jr-ink);
+    background-color: #fffdf6;
+    background-image: linear-gradient(180deg, transparent calc(1.9rem - 1px), rgba(18, 42, 77, 0.07) calc(1.9rem - 1px));
+    background-size: 100% 1.9rem;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(60, 44, 16, 0.15), 0 10px 18px -12px rgba(60, 40, 10, 0.45);
+  }
+  /* A postage stamp with perforated edges. */
+  .jr-stamp {
+    display: inline-flex;
+    width: 5.25rem;
+    height: 6.25rem;
+    padding: 7px;
+    background: #fffdf6;
+    -webkit-mask: radial-gradient(circle 3.2px at 4px 4px, #0000 97%, #000) -4px -4px / 8px 8px;
+    mask: radial-gradient(circle 3.2px at 4px 4px, #0000 97%, #000) -4px -4px / 8px 8px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+    transform: rotate(4deg);
+  }
+  .jr-stamp-face {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.2rem;
+    color: #f7e9b6;
+    background: radial-gradient(120% 90% at 30% 20%, #24467a, #122a4d 60%, #0a1a30);
+    text-align: center;
+  }
+  /* A circular postmark with cancellation waves. */
+  .jr-postmark {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 5.5rem;
+    height: 5.5rem;
+    border: 2px solid rgba(26, 29, 36, 0.55);
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    line-height: 1.25;
+    text-align: center;
+    text-transform: uppercase;
+    color: rgba(26, 29, 36, 0.62);
+    transform: rotate(-12deg);
+    pointer-events: none;
+  }
+  .jr-postmark::after {
+    content: "";
+    position: absolute;
+    left: 92%;
+    top: 30%;
+    width: 6rem;
+    height: 2.4rem;
+    background: repeating-linear-gradient(180deg, rgba(26, 29, 36, 0.5) 0 2px, transparent 2px 9px);
+    -webkit-mask: radial-gradient(60% 120% at 0 50%, #000 60%, #0000);
+    mask: radial-gradient(60% 120% at 0 50%, #000 60%, #0000);
+  }
+}
+
+@keyframes jr-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes jr-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+}
+@keyframes jr-reveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+}
+@keyframes jr-letter {
+  from {
+    transform: translate3d(0, 48px, 0);
+  }
+}
+
+/* Scroll-driven reveals: each clipping settles onto the desk as it enters the
+   viewport, and the letter rises out of its envelope. Browsers without view
+   timelines simply show everything. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .jr-clip-wrap {
+      animation: jr-reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+    .jr-letter {
+      animation: jr-letter linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 35%;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jr-rule,
+  .jr-masthead-rise {
+    animation: none;
+  }
+  .jr-clip,
+  .jr-tab,
+  .jr-topic,
+  .jr-headline-link {
+    transition: none;
+  }
+}

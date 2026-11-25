@@ -1,0 +1,1059 @@
+/* =====================================================================
+ * Salon: the tactile kit for the public /community and /about pages.
+ *
+ * A round table in navy felt with a polished brass rim, leather chairs,
+ * a framed photograph, a bound page with a ribbon, minted principle
+ * coins, a calling card, cameo portraits, a parchment charter with a wax
+ * seal, and an envelope that lets its letter out. Classes are prefixed
+ * sl- and layered as components so Tailwind utilities can refine them.
+ *
+ * Motion: each entrance plays once; ambient motion (lamp glow, rim
+ * sheen, ribbon sway) is slow and transform/opacity-only; hover motion
+ * needs a fine pointer; prefers-reduced-motion stills all of it.
+ * ===================================================================== */
+
+:root {
+  --sl-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sl-press: cubic-bezier(0.23, 1, 0.32, 1);
+  --sl-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sl-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .04 0 0 0 0 .1 0 0 0 0 .19 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.1'/%3E%3C/svg%3E");
+  --sl-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 -.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)' opacity='.09'/%3E%3C/svg%3E");
+  --sl-brass: linear-gradient(180deg, #f6e8b8 0%, #e2c66f 24%, #c9a227 52%, #b48e20 53%, #d8bb62 82%, #f0dc9c 100%);
+  --sl-raise:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 1px rgba(10, 26, 48, 0.05),
+    0 2px 6px -2px rgba(10, 26, 48, 0.1),
+    0 18px 36px -24px rgba(10, 26, 48, 0.45);
+}
+
+@layer components {
+  /* ------------------------------------------------------------------ *
+   * Shared surfaces
+   * ------------------------------------------------------------------ */
+
+  /* Warm desk light behind a light section. */
+  .sl-desk {
+    background-color: #f1ebdf;
+    background-image:
+      var(--sl-grain),
+      radial-gradient(90% 60% at 50% 0%, rgba(255, 253, 248, 0.95), rgba(255, 253, 248, 0) 65%),
+      linear-gradient(180deg, #f5f0e5 0%, #ece4d3 100%);
+  }
+
+  /* Cardstock. */
+  .sl-card {
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    border-radius: 22px;
+    background-color: #fffdf8;
+    background-image: linear-gradient(180deg, #fffefb 0%, #fcf7ec 100%);
+    box-shadow: var(--sl-raise);
+  }
+  .sl-strip {
+    border-bottom: 1px solid rgba(18, 42, 77, 0.09);
+    background: linear-gradient(180deg, rgba(247, 242, 230, 0.9), rgba(247, 242, 230, 0.35));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .sl-lift {
+    transition:
+      transform 240ms var(--sl-ease),
+      box-shadow 240ms var(--sl-ease),
+      border-color 240ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-lift:hover {
+      transform: translate3d(0, -3px, 0);
+      border-color: rgba(165, 129, 26, 0.45);
+      box-shadow:
+        inset 0 1px 0 #fff,
+        0 8px 14px -8px rgba(10, 26, 48, 0.18),
+        0 28px 48px -26px rgba(10, 26, 48, 0.5);
+    }
+  }
+
+  /* Navy leather with saddle stitching. */
+  .sl-leather {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 24px;
+    color: #fffdf8;
+    border: 1px solid #06111f;
+    background-color: #0e223d;
+    background-image:
+      var(--sl-leather),
+      radial-gradient(120% 90% at 0% 0%, rgba(43, 74, 117, 0.95) 0%, rgba(18, 42, 77, 0.9) 45%, #0a1a30 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      0 2px 4px rgba(10, 26, 48, 0.2),
+      0 26px 50px -28px rgba(10, 26, 48, 0.9);
+  }
+  .sl-leather::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: -1;
+    border-radius: 17px;
+    border: 1.5px dashed rgba(201, 162, 39, 0.42);
+    pointer-events: none;
+  }
+  .sl-well-dark {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.1));
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .sl-well {
+    border-radius: 14px;
+    background: linear-gradient(180deg, #efe7d6, #f8f3e8);
+    box-shadow: inset 0 1px 3px rgba(10, 26, 48, 0.16), 0 1px 0 #fff;
+  }
+
+  /* Engraved brass nameplate with two screws. */
+  .sl-plate {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.32rem 1.35rem;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #3d2c05;
+    text-shadow: 0 1px 0 rgba(255, 244, 205, 0.7);
+    background: var(--sl-brass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(90, 64, 8, 0.35),
+      0 1px 1px rgba(10, 26, 48, 0.25),
+      0 4px 10px -4px rgba(90, 64, 8, 0.6);
+  }
+  .sl-plate::before,
+  .sl-plate::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background:
+      linear-gradient(45deg, transparent 41%, rgba(60, 40, 0, 0.6) 44% 56%, transparent 59%),
+      radial-gradient(circle at 35% 30%, #fff6d6, #b08a22 58%, #6b520f);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .sl-plate::before { left: 6px; }
+  .sl-plate::after { right: 6px; }
+
+  /* Keys: raised buttons that press down. 44px tall for touch. */
+  .sl-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.16);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #122a4d;
+    background: linear-gradient(180deg, #fffefb 0%, #f3ecdd 100%);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -1px 0 rgba(18, 42, 77, 0.06),
+      0 1px 1px rgba(10, 26, 48, 0.08),
+      0 4px 10px -5px rgba(10, 26, 48, 0.3);
+    transition:
+      transform 140ms var(--sl-press),
+      box-shadow 140ms var(--sl-press),
+      border-color 180ms ease,
+      color 180ms ease,
+      filter 180ms ease;
+  }
+  .sl-key svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  .sl-key:active:not(:disabled) {
+    transform: translate3d(0, 1px, 0);
+    box-shadow: inset 0 1px 3px rgba(10, 26, 48, 0.25);
+  }
+  .sl-key:disabled {
+    opacity: 0.6;
+  }
+  .sl-key-brass {
+    color: #2b1f03;
+    border-color: #8f6d14;
+    text-shadow: 0 1px 0 rgba(255, 244, 205, 0.6);
+    background: linear-gradient(180deg, #f5e3a2 0%, #dcbc59 38%, #c9a227 62%, #b18b1d 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.18),
+      0 1px 1px rgba(10, 26, 48, 0.3),
+      0 8px 18px -8px rgba(143, 109, 20, 0.75);
+  }
+  .sl-key-navy {
+    color: #fffdf8;
+    border-color: #0a1a30;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+    background: linear-gradient(180deg, #2c4c79 0%, #1b3a63 42%, #122a4d 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+      0 1px 1px rgba(10, 26, 48, 0.3),
+      0 8px 16px -8px rgba(10, 26, 48, 0.75);
+  }
+  .sl-key-ghost {
+    color: rgba(255, 253, 248, 0.92);
+    border-color: rgba(255, 255, 255, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.03));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 14px -8px rgba(0, 0, 0, 0.6);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-key:hover {
+      border-color: rgba(165, 129, 26, 0.6);
+    }
+    .sl-key-brass:hover,
+    .sl-key-navy:hover {
+      filter: brightness(1.07);
+    }
+    .sl-key-ghost:hover {
+      color: #f2e4b8;
+    }
+  }
+  .sl-key-brass:active:not(:disabled),
+  .sl-key-navy:active:not(:disabled),
+  .sl-key-ghost:active:not(:disabled) {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Monogram coin. */
+  .sl-coin {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fffdf8;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+    background:
+      radial-gradient(circle at 32% 25%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%),
+      linear-gradient(180deg, #2c4c79, #122a4d);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      inset 0 -2px 2px rgba(0, 0, 0, 0.3),
+      0 0 0 2px #fffdf8,
+      0 0 0 3px rgba(201, 162, 39, 0.55),
+      0 4px 8px -3px rgba(10, 26, 48, 0.5);
+  }
+  .sl-coin-sm {
+    width: 2rem;
+    height: 2rem;
+    font-size: 11px;
+  }
+
+  /* Debossed field. */
+  .sl-field {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(18, 42, 77, 0.18);
+    background-color: #fffdf9;
+    color: #0a1a30;
+    font-size: 16px;
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.12), 0 1px 0 rgba(255, 255, 255, 0.9);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+  }
+  @media (min-width: 640px) {
+    .sl-field {
+      font-size: 14px;
+    }
+  }
+  .sl-field:focus {
+    outline: none;
+    border-color: #a5811a;
+    background-color: #fff;
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.08), 0 0 0 3px rgba(201, 162, 39, 0.34);
+  }
+  /* Lined writing paper with a margin rule, for longer text. */
+  .sl-lined {
+    line-height: 1.75rem;
+    padding-left: 2.75rem;
+    background-image:
+      linear-gradient(90deg, transparent 2.1rem, rgba(190, 80, 70, 0.32) 2.1rem 2.17rem, transparent 2.17rem),
+      linear-gradient(transparent calc(1.75rem - 1px), rgba(79, 143, 214, 0.22) calc(1.75rem - 1px));
+    background-size: 100% 100%, 100% 1.75rem;
+    background-position: 0 0, 0 0.625rem;
+    background-attachment: local;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The round table (community hero)
+   * ------------------------------------------------------------------ */
+  .sl-table-stage {
+    position: relative;
+    container-type: inline-size;
+    width: 100%;
+    max-width: 30rem;
+    aspect-ratio: 1;
+    margin-inline: auto;
+  }
+  /* The lamp overhead: a pool of warm light that breathes slowly. */
+  .sl-table-stage::before {
+    content: "";
+    position: absolute;
+    inset: -6%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 46%, rgba(242, 228, 184, 0.3), rgba(242, 228, 184, 0.08) 45%, rgba(242, 228, 184, 0) 66%);
+    animation: sl-breathe 7s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .sl-table-rim {
+    position: absolute;
+    inset: 19%;
+    padding: 2.3cqw;
+    border-radius: 50%;
+    background: conic-gradient(from 200deg, #f3e1a2, #a5811a, #f6e8b8, #8f6d14, #e9cf7a, #a5811a, #f3e1a2);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+      0 2.5cqw 6cqw -1cqw rgba(0, 0, 0, 0.65),
+      0 0 0 0.5cqw rgba(0, 0, 0, 0.25);
+    animation: sl-fade 900ms var(--sl-ease) 120ms backwards;
+  }
+  /* Polished brass catching the light as it turns. */
+  .sl-table-rim::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.6) 18deg, transparent 46deg, transparent 180deg, rgba(255, 255, 255, 0.35) 200deg, transparent 228deg);
+    animation: sl-turn 16s linear infinite;
+  }
+  .sl-table-felt {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 50%;
+    background-color: #102846;
+    background-image:
+      var(--sl-leather),
+      radial-gradient(circle at 50% 38%, #2a4f82 0%, #173560 52%, #0b1d36 100%);
+    box-shadow: inset 0 1.2cqw 3cqw rgba(0, 0, 0, 0.6), inset 0 0 0 0.4cqw rgba(0, 0, 0, 0.3);
+  }
+  .sl-table-felt::before {
+    content: "";
+    position: absolute;
+    inset: 7%;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(201, 162, 39, 0.45);
+  }
+  .sl-table-medal {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 15cqw;
+    height: 15cqw;
+    margin: -7.5cqw 0 0 -7.5cqw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: #4b3605;
+    background: radial-gradient(circle at 32% 26%, #fbf0c6 0%, #e3c56a 30%, #c9a227 55%, #8f6d14 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -2px 3px rgba(80, 55, 0, 0.45),
+      0 0 0 0.6cqw rgba(0, 0, 0, 0.25),
+      0 1.5cqw 3cqw rgba(0, 0, 0, 0.5);
+    animation: sl-pop-in 700ms var(--sl-pop) 300ms backwards;
+  }
+  .sl-table-medal svg {
+    width: 52%;
+    height: 52%;
+    filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.7));
+  }
+  .sl-table-medal::after {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(242, 228, 184, 0.42), rgba(242, 228, 184, 0) 62%);
+    animation: sl-breathe 4.5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  /* Leather chairs pulled in around the table (--a = angle, --i = order). */
+  .sl-chair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 17cqw;
+    height: 11cqw;
+    margin: -5.5cqw 0 0 -8.5cqw;
+    border-radius: 46% 46% 32% 32% / 64% 64% 36% 36%;
+    background:
+      var(--sl-leather),
+      radial-gradient(120% 90% at 50% 70%, #2c4c79 0%, #17325a 60%, #0b1b31 100%);
+    box-shadow:
+      inset 0 0.4cqw 0 rgba(255, 255, 255, 0.12),
+      inset 0 -0.8cqw 1.2cqw rgba(0, 0, 0, 0.4),
+      0 1.2cqw 2.4cqw rgba(0, 0, 0, 0.5);
+    transform: rotate(var(--a)) translateY(-39cqw);
+    animation: sl-chair-in 950ms var(--sl-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 70ms + 250ms);
+  }
+  /* Backrest with a row of brass studs. */
+  .sl-chair::before {
+    content: "";
+    position: absolute;
+    left: 4%;
+    right: 4%;
+    top: -14%;
+    height: 44%;
+    border-radius: 50% 50% 22% 22% / 80% 80% 20% 20%;
+    background:
+      radial-gradient(circle, #ecd58a 0 0.55cqw, transparent 0.75cqw) 0 62% / 16% 100% repeat-x,
+      linear-gradient(180deg, #24467a, #0b1b31);
+    box-shadow: inset 0 0.3cqw 0 rgba(255, 255, 255, 0.15), 0 0.6cqw 1cqw rgba(0, 0, 0, 0.45);
+  }
+  .sl-chair[data-open] {
+    filter: saturate(0.6) brightness(0.85);
+  }
+  @keyframes sl-chair-in {
+    from {
+      opacity: 0;
+      transform: rotate(var(--a)) translateY(-49cqw);
+    }
+  }
+  /* The person seated: a monogram coin that stays upright. */
+  .sl-seat-coin {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 9.5cqw;
+    height: 9.5cqw;
+    margin: -4.75cqw 0 0 -4.75cqw;
+    font-size: 3.3cqw;
+    transform: rotate(var(--a)) translateY(-38.5cqw) rotate(calc(var(--a) * -1));
+    animation: sl-seat-in 650ms var(--sl-pop) backwards;
+    animation-delay: calc(var(--i, 0) * 80ms + 800ms);
+  }
+  @keyframes sl-seat-in {
+    from {
+      opacity: 0;
+      transform: rotate(var(--a)) translateY(-38.5cqw) rotate(calc(var(--a) * -1)) scale(0.4);
+    }
+  }
+  /* A place card on the felt in front of an empty chair. */
+  .sl-placecard {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10cqw;
+    margin: -1.9cqw 0 0 -5cqw;
+    padding: 0.5cqw 0;
+    border-radius: 0.5cqw;
+    font-size: 2.1cqw;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-transform: uppercase;
+    color: #8a6a12;
+    background: linear-gradient(180deg, #fffdf6, #f1e7cf);
+    box-shadow: 0 0.6cqw 1cqw rgba(0, 0, 0, 0.45);
+    transform: rotate(var(--a)) translateY(-24cqw) rotate(calc(var(--a) * -1));
+    animation: sl-fade 600ms ease backwards;
+    animation-delay: calc(var(--i, 0) * 80ms + 900ms);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Community board
+   * ------------------------------------------------------------------ */
+  .sl-board-row {
+    transition: background-color 180ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-board-row:hover {
+      background-color: rgba(247, 242, 230, 0.6);
+    }
+  }
+  /* Reply count in a little speech bubble. */
+  .sl-bubble {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 2.4rem;
+    justify-content: center;
+    padding: 0.25rem 0.55rem;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #122a4d;
+    background: linear-gradient(180deg, #fffefb, #f1eadb);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.2);
+  }
+  .sl-bubble::after {
+    content: "";
+    position: absolute;
+    left: 9px;
+    bottom: -5px;
+    width: 9px;
+    height: 9px;
+    background: #f3ecde;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+    filter: drop-shadow(0 1px 0 rgba(10, 26, 48, 0.12));
+  }
+  /* The opening prompt on an index card with a folded corner. */
+  .sl-index-card {
+    position: relative;
+    border-radius: 4px;
+    background:
+      linear-gradient(225deg, transparent 14px, #fffefb 14px) top right / 100% 100% no-repeat;
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.12), 0 10px 20px -14px rgba(10, 26, 48, 0.5);
+  }
+  .sl-index-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(225deg, transparent 50%, #e9dfc8 50%);
+    border-bottom-left-radius: 3px;
+    box-shadow: -1px 1px 2px rgba(10, 26, 48, 0.18);
+  }
+  /* Replies hang from a stitched thread. */
+  .sl-thread {
+    position: relative;
+  }
+  .sl-thread::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 8px;
+    bottom: 8px;
+    border-left: 2px dashed rgba(201, 162, 39, 0.45);
+  }
+  .sl-note {
+    position: relative;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fffefb, #fbf6ea);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.14), 0 8px 16px -12px rgba(10, 26, 48, 0.45);
+  }
+  .sl-note::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 12px;
+    width: 10px;
+    height: 10px;
+    background: #fffdf8;
+    transform: rotate(45deg);
+    box-shadow: -1px 1px 1px rgba(10, 26, 48, 0.1);
+  }
+
+  /* Wax seal press: the submit key for a new discussion. */
+  .sl-seal-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.75rem;
+    padding: 0 1.2rem 0 0.35rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.16);
+    font-size: 14px;
+    font-weight: 600;
+    color: #122a4d;
+    background: linear-gradient(180deg, #fffefb 0%, #f3ecdd 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(10, 26, 48, 0.08), 0 4px 10px -5px rgba(10, 26, 48, 0.3);
+    transition: box-shadow 140ms var(--sl-press), border-color 180ms ease;
+  }
+  .sl-seal {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 52% 48% 50% 46% / 48% 53% 47% 52%;
+    color: rgba(255, 222, 222, 0.85);
+    background: radial-gradient(circle at 35% 30%, #e45b68 0%, #b4233c 45%, #7a1426 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.35),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+      0 2px 4px rgba(122, 20, 38, 0.45);
+    transition: transform 160ms var(--sl-press);
+  }
+  .sl-seal svg {
+    width: 1rem;
+    height: 1rem;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.35));
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-seal-key:hover {
+      border-color: rgba(165, 129, 26, 0.6);
+    }
+  }
+  .sl-seal-key:active:not(:disabled) .sl-seal {
+    transform: scale(0.88) rotate(-8deg);
+  }
+  .sl-seal-key:disabled {
+    opacity: 0.6;
+  }
+  /* Large decorative seal (on the charter and the envelope). */
+  .sl-seal-lg {
+    width: 3.6rem;
+    height: 3.6rem;
+  }
+  .sl-seal-lg svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Community sidebar objects
+   * ------------------------------------------------------------------ */
+
+  /* Membership card with a coloured ribbon down its edge. */
+  .sl-member-card {
+    --tone: #c9a227;
+    position: relative;
+    display: block;
+    overflow: hidden;
+    padding: 0.85rem 1rem 0.85rem 1.35rem;
+    border-radius: 14px;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    background: linear-gradient(180deg, #fffefb, #fbf6ea);
+    box-shadow: inset 0 1px 0 #fff, 0 2px 6px -3px rgba(10, 26, 48, 0.25);
+  }
+  .sl-member-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 70%, #fff), var(--tone));
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.15);
+  }
+  .sl-stamp {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1rem 0.45rem;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transform: rotate(-6deg);
+    opacity: 0.85;
+  }
+
+  /* Brass door plate for a room. */
+  .sl-doorplate {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 1.6rem;
+    border-radius: 8px;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: #3d2c05;
+    text-shadow: 0 1px 0 rgba(255, 244, 205, 0.7);
+    background: var(--sl-brass);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(90, 64, 8, 0.35),
+      inset 0 0 0 3px rgba(255, 240, 200, 0.25),
+      0 2px 4px rgba(10, 26, 48, 0.25);
+  }
+  .sl-doorplate::before,
+  .sl-doorplate::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    background:
+      linear-gradient(-45deg, transparent 41%, rgba(60, 40, 0, 0.6) 44% 56%, transparent 59%),
+      radial-gradient(circle at 35% 30%, #fff6d6, #b08a22 58%, #6b520f);
+  }
+  .sl-doorplate::before { left: 7px; }
+  .sl-doorplate::after { right: 7px; }
+
+  /* Parchment charter with burnt edges, sealed in wax. */
+  .sl-parchment {
+    position: relative;
+    border-radius: 6px;
+    background-color: #f6ecd2;
+    background-image:
+      var(--sl-grain),
+      radial-gradient(60% 40% at 20% 15%, rgba(255, 250, 235, 0.8), transparent 70%),
+      radial-gradient(50% 45% at 85% 80%, rgba(214, 186, 128, 0.35), transparent 70%),
+      linear-gradient(180deg, #f8efd6, #f0e2c0);
+    box-shadow:
+      inset 0 0 28px rgba(150, 105, 40, 0.38),
+      inset 0 0 3px rgba(120, 80, 20, 0.4),
+      0 16px 30px -18px rgba(60, 40, 10, 0.55);
+  }
+  .sl-ribbon-tails {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+  .sl-ribbon-tails::before,
+  .sl-ribbon-tails::after {
+    content: "";
+    position: absolute;
+    top: 55%;
+    width: 1.1rem;
+    height: 2.6rem;
+    background: linear-gradient(180deg, #1b3a63, #122a4d);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+  }
+  .sl-ribbon-tails::before {
+    left: calc(50% - 1.05rem);
+    transform: rotate(14deg);
+  }
+  .sl-ribbon-tails::after {
+    left: calc(50% - 0.05rem);
+    transform: rotate(-14deg);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * About: framed photograph, bound page, coins, calling card, cameos
+   * ------------------------------------------------------------------ */
+  .sl-frame-hang {
+    position: relative;
+    padding-top: 2.75rem;
+  }
+  .sl-frame {
+    position: relative;
+    padding: 14px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #f6e8b8 0%, #b48f25 22%, #f3e1a2 44%, #8f6d14 68%, #e9cf7a 86%, #a5811a 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 0 0 3px rgba(80, 55, 0, 0.35),
+      inset 0 0 0 6px rgba(255, 240, 200, 0.35),
+      0 2px 4px rgba(10, 26, 48, 0.25),
+      0 34px 60px -30px rgba(10, 26, 48, 0.7);
+    transform: perspective(1400px) rotateY(-7deg) rotateX(2deg) rotate(1.2deg);
+    transition: transform 600ms var(--sl-ease);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-frame:hover {
+      transform: perspective(1400px) rotateY(0deg) rotateX(0deg) rotate(0deg);
+    }
+  }
+  .sl-mat {
+    padding: 12px;
+    background: linear-gradient(180deg, #fdfaf1, #f4ecda);
+    box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.3);
+  }
+  .sl-mat img {
+    display: block;
+    width: 100%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), inset 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+  /* Picture wire from a brass nail. */
+  .sl-wire {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 60%;
+    height: 3rem;
+    transform: translateX(-50%);
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  /* A bound page: stacked leaves, a gutter shadow, a drop cap and a ribbon marker. */
+  .sl-page {
+    position: relative;
+    border-radius: 4px 18px 18px 4px;
+    background-color: #fffcf4;
+    background-image:
+      var(--sl-grain),
+      linear-gradient(90deg, rgba(120, 90, 40, 0.16) 0%, rgba(120, 90, 40, 0) 4%, rgba(120, 90, 40, 0) 97%, rgba(120, 90, 40, 0.08) 100%);
+    box-shadow:
+      3px 3px 0 #f2e9d6,
+      4px 4px 0 rgba(18, 42, 77, 0.08),
+      7px 7px 0 #ebe0c8,
+      8px 8px 0 rgba(18, 42, 77, 0.08),
+      0 34px 54px -30px rgba(10, 26, 48, 0.55);
+  }
+  .sl-page-body > p:first-of-type::first-letter {
+    float: left;
+    margin: 0.06em 0.12em 0 0;
+    font-family: var(--font-serif);
+    font-size: 3.7em;
+    line-height: 0.84;
+    color: #a5811a;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .sl-ribbon {
+    position: absolute;
+    top: -6px;
+    right: 2.5rem;
+    width: 1.35rem;
+    height: 6.5rem;
+    background: linear-gradient(90deg, #8b1a2c, #b4233c 45%, #8b1a2c);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transform-origin: top center;
+    animation: sl-sway 6s ease-in-out infinite;
+  }
+
+  /* Minted principle coins. Hover spins one. */
+  .sl-medal {
+    --tone: #122a4d;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 50%;
+    color: #fffdf8;
+    background:
+      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 50%),
+      radial-gradient(circle, var(--tone) 58%, color-mix(in srgb, var(--tone) 65%, #000) 100%);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.18),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+      0 0 0 3px #e9cf7a,
+      0 0 0 4px #a5811a,
+      0 6px 12px -4px rgba(10, 26, 48, 0.5);
+    transition: transform 700ms var(--sl-ease);
+  }
+  .sl-medal svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    filter: drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.3));
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .group:hover .sl-medal {
+      transform: perspective(400px) rotateY(360deg);
+    }
+  }
+
+  /* Calling card: embossed letters on heavy stock, a second card beneath. */
+  .sl-callcard {
+    position: relative;
+    isolation: isolate;
+    border-radius: 6px;
+    background-color: #fffcf3;
+    background-image: var(--sl-grain), linear-gradient(160deg, #fffefa, #f6efdf);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.12), 0 18px 34px -20px rgba(10, 26, 48, 0.55);
+    transform: rotate(-1.4deg);
+    transition: transform 400ms var(--sl-ease);
+  }
+  .sl-callcard::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 6px;
+    background: linear-gradient(160deg, #f6efdf, #ece2c9);
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.15);
+    transform: rotate(3.2deg) translate(4px, 6px);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-callcard:hover {
+      transform: rotate(0deg) translate3d(0, -2px, 0);
+    }
+  }
+  .sl-emboss {
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95), 0 -1px 0 rgba(10, 26, 48, 0.14);
+  }
+
+  /* Cameo portrait card (TiltCard adds the pointer tilt and the glare). */
+  .sl-tilt {
+    position: relative;
+    transform-style: preserve-3d;
+  }
+  .sl-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%);
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sl-tilt:hover .sl-glare {
+      opacity: 1;
+    }
+  }
+  .sl-cameo-frame {
+    display: inline-flex;
+    padding: 5px;
+    border-radius: 50%;
+    background: conic-gradient(from 210deg, #f3e1a2, #a5811a, #f6e8b8, #8f6d14, #e9cf7a, #a5811a, #f3e1a2);
+    box-shadow: 0 6px 14px -6px rgba(10, 26, 48, 0.6);
+  }
+  .sl-cameo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    width: 5.5rem;
+    height: 6.75rem;
+    border-radius: 50%;
+    font-family: var(--font-serif);
+    font-size: 1.65rem;
+    color: #f2e4b8;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    background:
+      radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%),
+      linear-gradient(180deg, #24467a, #0e223d);
+    box-shadow: inset 0 0 0 2px rgba(255, 240, 200, 0.45), inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+  .sl-cameo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Envelope that lets its letter out (newsletter). */
+  /* The wrapper reserves the space above the envelope for its open flap. */
+  .sl-envelope {
+    position: relative;
+    width: 100%;
+    max-width: 24rem;
+    aspect-ratio: 1.55 / 1.4;
+    margin-inline: auto;
+  }
+  .sl-envelope-body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    aspect-ratio: 1.55;
+  }
+  .sl-envelope-back {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #e4d2a8, #d9c493);
+    box-shadow: 0 24px 40px -22px rgba(60, 40, 10, 0.6);
+  }
+  .sl-envelope-flap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 58%;
+    background: linear-gradient(0deg, #e8d7ae, #dcc898);
+    clip-path: polygon(0 100%, 50% 0, 100% 100%);
+  }
+  .sl-envelope-letter {
+    position: absolute;
+    left: 7%;
+    right: 7%;
+    top: -34%;
+    height: 92%;
+    padding: 9% 9% 0;
+    border-radius: 4px;
+    background-color: #fffdf6;
+    background-image:
+      linear-gradient(transparent calc(1.4rem - 1px), rgba(79, 143, 214, 0.18) calc(1.4rem - 1px));
+    background-size: 100% 1.4rem;
+    background-position: 0 3.2rem;
+    box-shadow: 0 2px 6px rgba(60, 40, 10, 0.25);
+  }
+  .sl-envelope-front {
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #ecdcb6, #e2cfa2);
+    clip-path: polygon(0 18%, 50% 62%, 100% 18%, 100% 100%, 0 100%);
+    box-shadow: inset 0 -2px 4px rgba(60, 40, 10, 0.2);
+  }
+  .sl-envelope-seal {
+    position: absolute;
+    left: 50%;
+    top: 62%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Keyframes
+   * ------------------------------------------------------------------ */
+  @keyframes sl-breathe {
+    0%,
+    100% {
+      opacity: 0.7;
+      transform: scale(0.98);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.02);
+    }
+  }
+  @keyframes sl-turn {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes sl-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sl-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+  @keyframes sl-sway {
+    0%,
+    100% {
+      transform: rotate(-1.6deg);
+    }
+    50% {
+      transform: rotate(1.6deg);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-table-stage::before,
+  .sl-table-rim,
+  .sl-table-rim::before,
+  .sl-table-medal,
+  .sl-table-medal::after,
+  .sl-chair,
+  .sl-seat-coin,
+  .sl-placecard,
+  .sl-ribbon {
+    animation: none;
+  }
+  .sl-frame,
+  .sl-callcard,
+  .sl-medal,
+  .sl-lift {
+    transition: none;
+  }
+}

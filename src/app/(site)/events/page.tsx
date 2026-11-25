@@ -1,10 +1,13 @@
+import "../desk.css";
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { CalendarClock, Globe2, MonitorPlay, ShieldCheck } from "lucide-react";
+import { Globe2, MonitorPlay, ShieldCheck } from "lucide-react";
 import { getEventCalendar } from "@/db/live-events";
 import { getSessionUser } from "@/lib/auth";
 import { EventCalendar } from "@/components/academy/event-calendar";
-import { PublicHero } from "@/components/site/public-hero";
-import { cn } from "@/lib/utils";
+import { DeskCalendar } from "@/components/events/desk-calendar";
+import { Reveal } from "@/components/motion/reveal";
+import { rise } from "@/components/site/public-hero";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -14,9 +17,9 @@ export const metadata = {
 };
 
 const HOW_IT_WORKS = [
-  { icon: MonitorPlay, title: "Join from your browser", body: "Camera and microphone in the event room, with no download." },
-  { icon: ShieldCheck, title: "Access follows enrolment", body: "Sessions open to your course, cohort or account." },
-  { icon: Globe2, title: "Local times", body: "Each event lists its time zone and length." },
+  { icon: MonitorPlay, title: "Join from your browser", body: "Camera and microphone in the event room, with no download.", tilt: "-1.6deg" },
+  { icon: ShieldCheck, title: "Access follows enrolment", body: "Sessions open to your course, cohort or account.", tilt: "1.1deg" },
+  { icon: Globe2, title: "Local times", body: "Each event lists its time zone and length.", tilt: "-0.7deg" },
 ];
 
 export default async function EventsPage({
@@ -25,11 +28,13 @@ export default async function EventsPage({
   searchParams: Promise<{ past?: string }>;
 }) {
   const user = await getSessionUser();
-  const past = (await searchParams).past === "1",
-    events = await getEventCalendar(user, {
-      past,
-      limit: 60,
-    });
+  const past = (await searchParams).past === "1";
+  const events = (await getEventCalendar(user, { past, limit: 60 })).map((row) => ({
+    ...row,
+    startsAt: row.startsAt.toISOString(),
+  }));
+  const live = events.filter((event) => event.status === "live");
+  const featured = past ? events[0] : (live[0] ?? events.find((event) => event.status === "scheduled") ?? events[0]);
   const views = [
     { href: "/events", label: "Upcoming and live", current: !past },
     { href: "/events?past=1", label: "Past and cancelled", current: past },
@@ -37,76 +42,77 @@ export default async function EventsPage({
 
   return (
     <>
-      <PublicHero
-        image="/images/online-learning.jpg"
-        eyebrow="Learn together"
-        title={
-          <>
-            Live event <span className="text-sheen">calendar</span>
-          </>
-        }
-        description={
-          user
-            ? "Teaching sessions, group discussions and office hours. Open an event to see its details and join when it starts."
-            : "Discover teaching sessions, group discussions and office hours. Sign in to join the sessions available to your account."
-        }
-        actions={
-          <nav aria-label="Event calendar views" className="glass-dark inline-flex rounded-full p-1">
-            {views.map((view) => (
-              <Link
-                key={view.href}
-                href={view.href}
-                aria-current={view.current ? "page" : undefined}
-                className={cn(
-                  "inline-flex h-11 items-center rounded-full px-5 text-sm font-medium transition-colors duration-200",
-                  view.current ? "bg-paper text-navy shadow-sm" : "text-paper/80 hover:bg-white/10 hover:text-paper",
-                )}
-              >
-                {view.label}
-              </Link>
-            ))}
-          </nav>
-        }
-        aside={
-          <div className="glass-dark rounded-3xl p-6 sm:p-7">
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">
-              <CalendarClock className="h-4 w-4" /> How live sessions work
+      <section className="dk-felt relative isolate overflow-hidden text-paper">
+        <div className="shell grid grid-cols-1 items-center gap-14 py-16 sm:py-20 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:py-24">
+          <div>
+            <p className="rise dk-plate" style={rise(0)}>Learn together</p>
+            <h1 className="rise display mt-5 text-[2.7rem] sm:text-6xl" style={rise(1)}>
+              Live event <span className="dk-foil-dark">calendar</span>
+            </h1>
+            <p className="rise mt-6 max-w-xl text-[16px] leading-relaxed text-paper/80" style={rise(2)}>
+              {user
+                ? "Teaching sessions, group discussions and office hours. Open an event to see its details and join when it starts."
+                : "Discover teaching sessions, group discussions and office hours. Sign in to join the sessions available to your account."}
             </p>
-            <ul className="mt-5 space-y-4">
-              {HOW_IT_WORKS.map((item) => (
-                <li key={item.title} className="flex gap-3.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold">
-                    <item.icon className="h-4.5 w-4.5" />
-                  </span>
-                  <span>
-                    <span className="block text-[15px] font-medium text-paper">{item.title}</span>
-                    <span className="mt-0.5 block text-[13px] leading-relaxed text-paper/65">{item.body}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {!user ? (
-              <Link
-                href="/login?next=/events"
-                className="mt-6 inline-flex h-11 items-center rounded-full bg-gold px-5 text-sm font-semibold text-ink transition-[background-color,transform] duration-150 hover:bg-gold-soft active:scale-[0.97]"
-              >
-                Sign in to join
-              </Link>
+            <div className="rise mt-8" style={rise(3)}>
+              <nav aria-label="Event calendar views" className="dk-switch" data-state={past ? "past" : "upcoming"}>
+                <span aria-hidden className="dk-switch-thumb" />
+                {views.map((view) => (
+                  <Link key={view.href} href={view.href} aria-current={view.current ? "page" : undefined} className="dk-switch-option">
+                    {view.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            {live.length ? (
+              <p className="rise mt-6 flex flex-wrap items-center gap-3 text-[14px] text-paper/85" style={rise(4)}>
+                <span className="dk-lamp">
+                  <span aria-hidden className="dk-lamp-bulb" />
+                  On air
+                </span>
+                {live.length === 1 ? "One session is live right now." : `${live.length} sessions are live right now.`}
+              </p>
             ) : null}
           </div>
-        }
-      />
-      <section className="mesh-light py-12 lg:py-16">
+          <div className="lg:justify-self-end">
+            <DeskCalendar session={featured} past={past} />
+          </div>
+        </div>
+      </section>
+
+      <section className="dk-linen py-14 lg:py-20">
         <div className="shell">
           <h2 className="sr-only">{past ? "Past and cancelled events" : "Upcoming and live events"}</h2>
-          <EventCalendar
-            key={String(past)}
-            initialEvents={events.map((row) => ({
-              ...row,
-              startsAt: row.startsAt.toISOString(),
-            }))}
-            past={past}
-          />
+          <EventCalendar key={String(past)} initialEvents={events} past={past} appearance="ticket" />
+        </div>
+      </section>
+
+      <section className="dk-linen border-t border-[#dccdab] pb-20 pt-14">
+        <div className="shell">
+          <Reveal className="max-w-2xl">
+            <p className="eyebrow">Before you join</p>
+            <h2 className="mt-4 font-serif text-4xl leading-tight text-navy">How live sessions work</h2>
+          </Reveal>
+          <ul className="mt-12 grid gap-8 md:grid-cols-3">
+            {HOW_IT_WORKS.map((item, index) => (
+              <Reveal as="li" key={item.title} delay={index * 0.07} className="h-full">
+                <div className="dk-index" style={{ "--tilt": item.tilt } as CSSProperties}>
+                  <span aria-hidden className="dk-pin" />
+                  <h3 className="flex items-center gap-2.5 font-serif text-xl text-navy">
+                    <item.icon aria-hidden className="h-5 w-5 text-[#8c241c]" />
+                    {item.title}
+                  </h3>
+                  <p className="mt-4 text-[15px] leading-[1.55rem] text-stone-700">{item.body}</p>
+                </div>
+              </Reveal>
+            ))}
+          </ul>
+          {!user ? (
+            <Reveal className="mt-12 flex flex-wrap items-center gap-3">
+              <Link href="/login?next=/events" className="dk-btn" data-variant="brass">Sign in to join</Link>
+              <Link href="/signup" className="dk-btn">Apply for a student account</Link>
+            </Reveal>
+          ) : null}
         </div>
       </section>
     </>
