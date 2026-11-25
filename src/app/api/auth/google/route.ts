@@ -14,12 +14,13 @@ export async function GET(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   if (host && host !== new URL(origin).host && !request.nextUrl.searchParams.has("canonical")) {
     const target = new URL("/api/auth/google", origin);
-    const next = request.nextUrl.searchParams.get("next");
+    const next = request.nextUrl.searchParams.get("next"), intent = request.nextUrl.searchParams.get("intent");
+    if (intent) target.searchParams.set("intent", intent);
     if (next) target.searchParams.set("next", next);
     target.searchParams.set("canonical", "1");
     return NextResponse.redirect(target);
   }
-  const { flow, challenge } = startFlow(request.nextUrl.searchParams.get("next") ?? "");
+  const { flow, challenge } = startFlow(request.nextUrl.searchParams.get("next") ?? "", request.nextUrl.searchParams.get("intent") ?? undefined);
   const response = NextResponse.redirect(authorizationUrl({ clientId: config.clientId, redirectUri: redirectUriFor(origin), state: flow.state, nonce: flow.nonce, challenge }));
   response.cookies.set(GOOGLE_STATE_COOKIE, sealFlow(flow, config.clientSecret), {
     httpOnly: true,

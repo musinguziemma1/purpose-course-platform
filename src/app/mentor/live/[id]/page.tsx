@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, Users, Video } from "lucide-react";
+import { Clapperboard, NotebookTabs, Video } from "lucide-react";
 import { LiveRoom } from "@/components/academy/live-room";
 import { RecordingForm } from "@/components/academy/admin-forms";
 import { getLiveSessionRoom } from "@/db/courses";
@@ -10,10 +10,13 @@ import { EventStatusForm } from "@/components/academy/event-forms";
 import { ensureRoomCode, isRoomHost } from "@/db/conference";
 import { nativeConferenceAvailable } from "@/lib/conference-config";
 import { sessionStillOpen } from "@/db/live-lifecycle";
+import { DeskEmpty, DeskHero, DeskSheet, LeatherChip, OnAirLamp, SheetHead, rise } from "@/components/mentor/desk";
 
 export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
+
+const LAMP_LABEL: Record<string, string> = { live: "On air", scheduled: "Standby", ended: "Off air", cancelled: "Cancelled" };
 
 export default async function MentorLiveRoomPage({ params }: Params) {
   const { id } = await params;
@@ -23,79 +26,99 @@ export default async function MentorLiveRoomPage({ params }: Params) {
   if (!room) notFound();
   const roomCode = nativeConferenceAvailable() && sessionStillOpen(room.session) ? room.session.roomCode ?? (await ensureRoomCode(room.session.id)) : null;
   const canHost = isRoomHost(room.session.hostId, user);
+  const live = room.session.status === "live";
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link href="/mentor/live" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-            <ArrowLeft className="h-3.5 w-3.5" /> Live teaching
-          </Link>
-          <h1 className="mt-1.5 font-serif text-2xl text-navy">{room.session.title}</h1>
-          <p className="text-[11.5px] text-stone-500">
-            {formatDateTime(room.session.startsAt)} · {room.session.status} · {room.attendees.length} RSVPs
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {roomCode ? (
-            <Link
-              href={`/room/${roomCode}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-3.5 text-[11px] font-semibold text-paper hover:bg-navy-700"
-            >
-              <Video className="h-3.5 w-3.5" /> Open video room
-            </Link>
-          ) : null}
-          {canHost ? <EventStatusForm id={room.session.id} status={room.session.status} version={room.session.updatedAt.toISOString()} /> : null}
-        </div>
-      </div>
+    <div className="space-y-7">
+      <DeskHero
+        compact
+        back={{ href: "/mentor/live", label: "Live teaching" }}
+        eyebrow="Live room"
+        title={room.session.title}
+        meta={
+          <>
+            <LeatherChip tone={live ? "rose" : undefined}>{room.session.status}</LeatherChip>
+            <LeatherChip>{formatDateTime(room.session.startsAt)}</LeatherChip>
+            <LeatherChip tone="teal">{room.attendees.length} RSVPs</LeatherChip>
+          </>
+        }
+        aside={
+          roomCode || canHost ? (
+            <div className="desk-console desk-rise w-full px-5 pb-5 pt-6 lg:w-72" style={rise(2)}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-stone-600">Broadcast</p>
+                <OnAirLamp on={live} label={LAMP_LABEL[room.session.status] ?? room.session.status} />
+              </div>
+              {roomCode ? (
+                <Link href={`/room/${roomCode}`} className="desk-btn mt-4 w-full" data-variant="teal">
+                  <Video aria-hidden /> Open video room
+                </Link>
+              ) : null}
+              {canHost ? <EventStatusForm id={room.session.id} status={room.session.status} version={room.session.updatedAt.toISOString()} /> : null}
+            </div>
+          ) : (
+            <OnAirLamp on={live} label={LAMP_LABEL[room.session.status] ?? room.session.status} />
+          )
+        }
+      />
 
-      <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
-        <LiveRoom
-          sessionId={room.session.id}
-          initialMessages={room.messages.map((message) => ({
-            id: message.id,
-            authorName: message.authorName,
-            authorRole: message.authorRole,
-            kind: message.kind,
-            body: message.body,
-            createdAt: message.createdAt.toISOString(),
-          }))}
-          initialStatus={room.session.status}
-          recordingUrl={room.session.recordingUrl}
-          defaultName={user.fullName}
-          isLive={room.session.status === "live"}
-        />
-        <div className="space-y-4">
-          <div className="admin-card p-5">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Close the session</p>
-            <p className="mt-1 text-[11.5px] text-stone-600">
-              Attach the recording so absent students can catch up, and students who missed it keep access.
-            </p>
-            <div className="mt-3">
-              {canHost ? <RecordingForm sessionId={room.session.id} version={room.session.updatedAt.toISOString()} /> : null}
-            </div>
-          </div>
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <Users className="h-3.5 w-3.5" /> Attendees
+      <div className="grid gap-7 xl:grid-cols-[1.55fr_1fr] xl:items-start">
+        <div className="desk-rise min-w-0" style={rise(1)}>
+          <LiveRoom
+            sessionId={room.session.id}
+            initialMessages={room.messages.map((message) => ({
+              id: message.id,
+              authorName: message.authorName,
+              authorRole: message.authorRole,
+              kind: message.kind,
+              body: message.body,
+              createdAt: message.createdAt.toISOString(),
+            }))}
+            initialStatus={room.session.status}
+            recordingUrl={room.session.recordingUrl}
+            defaultName={user.fullName}
+            isLive={live}
+          />
+        </div>
+        <div className="space-y-7">
+          <DeskSheet className="desk-rise overflow-hidden" style={rise(2)} labelledBy="close-session">
+            <SheetHead id="close-session" eyebrow="After the bell" title="Close the session" icon={Clapperboard} tone="navy" />
+            <div className="px-5 pb-5 pt-4">
+              <p className="text-[13.5px] leading-relaxed text-stone-600">
+                Attach the recording so absent students can catch up, and students who missed it keep access.
               </p>
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {room.attendees.length === 0 ? (
-                <li className="px-5 py-4 text-[12px] text-stone-500">No RSVPs yet.</li>
+              {canHost ? (
+                <div className="mt-3">
+                  <RecordingForm sessionId={room.session.id} version={room.session.updatedAt.toISOString()} />
+                </div>
               ) : (
-                room.attendees.map((attendee, index) => (
-                  <li key={`${attendee.name}-${index}`} className="px-5 py-2.5">
-                    <p className="text-[11.5px] font-medium text-navy">{attendee.name}</p>
-                    <p className="text-[10px] text-stone-500">{attendee.title ?? "Participant"}</p>
-                  </li>
-                ))
+                <p className="mt-3 font-serif text-[14px] italic text-stone-500">Only the session host can attach the recording.</p>
               )}
-            </ul>
-          </div>
-          <p className="inline-flex items-center gap-1.5 text-[10.5px] text-stone-400">
-            <CalendarClock className="h-3 w-3" /> The feed is shared with students in real time.
+            </div>
+          </DeskSheet>
+
+          <DeskSheet className="desk-rise overflow-hidden" style={rise(3)} labelledBy="attendees">
+            <SheetHead id="attendees" eyebrow="Sign-in sheet" title="Attendees" icon={NotebookTabs} tone="teal" count={room.attendees.length} />
+            {room.attendees.length === 0 ? (
+              <DeskEmpty>No RSVPs yet.</DeskEmpty>
+            ) : (
+              <ol className="desk-ledger">
+                {room.attendees.map((attendee, index) => (
+                  <li key={`${attendee.name}-${index}`} className="flex items-baseline gap-3 py-2.5 pr-5">
+                    <span aria-hidden className="numeric w-5 shrink-0 text-right font-serif text-[13px] italic text-stone-400">
+                      {index + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-medium text-navy">{attendee.name}</span>
+                      <span className="block text-[12px] text-stone-500">{attendee.title ?? "Participant"}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </DeskSheet>
+          <p className="desk-rise px-1 font-serif text-[14px] italic text-stone-500" style={rise(4)}>
+            The feed is shared with students in real time.
           </p>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Activity,
   ArrowLeftRight,
@@ -116,6 +117,7 @@ export function WorkspaceShell({
   accent = "gold",
   reviewMode = false,
   banner,
+  skin,
 }: {
   children: ReactNode;
   sections: NavSection[];
@@ -126,8 +128,12 @@ export function WorkspaceShell({
   accent?: Accent;
   reviewMode?: boolean;
   banner?: ReactNode;
+  /** "console": the tactile admin skin (src/app/admin/console.css). Other workspaces keep the plain shell. */
+  skin?: "console";
 }) {
   const pathname = usePathname();
+  const skinned = skin === "console";
+  const reduceMotion = useReducedMotion();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [previousPathname, setPreviousPathname] = useState(pathname);
   if (pathname !== previousPathname) {
@@ -153,7 +159,7 @@ export function WorkspaceShell({
 
   const brand = (
     <Link href={workspaceHome} className="flex items-center gap-2.5 rounded-lg">
-      <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-ink", tone.bg)}>
+      <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-ink", tone.bg, skinned && "console-medallion")}>
         <svg viewBox="0 0 32 32" className="h-5 w-5" fill="none" aria-hidden>
           <path d="M16 3l3.2 8.1L28 14l-8.8 2.9L16 25l-3.2-8.1L4 14l8.8-2.9L16 3z" fill="currentColor" />
         </svg>
@@ -183,13 +189,26 @@ export function WorkspaceShell({
                     className={cn(
                       "group flex items-center gap-3 rounded-lg px-3 text-[14px] transition-colors duration-150",
                       touch ? "min-h-11" : "min-h-10",
-                      active ? "bg-white/[0.12] font-medium text-paper shadow-[inset_3px_0_0_var(--color-gold)]" : "text-paper/70 hover:bg-white/[0.06] hover:text-paper",
+                      skinned && "console-nav-link",
+                      active
+                        ? skinned
+                          ? "font-medium text-paper"
+                          : "bg-white/[0.12] font-medium text-paper shadow-[inset_3px_0_0_var(--color-gold)]"
+                        : "text-paper/70 hover:bg-white/[0.06] hover:text-paper",
                     )}
                   >
+                    {skinned && active ? (
+                      <motion.span
+                        aria-hidden
+                        layoutId={touch ? "console-nav-drawer" : "console-nav-rail"}
+                        className="console-nav-active"
+                        transition={reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42, mass: 0.9 }}
+                      />
+                    ) : null}
                     <Icon aria-hidden className={cn("h-[18px] w-[18px] shrink-0", active ? tone.text : "text-paper/50 group-hover:text-gold")} />
                     <span className="flex-1">{item.label}</span>
                     {item.badge ? (
-                      <span className="min-w-6 rounded-full bg-gold px-1.5 py-0.5 text-center text-[12px] font-bold tabular-nums text-ink">
+                      <span className={cn("min-w-6 rounded-full bg-gold px-1.5 py-0.5 text-center text-[12px] font-bold tabular-nums text-ink", skinned && "console-nav-badge")}>
                         {item.badge > 99 ? "99+" : item.badge}
                         <span className="sr-only"> waiting</span>
                       </span>
@@ -205,9 +224,9 @@ export function WorkspaceShell({
   );
 
   return (
-    <div className="min-h-dvh bg-[#f6f2e9] lg:flex">
+    <div className={cn("min-h-dvh lg:flex", skinned ? "console" : "bg-[#f6f2e9]")}>
       <a href="#workspace-main" className="skip-link">Skip to main content</a>
-      <aside className="sticky top-0 hidden h-dvh w-[17rem] shrink-0 self-start flex-col bg-ink lg:flex">
+      <aside className={cn("sticky top-0 hidden h-dvh w-[17rem] shrink-0 self-start flex-col bg-ink lg:flex", skinned && "console-rail")}>
         <div className="shrink-0 px-4 py-5">{brand}</div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6">{navigation(false)}</div>
         <div className="shrink-0 border-t border-white/10 p-3">
@@ -231,6 +250,7 @@ export function WorkspaceShell({
             aria-label={`${workspaceName} menu`}
             className={cn(
               "relative flex h-full w-[min(20rem,86vw)] flex-col bg-ink pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] shadow-2xl ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:translate-x-0",
+              skinned && "console-rail",
               // Visible at once when opening (so focus can move in); stays visible until the exit slide ends.
               drawerOpen ? "visible translate-x-0 transition-[transform,opacity] duration-[280ms]" : "invisible -translate-x-full transition-[transform,opacity,visibility] duration-200 motion-reduce:opacity-0",
             )}
@@ -265,7 +285,7 @@ export function WorkspaceShell({
             </Link>
           </div>
         ) : null}
-        <header className="sticky top-0 z-30 flex shrink-0 items-center gap-2 border-b border-navy/10 bg-paper/95 px-3 py-2 backdrop-blur sm:gap-3 sm:px-6">
+        <header className={cn("sticky top-0 z-30 flex shrink-0 items-center gap-2 border-b border-navy/10 bg-paper/95 px-3 py-2 backdrop-blur sm:gap-3 sm:px-6", skinned && "console-topbar")}>
           <button
             ref={menuButtonRef}
             type="button"
@@ -295,7 +315,7 @@ export function WorkspaceShell({
           <div className="flex shrink-0 items-center gap-2">
             <CommandPalette signedIn />
             <NotificationBell profileId={user.profileId} />
-            <AccountMenu user={user} workspaces={workspaces} currentHome={workspaceHome} />
+            <AccountMenu user={user} workspaces={workspaces} currentHome={workspaceHome} skinned={skinned} />
           </div>
         </header>
         {banner}
@@ -306,7 +326,7 @@ export function WorkspaceShell({
 }
 
 /** Disclosure (not an ARIA menu): a button that reveals a short list of links. */
-function AccountMenu({ user, workspaces, currentHome }: { user: ShellUser; workspaces: WorkspaceLink[]; currentHome: string }) {
+function AccountMenu({ user, workspaces, currentHome, skinned = false }: { user: ShellUser; workspaces: WorkspaceLink[]; currentHome: string; skinned?: boolean }) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -352,7 +372,10 @@ function AccountMenu({ user, workspaces, currentHome }: { user: ShellUser; works
       {open ? (
         <div
           id="workspace-account-panel"
-          className="absolute right-0 top-[calc(100%+8px)] z-40 w-72 origin-top-right overflow-hidden rounded-xl border border-navy/10 bg-paper shadow-[0_12px_40px_-12px_rgba(10,26,48,0.35)] transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] starting:-translate-y-1 starting:scale-[0.97] starting:opacity-0 motion-reduce:starting:translate-y-0 motion-reduce:starting:scale-100"
+          className={cn(
+            "absolute right-0 top-[calc(100%+8px)] z-40 w-72 origin-top-right overflow-hidden rounded-xl border border-navy/10 bg-paper shadow-[0_12px_40px_-12px_rgba(10,26,48,0.35)] transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] starting:-translate-y-1 starting:scale-[0.97] starting:opacity-0 motion-reduce:starting:translate-y-0 motion-reduce:starting:scale-100",
+            skinned && "console-popover",
+          )}
         >
           <div className="border-b border-navy/10 px-4 py-3">
             <p className="truncate text-[14px] font-semibold text-navy">{user.fullName}</p>

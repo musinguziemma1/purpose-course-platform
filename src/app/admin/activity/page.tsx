@@ -1,7 +1,8 @@
 import { requireAdminPage } from "@/lib/page-access";
-import { Activity } from "lucide-react";
+import { Activity, BookOpenText } from "lucide-react";
 import { getActivityLogs } from "@/db/queries";
 import { formatDateTime, relativeTime } from "@/lib/utils";
+import { ConsoleEmpty, ConsoleHeader, Panel, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
@@ -12,37 +13,34 @@ export default async function AdminActivityPage() {
   const logs = await getActivityLogs(80);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-2xl text-navy">Activity log</h1>
-        <p className="text-[12.5px] text-stone-600">
-          An append-only record of editorial, community and audience events. Useful for handovers and accountability.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Audit trail"
+        title="Activity log"
+        description="An append-only record of editorial, community and audience events. Useful for handovers and accountability."
+      />
 
-      <div className="admin-card overflow-hidden">
-        {logs.length === 0 ? (
-          <p className="px-5 py-10 text-center text-sm text-stone-500">No activity recorded yet.</p>
-        ) : (
-          <ul className="divide-y divide-navy/8">
-            {logs.map((log) => (
-              <li key={log.id} className="flex gap-3 px-5 py-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cream text-gold-dark">
-                  <Activity className="h-3.5 w-3.5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[12.5px] leading-relaxed text-stone-700">{log.description}</p>
-                  <p className="mt-0.5 text-[10.5px] uppercase tracking-[0.1em] text-stone-400">
-                    {log.action} · {log.actorName ?? "System"}
-                    {log.actorRole ? ` (${log.actorRole})` : ""} · {formatDateTime(log.createdAt)}
+      {logs.length === 0 ? (
+        <ConsoleEmpty icon={Activity} title="No activity recorded yet." />
+      ) : (
+        <Panel title="Logbook" description={`Latest ${logs.length} entries, newest first.`} icon={BookOpenText}>
+          <ol className="k-ledger k-stagger">
+            {logs.map((log, index) => (
+              <li key={log.id} style={staggerStyle(index)} className="flex gap-3 py-3.5 pl-[1.45rem] pr-5">
+                <span aria-hidden className="k-rivet mt-1" />
+                <div className="min-w-0 flex-1 pl-6">
+                  <p className="text-[14px] leading-relaxed text-stone-800">{log.description}</p>
+                  <p className="mt-0.5 text-[11.5px] uppercase tracking-[0.1em] text-stone-500">
+                    <span className="k-mono normal-case tracking-normal text-navy">{log.action}</span> · {log.actorName ?? "System"}
+                    {log.actorRole ? ` (${log.actorRole})` : ""} · <time dateTime={new Date(log.createdAt).toISOString()}>{formatDateTime(log.createdAt)}</time>
                   </p>
                 </div>
-                <span className="shrink-0 text-[10.5px] text-stone-400">{relativeTime(log.createdAt)}</span>
+                <span className="hidden shrink-0 pt-0.5 text-[12px] text-stone-500 sm:block">{relativeTime(log.createdAt)}</span>
               </li>
             ))}
-          </ul>
-        )}
-      </div>
+          </ol>
+        </Panel>
+      )}
     </div>
   );
 }

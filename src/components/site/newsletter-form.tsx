@@ -78,7 +78,7 @@ export function NewsletterForm({
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="Your email address"
-          className={cn("flex-1", variant === "dark" && "border-white/20 bg-white/10 text-paper placeholder:text-paper/50")}
+          className={cn("sm:min-w-0 sm:flex-1", variant === "dark" && "border-white/20 bg-white/10 text-paper placeholder:text-paper/50")}
           aria-label="Email address"
         />
         <button
@@ -90,12 +90,12 @@ export function NewsletterForm({
           Subscribe
         </button>
       </div>
-      <div className="mt-2.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="mt-2.5 flex flex-col gap-2">
         <Select
           value={principle}
           onChange={(event) => setPrinciple(event.target.value)}
           className={cn(
-            "h-9 text-xs sm:max-w-60",
+            "sm:text-[13px]",
             variant === "dark" && "border-white/20 bg-white/10 text-paper",
           )}
           aria-label="Which principle do you want to grow in?"

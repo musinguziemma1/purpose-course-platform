@@ -1,8 +1,8 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
+import { Info } from "lucide-react";
 import { getProgrammeOutlines } from "@/db/programmes";
 import { getProgrammeLevelPresentation } from "@/lib/programme-stages";
+import { BackLink, Chip, Coin, LeatherChip, LearnHero } from "@/components/learn/kit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,43 +15,54 @@ export default async function StudentProgrammeOutlinePage({ params }: Params) {
   const programme = (await getProgrammeOutlines({ includeDrafts: false })).find((outline) => outline.slug === slug);
   if (!programme) notFound();
 
+  const moduleCount = programme.levels.reduce((total, level) => total + level.modules.length, 0);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/learn/courses" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> Academy courses
-        </Link>
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">
-          Published academic programme · {programme.duration}
-        </p>
-        <h1 className="mt-1 font-serif text-3xl text-navy">{programme.name}</h1>
-        <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-stone-600">{programme.description}</p>
-        <p className="mt-3 max-w-3xl rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[11.5px] leading-relaxed text-stone-700">
-          This programme is connected to the Academy’s digital lessons, aligned quizzes, assignments, level examinations,
-          progress rules and certificates. Course access follows your approved programme enrolment.
+    <div className="space-y-7">
+      <BackLink href="/learn/courses">Academy courses</BackLink>
+
+      <LearnHero
+        eyebrow={`Published academic programme · ${programme.duration}`}
+        title={programme.name}
+        description={programme.description}
+        meta={
+          <>
+            <LeatherChip>{programme.levels.length} levels</LeatherChip>
+            <LeatherChip>{moduleCount} academic modules</LeatherChip>
+          </>
+        }
+      />
+
+      <div className="lk-well flex max-w-3xl items-start gap-3 p-4 text-[14px] leading-relaxed text-stone-700">
+        <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-[#7a5d0d]" />
+        <p>
+          This programme is connected to the Academy’s digital lessons, aligned quizzes, assignments, level examinations, progress rules and certificates. Course access follows your
+          approved programme enrolment.
         </p>
       </div>
 
+      {/* The outline reads like a bound table of contents: one sheet per level. */}
       {programme.levels.map((level, levelIndex) => {
         const { stage, focus } = getProgrammeLevelPresentation(level.name, levelIndex);
         return (
-          <section key={level.id} className="admin-card overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/10 bg-cream/40 px-5 py-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">
-                  Level {levelIndex + 1} · {stage}
-                </p>
-                <h2 className="mt-1 font-serif text-xl text-navy">{focus}</h2>
+          <section key={level.id} className="lk-paper lk-stack overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(120,96,52,0.16)] bg-[linear-gradient(180deg,#fbf3dc,#fffdf8)] px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-4">
+                <Coin className="h-11 w-11 text-lg">{levelIndex + 1}</Coin>
+                <div>
+                  <p className="lk-kicker">
+                    Level {levelIndex + 1} · {stage}
+                  </p>
+                  <h2 className="mt-0.5 font-serif text-[1.25rem] text-navy">{focus}</h2>
+                </div>
               </div>
-              <span className="rounded-full bg-paper px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-600">
-                {level.modules.length} academic modules
-              </span>
+              <Chip>{level.modules.length} academic modules</Chip>
             </div>
-            <ol className="divide-y divide-navy/8">
+            <ol className="lk-ledger px-3 sm:px-4">
               {level.modules.map((module, moduleIndex) => (
-                <li key={module.id} className="flex gap-3 px-5 py-3.5">
-                  <span className="w-6 shrink-0 text-right text-[11px] text-stone-400">{moduleIndex + 1}.</span>
-                  <span className="text-[12.5px] leading-relaxed text-stone-700">{module.title}</span>
+                <li key={module.id} className="flex items-baseline gap-4 px-2 py-3.5">
+                  <span className="w-7 shrink-0 text-right font-serif text-[1.05rem] tabular-nums text-[#7a5d0d]">{moduleIndex + 1}.</span>
+                  <span className="text-[15px] leading-relaxed text-stone-800">{module.title}</span>
                 </li>
               ))}
             </ol>

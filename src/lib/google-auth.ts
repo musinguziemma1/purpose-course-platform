@@ -9,9 +9,13 @@ import { createHash, createHmac, createPublicKey, randomBytes, timingSafeEqual, 
 type Environment = Record<string, string | undefined>;
 export type GoogleConfiguration = { clientId: string; clientSecret: string };
 export type GoogleClaims = { sub: string; email: string; name?: string; picture?: string };
-export type FlowState = { state: string; verifier: string; nonce: string; next: string; exp: number };
+export type FlowState = { state: string; verifier: string; nonce: string; next: string; exp: number; intent?: "apply" };
+export type GoogleApplicant = { name: string; email: string; exp: number };
 
 export const GOOGLE_STATE_COOKIE = "pc_google_oauth";
+/** Verified name and email carried to the application form when a Google address has no account. */
+export const GOOGLE_APPLICANT_COOKIE = "pc_google_applicant";
+export const APPLICANT_SECONDS = 30 * 60;
 export const GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth";
 export const GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 export const GOOGLE_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs";
@@ -39,8 +43,8 @@ export function redirectUriFor(origin: string) {
   return `${new URL(origin).origin}/api/auth/google/callback`;
 }
 
-export function startFlow(next: string): { flow: FlowState; challenge: string } {
-  const flow: FlowState = { state: random(), verifier: random(48), nonce: random(), next: safeNextPath(next), exp: Math.floor(Date.now() / 1000) + FLOW_SECONDS };
+export function startFlow(next: string, intent?: string): { flow: FlowState; challenge: string } {
+  const flow: FlowState = { state: random(), verifier: random(48), nonce: random(), next: safeNextPath(next), exp: Math.floor(Date.now() / 1000) + FLOW_SECONDS, ...(intent === "apply" ? { intent: "apply" as const } : {}) };
   return { flow, challenge: base64url(createHash("sha256").update(flow.verifier).digest()) };
 }
 
@@ -70,6 +74,28 @@ export function openFlow(value: string | undefined, secret: string, now = Date.n
     const flow = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as FlowState;
     if (typeof flow.state !== "string" || typeof flow.verifier !== "string" || typeof flow.nonce !== "string" || typeof flow.exp !== "number") return null;
     return flow.exp * 1000 > now ? { ...flow, next: safeNextPath(flow.next) } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function sealApplicant(applicant: { name: string; email: string }, secret: string, now = Date.now()) {
+  const body = base64url(JSON.stringify({ name: applicant.name.slice(0, 160), email: applicant.email, exp: Math.floor(now / 1000) + APPLICANT_SECONDS }));
+  return `${body}.${base64url(createHmac("sha256", `applicant:${secret}`).update(body).digest())}`;
+}
+
+/** Returns the Google-verified applicant only for an untampered, unexpired cookie. */
+export function openApplicant(value: string | undefined, secret: string, now = Date.now()): GoogleApplicant | null {
+  if (!value) return null;
+  const [body, mac, extra] = value.split(".");
+  if (!body || !mac || extra !== undefined) return null;
+  const expected = createHmac("sha256", `applicant:${secret}`).update(body).digest();
+  const given = Buffer.from(mac, "base64url");
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+  try {
+    const applicant = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as GoogleApplicant;
+    if (typeof applicant.email !== "string" || typeof applicant.name !== "string" || typeof applicant.exp !== "number") return null;
+    return applicant.exp * 1000 > now ? applicant : null;
   } catch {
     return null;
   }

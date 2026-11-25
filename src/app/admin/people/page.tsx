@@ -1,7 +1,7 @@
 import { requireAdminPage } from "@/lib/page-access";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowUpRight, KeyRound, Mail, UserRound } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Building2, KeyRound, Mail, MailPlus, Send, UserRound } from "lucide-react";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accountInvitations, profiles, roles, users } from "@/db/schema";
@@ -13,11 +13,15 @@ import { ROLE_CATALOG } from "@/lib/roles";
 import { getOrganizations } from "@/db/learning";
 import { isDemoEnabled } from "@/lib/demo";
 import { InviteForm, RoleForm } from "@/components/admin/people-forms";
-import { formatDate } from "@/lib/utils";
+import { formatDate, initials } from "@/lib/utils";
+import { Led, Odometer, type LedTone } from "@/components/admin/console/instruments";
+import { ConsoleHeader, Panel, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "People & access" };
+
+const INVITE_LED: Record<string, LedTone> = { Accepted: "green", Pending: "gold", Revoked: "red", Expired: "off" };
 
 export default async function AdminPeoplePage() {
   await requireAdminPage("/admin/people");
@@ -50,65 +54,54 @@ export default async function AdminPeoplePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-serif text-2xl text-navy">People & access</h1>
-        <p className="text-[12.5px] text-stone-600">
-          Five workspaces share one identity system. Change a role here and the person&apos;s next sign-in lands in the
-          right dashboard.
-        </p>
-      </div>
+      <ConsoleHeader
+        eyebrow="Identity & access"
+        title="People & access"
+        description="Five workspaces share one identity system. Change a role here and the person's next sign-in lands in the right dashboard."
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {ROLE_CATALOG.map((role) => {
+      <ul className="k-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Roles">
+        {ROLE_CATALOG.map((role, index) => {
           const count = directory.filter((member) => member.roleSlug === role.slug).length;
           return (
-            <div key={role.slug} className="admin-card p-4">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-cream px-2 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-stone-600">
+            <li key={role.slug} style={staggerStyle(index)} className="admin-card k-idcard flex flex-col px-4 pb-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="ui-badge rounded-full border border-navy/10 bg-cream px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-stone-700">
                   level {role.level}
                 </span>
-                <span className="font-serif text-lg text-navy">{count}</span>
+                <span className="text-[1.5rem] text-navy">
+                  <Odometer value={count} />
+                </span>
               </div>
-              <p className="mt-2 text-[13px] font-semibold text-navy">{role.name}</p>
-              <p className="mt-0.5 text-[10.5px] leading-relaxed text-stone-500">{role.blurb}</p>
+              <p className="mt-2 font-serif text-[17px] text-navy">{role.name}</p>
+              <p className="mt-0.5 flex-1 text-[12.5px] leading-relaxed text-stone-600">{role.blurb}</p>
               <Link
                 href={role.workspace}
-                className="mt-2.5 inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-gold-dark hover:underline"
+                className="mt-3 inline-flex items-center gap-1 text-[12px] font-bold uppercase tracking-[0.08em] text-gold-dark hover:underline"
               >
-                {role.workspaceLabel} <ArrowUpRight className="h-3 w-3" />
+                {role.workspaceLabel} <ArrowUpRight aria-hidden className="h-3.5 w-3.5" />
               </Link>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
       <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] xl:items-start">
-        <div className="admin-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-navy/10 px-5 py-3.5">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-              <UserRound className="h-3.5 w-3.5 text-gold-dark" /> Accounts
-            </p>
-            <span className="text-[11px] text-stone-500">{directory.length} profiles</span>
-          </div>
+        <Panel title="Accounts" icon={UserRound} action={<span className="text-[12.5px] text-stone-600">{directory.length} profiles</span>}>
           <ul className="divide-y divide-navy/8">
             {directory.map((member) => (
-              <li key={member.profileId} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy font-serif text-[11px] font-semibold text-paper">
-                  {member.fullName
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
+              <li key={member.profileId} className="flex flex-wrap items-center gap-3.5 px-5 py-3.5">
+                <span aria-hidden className="k-coin">{initials(member.fullName)}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[12.5px] font-medium text-navy">
+                  <p className="flex flex-wrap items-center gap-2 text-[14px] font-medium text-navy">
                     {member.fullName}
                     {member.profileId === user.profileId ? (
-                      <span className="ml-1.5 text-[10px] font-normal uppercase tracking-[0.08em] text-stone-400">(you)</span>
+                      <span className="text-[11px] font-normal uppercase tracking-[0.08em] text-stone-500">(you)</span>
                     ) : null}
+                    {!member.isActive ? <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-rose-700">inactive</span> : null}
                   </p>
-                  <p className="inline-flex items-center gap-1 text-[10.5px] text-stone-500">
-                    <Mail className="h-2.5 w-2.5" /> {member.email} · joined {formatDate(member.createdAt, "short")}
+                  <p className="flex items-center gap-1 break-all text-[12.5px] text-stone-600">
+                    <Mail aria-hidden className="h-3 w-3 shrink-0" /> {member.email} · joined {formatDate(member.createdAt, "short")}
                   </p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
@@ -120,78 +113,86 @@ export default async function AdminPeoplePage() {
                   />
                   <Link
                     href={homePathForRole(member.roleSlug)}
-                    className="text-[10px] uppercase tracking-[0.08em] text-stone-400 hover:text-gold-dark"
+                    className="inline-flex items-center gap-1 text-[11.5px] uppercase tracking-[0.08em] text-stone-500 hover:text-gold-dark"
                   >
-                    {member.roleSlug} workspace →
+                    {member.roleSlug} workspace <ArrowRight aria-hidden className="h-3 w-3" />
                   </Link>
                 </div>
               </li>
             ))}
           </ul>
-        </div>
+        </Panel>
 
         <div className="space-y-5">
-          <div className="admin-card p-5">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-              <Mail className="h-3.5 w-3.5 text-gold-dark" /> Invite a colleague
-            </p>
-            <div className="mt-3">
-              <InviteForm roles={roleOptions.filter((role) => role.slug !== "guest")} configurationError={emailConfigurationError()} />
-            </div>
-          </div>
+          <Panel title="Invite a colleague" icon={MailPlus} riveted bodyClassName="px-5 pb-6 pt-4">
+            <InviteForm roles={roleOptions.filter((role) => role.slug !== "guest")} configurationError={emailConfigurationError()} />
+          </Panel>
 
-          <div className="admin-card p-5">
-            <h2 className="text-sm font-semibold text-navy">Recent invitations</h2>
-            <ul className="mt-3 space-y-3">
+          <Panel title="Recent invitations" icon={Send}>
+            <ul className="divide-y divide-navy/8">
               {invitations.map((invitation) => {
                 const status = invitation.acceptedAt ? "Accepted" : invitation.revokedAt ? "Revoked" : invitation.expiresAt < new Date() ? "Expired" : "Pending";
                 const role = roleRows.find((role) => role.id === invitation.roleId);
-                return <li key={invitation.id} className="break-words border-b border-navy/10 pb-3 text-xs"><p className="font-medium">{invitation.email}</p><p className="text-stone-600">{role?.name} · {status} · expires {formatDate(invitation.expiresAt)}</p>
-                  {status === "Pending" && role && canAssignRole(user, "guest", role.slug) ? <form action={revokeAccountInvitation}><input type="hidden" name="invitationId" value={invitation.id} /><button type="submit" className="mt-1 font-semibold text-rose-700 underline">Revoke invitation</button></form> : null}
-                </li>;
+                return (
+                  <li key={invitation.id} className="flex gap-3 break-words px-5 py-3">
+                    <Led tone={INVITE_LED[status]} className="mt-1.5" />
+                    <div className="min-w-0 flex-1 text-[13px]">
+                      <p className="font-medium text-navy">{invitation.email}</p>
+                      <p className="text-stone-600">
+                        {role?.name} · {status} · expires {formatDate(invitation.expiresAt)}
+                      </p>
+                      {status === "Pending" && role && canAssignRole(user, "guest", role.slug) ? (
+                        <form action={revokeAccountInvitation}>
+                          <input type="hidden" name="invitationId" value={invitation.id} />
+                          <button type="submit" className="mt-1 font-semibold text-rose-700 underline underline-offset-2">
+                            Revoke invitation
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
+                  </li>
+                );
               })}
-              {!invitations.length ? <li className="text-xs text-stone-600">No invitations yet.</li> : null}
+              {!invitations.length ? <li className="px-5 py-4 text-[13px] text-stone-600">No invitations yet.</li> : null}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="admin-card p-5">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-              <UserRound className="h-3.5 w-3.5 text-gold-dark" /> Organisations
-            </p>
-            <ul className="mt-2 space-y-1">
+          <Panel title="Organisations" icon={Building2} bodyClassName="px-5 py-3">
+            <ul className="divide-y divide-navy/8">
               {organizations.map((row) => (
-                <li key={row.organization.id} className="flex items-center justify-between gap-2 border-b border-navy/8 py-1 text-[11.5px]">
+                <li key={row.organization.id} className="flex items-center justify-between gap-2 py-2 text-[13px]">
                   <span className="text-navy">{row.organization.name}</span>
-                  <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-500">{row.organization.plan} · {row.memberCount}</span>
+                  <span className="text-[11.5px] uppercase tracking-[0.08em] text-stone-600">
+                    {row.organization.plan} · {row.memberCount}
+                  </span>
                 </li>
               ))}
-              {organizations.length === 0 ? <li className="text-[11.5px] text-stone-500">No organisations yet.</li> : null}
+              {organizations.length === 0 ? <li className="py-2 text-[13px] text-stone-600">No organisations yet.</li> : null}
             </ul>
-            <p className="mt-3 text-xs text-stone-600">This launch serves one organisation. Additional organisations are not enabled.</p>
-          </div>
+            <p className="mt-2 text-[12.5px] text-stone-600">This launch serves one organisation. Additional organisations are not enabled.</p>
+          </Panel>
 
-          {isDemoEnabled() ? <div className="admin-card p-5">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">
-              <KeyRound className="h-3.5 w-3.5 text-gold-dark" /> Demo access
-            </p>
-            <ul className="mt-2 space-y-1.5 text-[11.5px] text-stone-700">
-              {[
-                ["admin@purposecourse.org", "Administrator"],
-                ["editor@purposecourse.org", "Editor"],
-                ["author@purposecourse.org", "Author"],
-                ["mentor@purposecourse.org", "Mentor"],
-                ["student@purposecourse.org", "Student"],
-              ].map(([email, role]) => (
-                <li key={email} className="flex items-center justify-between gap-2 border-b border-navy/8 pb-1.5 last:border-0 last:pb-0">
-                  <code className="text-[10.5px] text-navy">{email}</code>
-                  <span className="text-[10px] uppercase tracking-[0.08em] text-stone-500">{role}</span>
-                </li>
-              ))}
-            </ul>
-            <Link href="/login" className="mt-3 inline-flex text-[11px] font-semibold text-gold-dark hover:underline">
-              Open one-click sign-in →
-            </Link>
-          </div> : null}
+          {isDemoEnabled() ? (
+            <Panel title="Demo access" icon={KeyRound} bodyClassName="px-5 py-3">
+              <ul className="divide-y divide-navy/8 text-[13px] text-stone-700">
+                {[
+                  ["admin@purposecourse.org", "Administrator"],
+                  ["editor@purposecourse.org", "Editor"],
+                  ["author@purposecourse.org", "Author"],
+                  ["mentor@purposecourse.org", "Mentor"],
+                  ["student@purposecourse.org", "Student"],
+                ].map(([email, role]) => (
+                  <li key={email} className="flex items-center justify-between gap-2 py-2">
+                    <code className="k-mono text-navy">{email}</code>
+                    <span className="text-[11.5px] uppercase tracking-[0.08em] text-stone-600">{role}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" className="mt-2 inline-flex items-center gap-1 text-[13px] font-semibold text-gold-dark hover:underline">
+                Open one-click sign-in <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+              </Link>
+            </Panel>
+          ) : null}
         </div>
       </div>
     </div>

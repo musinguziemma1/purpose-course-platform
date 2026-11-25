@@ -1,0 +1,1080 @@
+/* =====================================================================
+ * Admin console skin: "the editorial bureau"
+ *
+ * Tactile surfaces for /admin only: a stitched leather rail, cardstock
+ * panels, debossed inputs, enamel and brass keys, and instruments
+ * (odometers, gauges, glass meters, LEDs) that animate their readings in.
+ *
+ * Every selector is scoped under .console, which WorkspaceShell adds with
+ * skin="console", so the learner and mentor workspaces keep their own look
+ * even after this stylesheet has loaded.
+ *
+ * Motion rules: entrance motion plays once per page; movement uses
+ * transform, opacity or clip-path; hover lifts only under a fine pointer;
+ * prefers-reduced-motion turns movement into an instant state change.
+ * ===================================================================== */
+
+.console {
+  --k-ink: #0a1a30;
+  --k-navy: #122a4d;
+  --k-navy-700: #1b3a63;
+  --k-navy-300: #8fa6c2;
+  --k-cream: #f7f2e6;
+  --k-paper: #fffdf8;
+  --k-sand: #efe7d5;
+  --k-gold: #c9a227;
+  --k-gold-dark: #a5811a;
+  --k-gold-soft: #f2e4b8;
+  --k-source: #2f6b40;
+  --k-potential: #5a3a8a;
+  --k-destiny: #155e63;
+
+  --k-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --k-ease-press: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Fine paper grain and pebbled leather, drawn once as tiny SVG noise tiles. */
+  --k-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .04 0 0 0 0 .1 0 0 0 0 .19 0 0 0 .6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.1'/%3E%3C/svg%3E");
+  --k-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 -.18'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)' opacity='.09'/%3E%3C/svg%3E");
+
+  --k-raise:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 1px 1px rgba(10, 26, 48, 0.05),
+    0 2px 5px -2px rgba(10, 26, 48, 0.1),
+    0 14px 30px -22px rgba(10, 26, 48, 0.4);
+  --k-raise-hover:
+    inset 0 1px 0 #fff,
+    0 1px 1px rgba(10, 26, 48, 0.05),
+    0 8px 14px -8px rgba(10, 26, 48, 0.16),
+    0 26px 46px -26px rgba(10, 26, 48, 0.45);
+  --k-well:
+    inset 0 1px 2px rgba(10, 26, 48, 0.12),
+    inset 0 0 0 1px rgba(10, 26, 48, 0.015),
+    0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* The desk: warm linen under a soft overhead light. */
+  background-color: #eee7d8;
+  background-image:
+    var(--k-grain),
+    radial-gradient(110% 55% at 60% -8%, rgba(255, 253, 248, 0.95), rgba(255, 253, 248, 0) 62%),
+    linear-gradient(180deg, #f3eee3 0%, #ebe3d2 100%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Shell: leather rail, brass medallion, sliding nav key, top bar
+ * ------------------------------------------------------------------ */
+.console-rail {
+  background-color: #0b1b31;
+  background-image:
+    var(--k-leather),
+    radial-gradient(140% 55% at 0% 0%, rgba(46, 79, 124, 0.6), rgba(46, 79, 124, 0) 62%),
+    radial-gradient(120% 45% at 100% 100%, rgba(201, 162, 39, 0.1), rgba(201, 162, 39, 0) 62%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06), 8px 0 26px -14px rgba(10, 26, 48, 0.6);
+}
+/* Saddle stitching down the inner edge. */
+.console-rail::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: 7px;
+  border-right: 1.5px dashed rgba(201, 162, 39, 0.34);
+  pointer-events: none;
+}
+.console-medallion {
+  border-radius: 12px;
+  color: #4b3605;
+  background: radial-gradient(circle at 32% 26%, #fbf0c6 0%, #e3c56a 30%, #c9a227 55%, #8f6d14 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -2px 3px rgba(80, 55, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 4px 10px -2px rgba(0, 0, 0, 0.6);
+}
+.console-medallion svg {
+  filter: drop-shadow(0 1px 0 rgba(255, 240, 200, 0.65));
+}
+.console-nav-link {
+  position: relative;
+  isolation: isolate;
+}
+/* The pressed key behind the current page; it slides between items (framer layoutId). */
+.console-nav-active {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.05));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 8px 16px -10px rgba(0, 0, 0, 0.85);
+}
+.console-nav-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  margin-top: -9px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, #f2e4b8, #c9a227 60%, #a5811a);
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.7);
+}
+.console-nav-badge {
+  background: linear-gradient(180deg, #f2da86, #c9a227 60%, #ad881c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.console-topbar {
+  border-bottom-color: transparent;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.93), rgba(250, 246, 237, 0.9));
+  box-shadow:
+    inset 0 -1px 0 rgba(18, 42, 77, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.7),
+    0 12px 26px -22px rgba(10, 26, 48, 0.6);
+}
+.console-popover {
+  background-image: var(--k-grain), linear-gradient(180deg, #fffefb, #fbf6ec);
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 2px 4px rgba(10, 26, 48, 0.06),
+    0 24px 50px -18px rgba(10, 26, 48, 0.45);
+}
+
+/* ------------------------------------------------------------------ *
+ * Page entrance: each top-level block of a page rises in, in order.
+ * (src/app/admin/template.tsx remounts on navigation, so this replays
+ * per page; server re-renders after an action do not replay it.)
+ * ------------------------------------------------------------------ */
+.console-enter > * > * {
+  animation: k-rise 560ms var(--k-ease) backwards;
+}
+.console-enter > * > :nth-child(2) { animation-delay: 50ms; }
+.console-enter > * > :nth-child(3) { animation-delay: 100ms; }
+.console-enter > * > :nth-child(4) { animation-delay: 150ms; }
+.console-enter > * > :nth-child(5) { animation-delay: 200ms; }
+.console-enter > * > :nth-child(6) { animation-delay: 250ms; }
+.console-enter > * > :nth-child(7) { animation-delay: 300ms; }
+.console-enter > * > :nth-child(n + 8) { animation-delay: 340ms; }
+@keyframes k-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+}
+@keyframes k-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* Children of a .k-stagger list rise one after another (--i is the position). */
+.k-stagger > * {
+  animation: k-rise 520ms var(--k-ease) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * 45ms + 120ms);
+}
+
+/* ------------------------------------------------------------------ *
+ * Cardstock panels
+ * ------------------------------------------------------------------ */
+.console .admin-card {
+  border: 1px solid rgba(18, 42, 77, 0.1);
+  border-radius: 18px;
+  background-color: #fffdf8;
+  background-image: linear-gradient(180deg, #fffefb 0%, #fdf8ee 100%);
+  box-shadow: var(--k-raise);
+}
+.console .admin-card:hover {
+  border-color: rgba(18, 42, 77, 0.15);
+}
+.console a.admin-card,
+.k-lift {
+  transition:
+    transform 220ms var(--k-ease),
+    box-shadow 220ms var(--k-ease),
+    border-color 220ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .console a.admin-card:hover,
+  .k-lift:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--k-raise-hover);
+    border-color: rgba(165, 129, 26, 0.45);
+  }
+}
+.console a.admin-card:active,
+.k-lift:active {
+  transform: translate3d(0, 0, 0);
+  transition-duration: 90ms;
+}
+
+@layer components {
+  /* Panel header: a letterpressed label strip with a recessed icon well.
+     .k-strip is the look alone (no display or padding), so it can sit on
+     elements whose layout Tailwind controls (unlayered rules beat utilities). */
+  .k-panel-head,
+  .k-strip {
+    border-bottom: 1px solid rgba(18, 42, 77, 0.09);
+    background: linear-gradient(180deg, rgba(247, 242, 230, 0.85), rgba(247, 242, 230, 0.35));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .k-panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+  }
+
+  /* Airmail edge along the top of a letter card. */
+  .k-airmail {
+    position: relative;
+  }
+  .k-airmail::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5px;
+    background: repeating-linear-gradient(-45deg, #a8253a 0 9px, #fffdf8 9px 15px, #1b3a63 15px 24px, #fffdf8 24px 30px);
+    opacity: 0.85;
+  }
+  .k-panel-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--k-navy);
+    text-shadow: 0 1px 0 #fff;
+  }
+  .k-panel-sub {
+    margin-top: 0.1rem;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #57534e;
+  }
+  .k-well {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 10px;
+    color: var(--k-gold-dark);
+    background: linear-gradient(180deg, #efe7d6, #fffdf8);
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.16), 0 1px 0 #fff;
+  }
+}
+
+/* Rivets in the four corners of a plate-like panel. */
+.console .admin-card.k-riveted,
+.k-riveted {
+  background-image:
+    radial-gradient(circle at 13px 13px, #fff 0 0.7px, #d8ceb1 1.3px, #9c8858 2.6px, rgba(60, 45, 10, 0.35) 3.1px, transparent 3.7px),
+    radial-gradient(circle at calc(100% - 13px) 13px, #fff 0 0.7px, #d8ceb1 1.3px, #9c8858 2.6px, rgba(60, 45, 10, 0.35) 3.1px, transparent 3.7px),
+    radial-gradient(circle at 13px calc(100% - 13px), #fff 0 0.7px, #d8ceb1 1.3px, #9c8858 2.6px, rgba(60, 45, 10, 0.35) 3.1px, transparent 3.7px),
+    radial-gradient(circle at calc(100% - 13px) calc(100% - 13px), #fff 0 0.7px, #d8ceb1 1.3px, #9c8858 2.6px, rgba(60, 45, 10, 0.35) 3.1px, transparent 3.7px),
+    linear-gradient(180deg, #fffefb 0%, #fdf8ee 100%);
+}
+
+@layer components {
+  /* Navy leather with saddle stitching: feature panels and the overview hero. */
+  .k-leather {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 22px;
+    color: var(--k-paper);
+    border: 1px solid #06111f;
+    background-color: #0e223d;
+    background-image:
+      var(--k-leather),
+      radial-gradient(120% 90% at 0% 0%, rgba(43, 74, 117, 0.95) 0%, rgba(18, 42, 77, 0.9) 42%, rgba(10, 26, 48, 1) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+      0 2px 4px rgba(10, 26, 48, 0.2),
+      0 24px 48px -26px rgba(10, 26, 48, 0.85);
+  }
+  .k-leather::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    z-index: -1;
+    border-radius: 15px;
+    border: 1.5px dashed rgba(201, 162, 39, 0.4);
+    pointer-events: none;
+  }
+  .k-leather-tile {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.1));
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Letterhead page header with an embossed watermark and a gold foil rule
+   * ------------------------------------------------------------------ */
+  .k-letterhead {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 22px;
+    padding: 1.35rem 1.35rem 1.6rem;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    background-color: #fffcf5;
+    background-image: var(--k-grain), linear-gradient(180deg, #fffefa 0%, #fbf5e8 100%);
+    box-shadow: var(--k-raise);
+  }
+  @media (min-width: 640px) {
+    .k-letterhead {
+      padding: 1.75rem 2rem 2rem;
+    }
+  }
+  .k-letterhead::after {
+    content: "";
+    position: absolute;
+    left: 1.5rem;
+    right: 1.5rem;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: linear-gradient(90deg, #a5811a, #f2e4b8 28%, #c9a227 52%, #ecd58a 74%, #a5811a);
+    transform-origin: left;
+    animation: k-draw 900ms var(--k-ease) 180ms backwards;
+  }
+  @keyframes k-draw {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  .k-watermark {
+    position: absolute;
+    z-index: -1;
+    right: -2.5rem;
+    top: 50%;
+    width: 13rem;
+    height: 13rem;
+    margin-top: -6.5rem;
+    color: #fbf5e8;
+    filter: drop-shadow(1.5px 1.5px 0 rgba(255, 255, 255, 1)) drop-shadow(-1px -1px 0 rgba(10, 26, 48, 0.1));
+    animation: k-fade 1200ms ease 200ms backwards;
+  }
+  .k-title {
+    margin-top: 0.6rem;
+    font-family: var(--font-serif);
+    font-size: clamp(1.65rem, 2.8vw, 2.15rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--k-navy);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+  .k-lede {
+    margin-top: 0.55rem;
+    max-width: 46rem;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: #57534e;
+  }
+
+  /* Engraved brass nameplate, used for eyebrows. */
+  .k-plate {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 1.3rem;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #3d2c05;
+    text-shadow: 0 1px 0 rgba(255, 244, 205, 0.7);
+    background: linear-gradient(180deg, #f6e8b8 0%, #e2c66f 24%, #c9a227 52%, #b48e20 53%, #d8bb62 82%, #f0dc9c 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      inset 0 -1px 0 rgba(90, 64, 8, 0.35),
+      0 1px 1px rgba(10, 26, 48, 0.22),
+      0 3px 8px -4px rgba(90, 64, 8, 0.6);
+  }
+  .k-plate::before,
+  .k-plate::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background:
+      linear-gradient(45deg, transparent 41%, rgba(60, 40, 0, 0.6) 44% 56%, transparent 59%),
+      radial-gradient(circle at 35% 30%, #fff6d6, #b08a22 58%, #6b520f);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .k-plate::before { left: 6px; }
+  .k-plate::after { right: 6px; }
+
+  /* ------------------------------------------------------------------ *
+   * Keys: raised buttons that press down
+   * ------------------------------------------------------------------ */
+  .k-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.5rem;
+    padding: 0 1.05rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.16);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--k-navy);
+    background: linear-gradient(180deg, #fffefb 0%, #f4eee1 100%);
+    box-shadow:
+      inset 0 1px 0 #fff,
+      inset 0 -1px 0 rgba(18, 42, 77, 0.06),
+      0 1px 1px rgba(10, 26, 48, 0.08),
+      0 3px 8px -4px rgba(10, 26, 48, 0.28);
+    transition:
+      transform 140ms var(--k-ease-press),
+      box-shadow 140ms var(--k-ease-press),
+      border-color 180ms ease,
+      color 180ms ease,
+      filter 180ms ease;
+  }
+  .k-key svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .k-key:hover {
+      border-color: rgba(165, 129, 26, 0.55);
+    }
+    .k-key-navy:hover,
+    .k-key-brass:hover,
+    .k-key-danger:hover,
+    .k-key-source:hover {
+      filter: brightness(1.08);
+    }
+  }
+  .k-key:active:not(:disabled) {
+    transform: translate3d(0, 1px, 0);
+    box-shadow: inset 0 1px 3px rgba(10, 26, 48, 0.22);
+  }
+  .k-key:disabled {
+    opacity: 0.55;
+  }
+  .k-key-sm {
+    min-height: 2.125rem;
+    padding: 0 0.8rem;
+    font-size: 12.5px;
+  }
+  .k-key-sm svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .k-key-navy,
+  .k-key-brass,
+  .k-key-danger,
+  .k-key-source {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+      0 1px 1px rgba(10, 26, 48, 0.3),
+      0 6px 14px -8px rgba(10, 26, 48, 0.7);
+  }
+  .k-key-navy {
+    color: #fffdf8;
+    border-color: #0a1a30;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+    background: linear-gradient(180deg, #2c4c79 0%, #1b3a63 42%, #122a4d 100%);
+  }
+  .k-key-brass {
+    color: #2b1f03;
+    border-color: #8f6d14;
+    text-shadow: 0 1px 0 rgba(255, 244, 205, 0.6);
+    background: linear-gradient(180deg, #f5e3a2 0%, #dcbc59 38%, #c9a227 62%, #b18b1d 100%);
+  }
+  .k-key-danger {
+    color: #fff;
+    border-color: #7f1d1d;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(180deg, #c2414f 0%, #a8253a 50%, #8b1a2c 100%);
+  }
+  .k-key-source {
+    color: #fff;
+    border-color: #1f4a2c;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+    background: linear-gradient(180deg, #4a8a5c 0%, #2f6b40 55%, #255733 100%);
+  }
+  .k-key-ghost {
+    color: rgba(255, 253, 248, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 4px 10px -6px rgba(0, 0, 0, 0.6);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .k-key-ghost:hover {
+      color: #f2e4b8;
+      border-color: rgba(201, 162, 39, 0.6);
+    }
+  }
+  .k-key-navy:active:not(:disabled),
+  .k-key-brass:active:not(:disabled),
+  .k-key-danger:active:not(:disabled),
+  .k-key-source:active:not(:disabled),
+  .k-key-ghost:active:not(:disabled) {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* Existing pill buttons inside the console (forms not rewritten by hand)
+   pick up the same enamel and paper-key treatment. data-flat opts out. */
+.console :is(button, a, summary)[class*="rounded-full"]:is(.bg-navy, .bg-source, .bg-rose-700, .bg-gold):not([data-flat]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.04) 48%, rgba(0, 0, 0, 0.12) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 1px 1px rgba(10, 26, 48, 0.25),
+    0 6px 14px -8px rgba(10, 26, 48, 0.65);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  transition:
+    transform 140ms var(--k-ease-press),
+    box-shadow 140ms var(--k-ease-press),
+    background-color 180ms ease;
+}
+.console :is(button, a, summary)[class*="rounded-full"].bg-gold:not([data-flat]) {
+  text-shadow: 0 1px 0 rgba(255, 244, 205, 0.55);
+}
+.console :is(button, a)[class*="rounded-full"]:is(.border-navy\/15, .border-navy\/20, .border-navy\/25, .border-rose-200, .border-red-200):not([data-flat]) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25));
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 1px 1px rgba(10, 26, 48, 0.08),
+    0 3px 8px -5px rgba(10, 26, 48, 0.32);
+  transition:
+    transform 140ms var(--k-ease-press),
+    box-shadow 140ms var(--k-ease-press),
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.console :is(button, a, summary)[class*="rounded-full"]:is(.bg-navy, .bg-source, .bg-rose-700, .bg-gold, .border-navy\/15, .border-navy\/20, .border-navy\/25, .border-rose-200, .border-red-200):not([data-flat], :disabled):active {
+  transform: translate3d(0, 1px, 0);
+  box-shadow: inset 0 2px 4px rgba(10, 26, 48, 0.3);
+}
+
+/* ------------------------------------------------------------------ *
+ * Debossed fields
+ * ------------------------------------------------------------------ */
+.console :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="color"], [type="submit"], [type="button"], [type="reset"], [type="image"]), select, textarea) {
+  border-color: rgba(18, 42, 77, 0.18);
+  background-color: #fffdf9;
+  box-shadow: var(--k-well);
+}
+.console :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="color"], [type="submit"], [type="button"], [type="reset"], [type="image"]), select, textarea):hover:not(:disabled) {
+  border-color: rgba(18, 42, 77, 0.3);
+}
+.console :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="hidden"], [type="color"], [type="submit"], [type="button"], [type="reset"], [type="image"]), select, textarea):focus {
+  outline: none;
+  border-color: var(--k-gold-dark);
+  background-color: #fff;
+  box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.08), 0 0 0 3px rgba(201, 162, 39, 0.34);
+}
+.console :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: #e11d48;
+  box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.08), 0 0 0 3px rgba(225, 29, 72, 0.14);
+}
+.console :is(input, select, textarea):disabled {
+  background-color: #f5f0e5;
+  box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.06);
+}
+.console :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--k-navy);
+}
+
+/* Ledger-style tables. */
+.console table thead {
+  background: linear-gradient(180deg, #f8f3e8, #efe7d6);
+}
+.console table thead th {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* Enamel badges. */
+.console .ui-badge {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 1px 1px rgba(10, 26, 48, 0.08);
+}
+
+@layer components {
+  /* ------------------------------------------------------------------ *
+   * Segmented control: a recessed track of keys; the current one pops out
+   * ------------------------------------------------------------------ */
+  .k-segments {
+    display: flex;
+    gap: 4px;
+    width: max-content;
+    max-width: 100%;
+    padding: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #e8dfcc, #f3ede1);
+    box-shadow: inset 0 1px 3px rgba(10, 26, 48, 0.2), inset 0 0 0 1px rgba(10, 26, 48, 0.04), 0 1px 0 #fff;
+  }
+  .k-segments::-webkit-scrollbar {
+    display: none;
+  }
+  .k-segment {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.25rem;
+    padding: 0 0.95rem;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #57534e;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 200ms var(--k-ease),
+      transform 140ms var(--k-ease-press);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .k-segment:hover {
+      color: var(--k-navy);
+      background-color: rgba(255, 255, 255, 0.5);
+    }
+  }
+  .k-segment:active {
+    transform: translate3d(0, 1px, 0);
+  }
+  .k-segment[aria-current="page"] {
+    color: var(--k-navy);
+    background: linear-gradient(180deg, #fffefb, #f6f0e3);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.16), 0 4px 10px -5px rgba(10, 26, 48, 0.35);
+  }
+  .k-segment-count {
+    min-width: 1.5rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    background: rgba(18, 42, 77, 0.08);
+    box-shadow: inset 0 1px 1px rgba(10, 26, 48, 0.12);
+  }
+  .k-segment[aria-current="page"] .k-segment-count {
+    color: #2b1f03;
+    background: linear-gradient(180deg, #f2da86, #c9a227);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Domed icon keys and metric tiles
+   * ------------------------------------------------------------------ */
+  .k-dome {
+    --dome: #122a4d;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 11px;
+    color: #fff;
+    background:
+      radial-gradient(120% 90% at 30% 15%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 55%),
+      linear-gradient(180deg, color-mix(in srgb, var(--dome) 78%, #fff), var(--dome) 60%, color-mix(in srgb, var(--dome) 78%, #000));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -2px 2px rgba(0, 0, 0, 0.22),
+      0 1px 1px rgba(10, 26, 48, 0.25),
+      0 6px 12px -6px color-mix(in srgb, var(--dome) 80%, transparent);
+  }
+  .k-dome svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    filter: drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.25));
+  }
+  .k-dome-gold { --dome: #c9a227; color: #2b1f03; }
+  .k-dome-gold svg { filter: drop-shadow(0 1px 0 rgba(255, 244, 205, 0.6)); }
+  .k-dome-source { --dome: #2f6b40; }
+  .k-dome-potential { --dome: #5a3a8a; }
+  .k-dome-destiny { --dome: #155e63; }
+  .k-dome-rose { --dome: #b4233c; }
+  .k-dome-amber { --dome: #c27c0e; }
+
+  .k-metric {
+    position: relative;
+    padding: 1rem 1.1rem 1.05rem;
+  }
+  .k-metric-label {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #57534e;
+    text-shadow: 0 1px 0 #fff;
+  }
+  .k-metric-value {
+    margin-top: 0.85rem;
+    font-size: 1.85rem;
+    color: var(--k-navy);
+  }
+  .k-metric-hint {
+    margin-top: 0.4rem;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #57534e;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page-specific objects
+   * ------------------------------------------------------------------ */
+
+  /* Manila folder with a name tab (applications, enrolments). */
+  .k-folder {
+    position: relative;
+    margin-top: 1.1rem;
+  }
+  .k-folder-tab {
+    position: absolute;
+    left: 1.25rem;
+    top: calc(-1.1rem + 1px);
+    max-width: 60%;
+    height: 1.1rem;
+    padding: 0 0.9rem;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: #fffefb;
+    box-shadow: inset 0 1px 0 #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1.05rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--k-gold-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Postage stamp with a perforated edge (contact inbox status). */
+  .k-stamp {
+    --stamp: #122a4d;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 5px;
+    background: #fffdf8;
+    -webkit-mask:
+      radial-gradient(circle 2.6px, #0000 97%, #000) -4px -4px / 8px 8px,
+      linear-gradient(#000 0 0) content-box;
+    mask:
+      radial-gradient(circle 2.6px, #0000 97%, #000) -4px -4px / 8px 8px,
+      linear-gradient(#000 0 0) content-box;
+    filter: drop-shadow(0 1px 1px rgba(10, 26, 48, 0.25));
+    transform: rotate(var(--tilt, 2deg));
+  }
+  .k-stamp-face {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 4.6rem;
+    padding: 0.45rem 0.6rem;
+    color: #fffdf8;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.22), transparent 60%),
+      var(--stamp);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 253, 248, 0.5);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .k-stamp-new { --stamp: #a8253a; }
+  .k-stamp-progress { --stamp: #b47a12; }
+  .k-stamp-resolved { --stamp: #2f6b40; }
+
+  /* Ruled logbook with a double margin line (activity log). */
+  .k-ledger {
+    background-image: linear-gradient(90deg, transparent 3.6rem, rgba(190, 80, 70, 0.3) 3.6rem 3.66rem, transparent 3.66rem 3.85rem, rgba(190, 80, 70, 0.3) 3.85rem 3.91rem, transparent 3.91rem);
+  }
+  .k-ledger > li {
+    border-bottom: 1px solid rgba(79, 143, 214, 0.18);
+  }
+  .k-ledger > li:last-child {
+    border-bottom: 0;
+  }
+  .k-rivet {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff8dc 0 1px, #e0c46e 2.5px, #a5811a 5px, #6b520f 6px);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.35), 0 0 0 2px rgba(255, 253, 248, 0.9);
+  }
+
+  /* Admission ticket with a perforated stub (cohorts). */
+  .k-ticket-wrap {
+    filter: drop-shadow(0 1px 1px rgba(10, 26, 48, 0.08)) drop-shadow(0 12px 18px rgba(10, 26, 48, 0.14));
+  }
+  .k-ticket {
+    display: grid;
+    border-radius: 18px;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    background-image: linear-gradient(180deg, #fffefb 0%, #fdf8ee 100%);
+  }
+  .k-ticket-stub {
+    border-top: 2px dashed rgba(18, 42, 77, 0.16);
+    background: linear-gradient(180deg, rgba(242, 228, 184, 0.35), rgba(242, 228, 184, 0.15));
+  }
+  @media (min-width: 640px) {
+    .k-ticket {
+      grid-template-columns: minmax(0, 1fr) 13rem;
+      -webkit-mask:
+        radial-gradient(circle 11px at calc(100% - 13rem) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+        radial-gradient(circle 11px at calc(100% - 13rem) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+      mask:
+        radial-gradient(circle 11px at calc(100% - 13rem) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+        radial-gradient(circle 11px at calc(100% - 13rem) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+    }
+    .k-ticket-stub {
+      border-top: 0;
+      border-left: 2px dashed rgba(18, 42, 77, 0.16);
+      border-radius: 0 18px 18px 0;
+    }
+  }
+
+  /* Card-catalogue drawer (data architecture). */
+  .k-drawer > summary {
+    list-style: none;
+  }
+  .k-drawer > summary::-webkit-details-marker {
+    display: none;
+  }
+  .k-labelholder {
+    position: relative;
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 5px;
+    background: linear-gradient(180deg, #f3e1a2, #c9a227 45%, #a5811a 55%, #e0c472);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(10, 26, 48, 0.3);
+  }
+  .k-labelholder > span {
+    display: block;
+    padding: 0.3rem 0.85rem;
+    border-radius: 2px;
+    background: linear-gradient(180deg, #fffdf6, #f6efdf);
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.2);
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--k-navy);
+  }
+  .k-pull {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 3.25rem;
+    height: 0.85rem;
+    border-radius: 0 0 1rem 1rem;
+    background: linear-gradient(180deg, #8f6d14 0%, #e5ca78 35%, #c9a227 60%, #8f6d14 100%);
+    box-shadow: inset 0 -2px 3px rgba(60, 40, 0, 0.45), 0 3px 5px -2px rgba(10, 26, 48, 0.5);
+    transition: transform 260ms var(--k-ease);
+  }
+  .k-drawer[open] .k-pull {
+    transform: translate3d(0, 2px, 0);
+  }
+  .k-drawer[open] .k-drawer-body {
+    animation: k-slide 420ms var(--k-ease);
+  }
+  @keyframes k-slide {
+    from {
+      opacity: 0;
+      transform: translate3d(0, -8px, 0);
+    }
+  }
+
+  /* Staff ID card with a lanyard slot (people & access). */
+  .k-idcard {
+    position: relative;
+    padding-top: 1.5rem;
+  }
+  .k-idcard::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0.55rem;
+    width: 2.5rem;
+    height: 0.45rem;
+    margin-left: -1.25rem;
+    border-radius: 9999px;
+    background: #e8e0cf;
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.35), 0 1px 0 #fff;
+  }
+  .k-coin {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    font-family: var(--font-serif);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fffdf8;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+    background:
+      radial-gradient(circle at 32% 25%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%),
+      linear-gradient(180deg, #2c4c79, #122a4d);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -2px 2px rgba(0, 0, 0, 0.3), 0 0 0 2px #fffdf8, 0 0 0 3px rgba(201, 162, 39, 0.55), 0 4px 8px -3px rgba(10, 26, 48, 0.5);
+  }
+
+  /* Cork noticeboard (announcements). */
+  .k-cork {
+    border-radius: 14px;
+    background-color: #c7ab84;
+    background-image:
+      radial-gradient(rgba(100, 70, 30, 0.35) 0.9px, transparent 1.3px),
+      radial-gradient(rgba(255, 240, 215, 0.3) 0.9px, transparent 1.3px),
+      var(--k-grain);
+    background-size: 7px 7px, 11px 11px, 180px 180px;
+    background-position: 0 0, 3px 5px, 0 0;
+    box-shadow: inset 0 2px 10px rgba(70, 45, 10, 0.45), inset 0 0 0 1px rgba(70, 45, 10, 0.2);
+  }
+  .k-notice {
+    position: relative;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #fffefb, #fbf6ea);
+    box-shadow: 0 1px 1px rgba(60, 40, 10, 0.2), 0 8px 16px -10px rgba(60, 40, 10, 0.55);
+  }
+  .k-pin {
+    position: absolute;
+    left: 50%;
+    top: -7px;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffd9d9 0 1.5px, #d6404e 4px, #8b1a2c 8px);
+    box-shadow: 0 3px 4px -1px rgba(60, 20, 10, 0.55);
+  }
+
+  /* Letter tray lip (review queue stages). */
+  .k-tray {
+    position: relative;
+    overflow: hidden;
+  }
+  .k-tray::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0.6rem;
+    background: linear-gradient(180deg, #e9e1cf, #f6f1e5);
+    box-shadow: inset 0 2px 3px rgba(10, 26, 48, 0.18);
+  }
+
+  /* Toggle-style switch readout (on/off states that are not form controls). */
+  .k-switch {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: 2.4rem;
+    height: 1.35rem;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #d6cfbf, #ebe5d8);
+    box-shadow: inset 0 1px 3px rgba(10, 26, 48, 0.3);
+  }
+  .k-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(1.35rem - 4px);
+    height: calc(1.35rem - 4px);
+    border-radius: 50%;
+    background: linear-gradient(180deg, #fff, #efe9dd);
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.35), inset 0 -1px 0 rgba(10, 26, 48, 0.08);
+    transition: transform 240ms var(--k-ease);
+  }
+  .k-switch[data-on] {
+    background: linear-gradient(180deg, #2a5f3a, #3f8452);
+  }
+  .k-switch[data-on]::after {
+    transform: translate3d(1.05rem, 0, 0);
+  }
+
+  /* Inline code / table names. */
+  .k-mono {
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Reduced motion: readings appear at their values, nothing travels.
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .console-enter > * > *,
+  .k-stagger > * {
+    animation-name: k-fade;
+  }
+  .k-odo-strip,
+  .k-meter-fill,
+  .k-gauge-value,
+  .k-gauge-needle,
+  .k-column-bar,
+  .k-letterhead::after,
+  .k-led-pulse::after,
+  .k-drawer[open] .k-drawer-body {
+    animation: none;
+  }
+  .k-odo-strip,
+  .k-meter-fill,
+  .k-gauge-needle {
+    transition: none;
+  }
+  .console a.admin-card:hover,
+  .k-lift:hover {
+    transform: none;
+  }
+}
+
+/* Round icon-only key (module and lesson controls). */
+@layer components {
+  .k-key-icon {
+    width: 2rem;
+    height: 2rem;
+    min-height: 2rem;
+    padding: 0;
+  }
+  .k-key-icon svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+
+/* A panel that guards something destructive. */
+.console .admin-card.k-danger {
+  border-color: rgba(225, 29, 72, 0.28);
+  background-image: linear-gradient(180deg, #fffafa 0%, #fdf1f1 100%);
+}

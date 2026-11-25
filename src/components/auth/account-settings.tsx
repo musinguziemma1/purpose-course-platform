@@ -5,11 +5,12 @@ import { PasswordForm } from "@/components/auth/password-form";
 import { profileIsComplete } from "@/lib/profile";
 import { homePathForRole, type SessionUser } from "@/lib/auth";
 
-export function AccountSettings({ user }: { user: SessionUser }) {
+/** headerless: the page supplies its own heading (the admin console does). */
+export function AccountSettings({ user, headerless = false }: { user: SessionUser; headerless?: boolean }) {
   const complete = profileIsComplete(user);
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {headerless ? null : <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-gold-dark">
             Your account
@@ -27,7 +28,7 @@ export function AccountSettings({ user }: { user: SessionUser }) {
         >
           Continue to workspace →
         </Link>
-      </div>
+      </div>}
       <div
         role="status"
         className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${complete ? "border-source/20 bg-source/5 text-source" : "border-gold/30 bg-gold/10 text-navy"}`}

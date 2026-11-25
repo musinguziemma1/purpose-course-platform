@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarClock, Radio, Users } from "lucide-react";
 import { eventDate } from "@/lib/event-time";
+import { EventTicketBoard } from "@/components/events/event-ticket-board";
 export type CalendarEvent = {
   id: number;
   title: string;
@@ -23,11 +24,14 @@ export function EventCalendar({
   past = false,
   compact = false,
   manage = false,
+  appearance = "card",
 }: {
   initialEvents: CalendarEvent[];
   past?: boolean;
   compact?: boolean;
   manage?: boolean;
+  /** "ticket" renders admission tickets (public /events page only; needs app/(site)/desk.css). */
+  appearance?: "card" | "ticket";
 }) {
   const [events, setEvents] = useState(initialEvents),
     [error, setError] = useState("");
@@ -67,6 +71,8 @@ export function EventCalendar({
     };
   }, [past, compact]);
   const visible = compact ? events.slice(0, 3) : events;
+  if (appearance === "ticket")
+    return <EventTicketBoard events={visible} past={past} manage={manage} error={error} />;
   return (
     <div className="space-y-3">
       {error ? (
@@ -80,7 +86,7 @@ export function EventCalendar({
         {visible.map((event) => (
           <article
             key={event.id}
-            className="flex min-w-0 flex-col rounded-xl border border-navy/15 bg-paper p-5"
+            className="flex min-w-0 flex-col rounded-2xl border border-navy/10 bg-paper p-5 shadow-card"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider">
               <span className="text-gold-dark">
@@ -130,7 +136,7 @@ export function EventCalendar({
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
                 href={`/events/${event.id}`}
-                className="rounded-full bg-navy px-4 py-2 text-xs font-semibold text-paper"
+                className="inline-flex h-10 items-center rounded-full bg-navy px-4 text-xs font-semibold text-paper transition-colors hover:bg-navy-700"
               >
                 {event.canJoin && ["scheduled", "live"].includes(event.status)
                   ? "Open session"

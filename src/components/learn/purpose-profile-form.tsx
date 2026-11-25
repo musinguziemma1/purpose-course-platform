@@ -161,10 +161,10 @@ export function PurposeProfileForm({ profileId, initial, version: initialVersion
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-[14px] text-navy">
           <span>You have unsaved changes from {new Date(draft.savedAt).toLocaleString()} on this device.</span>
           <span className="flex gap-2">
-            <button type="button" onClick={() => { setValues({ ...initial, ...draft.values }); setDraftHandled(true); }} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-navy px-4 text-[13px] font-semibold text-paper active:scale-[0.97]">
+            <button type="button" onClick={() => { setValues({ ...initial, ...draft.values }); setDraftHandled(true); }} className="lk-btn lk-btn-navy lk-btn-sm">
               <RotateCcw aria-hidden className="h-4 w-4" /> Restore
             </button>
-            <button type="button" onClick={() => { try { window.localStorage.removeItem(draftKey); } catch { /* storage unavailable */ } setDraftHandled(true); }} className="inline-flex h-10 items-center rounded-full border border-navy/20 px-4 text-[13px] font-semibold text-navy hover:bg-cream active:scale-[0.97]">
+            <button type="button" onClick={() => { try { window.localStorage.removeItem(draftKey); } catch { /* storage unavailable */ } setDraftHandled(true); }} className="lk-btn lk-btn-paper lk-btn-sm">
               Discard
             </button>
           </span>
@@ -174,10 +174,10 @@ export function PurposeProfileForm({ profileId, initial, version: initialVersion
       {SECTIONS.map((section) => {
         const info = PRINCIPLE_INFO[section.key];
         return (
-          <fieldset key={section.key} id={`principle-${section.key}`} className="admin-card scroll-mt-24 p-5 sm:p-6">
+          <fieldset key={section.key} id={`principle-${section.key}`} className="lk-paper scroll-mt-24 p-5 sm:p-6">
             <legend className="sr-only">{info.name}</legend>
             <div className="flex items-start gap-3">
-              <span aria-hidden className="mt-1.5 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: info.color }} />
+              <span aria-hidden className="mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full shadow-[inset_0_-1px_1px_rgba(0,0,0,0.3),0_0_0_2px_rgba(255,255,255,0.9),0_1px_2px_rgba(10,26,48,0.3)]" style={{ backgroundColor: info.color }} />
               <div>
                 <h2 className="font-serif text-2xl text-navy">{info.name} <span className="text-[15px] font-sans text-stone-600">· {info.question}</span></h2>
                 <p className="mt-1 text-[14px] text-stone-600">{section.intro}</p>
@@ -201,7 +201,7 @@ export function PurposeProfileForm({ profileId, initial, version: initialVersion
         );
       })}
 
-      <section className="admin-card p-5 sm:p-6">
+      <section className="lk-paper p-5 sm:p-6">
         <label className="flex cursor-pointer items-start gap-3">
           <input type="checkbox" name="sharedWithMentor" checked={shared} onChange={(event) => setShared(event.target.checked)} className="mt-1 h-5 w-5 shrink-0" />
           <span>
@@ -211,7 +211,7 @@ export function PurposeProfileForm({ profileId, initial, version: initialVersion
         </label>
       </section>
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t border-navy/10 bg-[#f6f2e9]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t border-[rgba(120,96,52,0.18)] bg-[#f8f2e4]/95 px-4 py-3 shadow-[0_-10px_22px_-20px_rgba(10,26,48,0.55)] backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
         <p ref={statusRef} tabIndex={-1} role="status" aria-live="polite" className={cn("text-[14px] outline-none", state.error ? "font-medium text-rose-700" : "text-stone-600")}>
           {state.error ? state.error : state.ok ? (
             <span className="inline-flex items-center gap-1.5 text-source"><CheckCircle2 aria-hidden className="h-4 w-4" /> {state.message} Version {version}.</span>
@@ -220,7 +220,7 @@ export function PurposeProfileForm({ profileId, initial, version: initialVersion
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-11 items-center gap-2 rounded-full bg-navy px-6 text-[14px] font-semibold text-paper transition-[transform,background-color] duration-150 hover:bg-navy-700 active:scale-[0.97] disabled:opacity-60"
+          className="lk-btn lk-btn-navy px-6"
         >
           {pending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Save aria-hidden className="h-4 w-4" />}
           {pending ? "Saving…" : "Save Purpose Profile"}

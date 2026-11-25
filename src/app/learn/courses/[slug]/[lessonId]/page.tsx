@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Lock, NotebookPen, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock, ListChecks, Lock, MessagesSquare, NotebookPen, Sparkles } from "lucide-react";
 import { LessonMedia } from "@/components/academy/lesson-media";
 import { getLessonContext, recordLessonView } from "@/db/courses";
 import { db } from "@/db";
 import { learningActivities } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { ListChecks } from "lucide-react";
 import { getSessionUser } from "@/lib/auth";
 import { renderRichText } from "@/lib/markdown";
 import { toggleLessonCompletion } from "@/app/actions/academy";
 import { cn } from "@/lib/utils";
+import { BackLink, Chip, Flourish, Panel, btn } from "@/components/learn/kit";
+import { SubmitButton } from "@/components/learn/forms";
 
 export const dynamic = "force-dynamic";
 
@@ -28,53 +29,42 @@ export default async function LessonPage({ params }: Params) {
   await recordLessonView(user.profileId, current.id).catch(() => undefined);
 
   const completed = current.completion === "completed";
-  const isDone = completed;
-  const activities = await db
-    .select()
-    .from(learningActivities)
-    .where(eq(learningActivities.lessonId, current.id))
-    .orderBy(learningActivities.sortOrder);
+  const activities = await db.select().from(learningActivities).where(eq(learningActivities.lessonId, current.id)).orderBy(learningActivities.sortOrder);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href={`/learn/courses/${course.slug}`} className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> {course.title}
-        </Link>
-        <div className="flex items-center gap-2 text-[10.5px] uppercase tracking-[0.08em] text-stone-500">
+        <BackLink href={`/learn/courses/${course.slug}`}>{course.title}</BackLink>
+        <div className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-stone-600">
           <span>
             Lesson {index + 1} of {progression.length}
           </span>
-          <span className="h-1 w-1 rounded-full bg-stone-300" />
+          <span aria-hidden className="h-1 w-1 rounded-full bg-stone-400" />
           <span className="inline-flex items-center gap-1">
-            <Clock className="h-3 w-3" /> {current.durationMinutes} min
+            <Clock aria-hidden className="h-3.5 w-3.5" /> {current.durationMinutes} min
           </span>
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.6fr_1fr] xl:items-start">
-        <article className="min-w-0 space-y-5">
-          <header>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr] xl:items-start">
+        {/* The reading surface is a book page rather than a leather plate, so nothing competes with the lesson. */}
+        <article className="min-w-0 space-y-6">
+          <header className="lk-paper lk-stack px-6 pb-6 pt-7 sm:px-10 sm:pt-9">
+            <p className="lk-kicker">
               {current.moduleTitle} · {course.levelName} level
             </p>
-            <h1 className="mt-1.5 font-serif text-3xl leading-tight text-navy">{current.title}</h1>
-            {current.summary ? <p className="mt-2 text-[13.5px] leading-relaxed text-stone-600">{current.summary}</p> : null}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-cream px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-600">
-                {current.kind}
-              </span>
-              {current.isPreview ? (
-                <span className="rounded-full bg-gold/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-gold-dark">
-                  preview
-                </span>
-              ) : null}
-              {isDone ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-source/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-source">
-                  <CheckCircle2 className="h-3 w-3" /> completed
-                </span>
+            <h1 className="mt-2 font-serif text-[2rem] leading-tight text-navy sm:text-[2.4rem]">{current.title}</h1>
+            {current.summary ? <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-stone-600">{current.summary}</p> : null}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Chip>{current.kind}</Chip>
+              {current.isPreview ? <Chip tone="gold">preview</Chip> : null}
+              {completed ? (
+                <Chip tone="green" icon={CheckCircle2}>
+                  completed
+                </Chip>
               ) : null}
             </div>
+            <Flourish className="mt-6" />
           </header>
 
           <LessonMedia
@@ -87,132 +77,124 @@ export default async function LessonPage({ params }: Params) {
             downloadLabel={current.downloadLabel}
           />
 
-          <div className="admin-card p-5 sm:p-7">{renderRichText(current.body)}</div>
+          <div className="lk-paper px-6 py-7 sm:px-10 sm:py-9">
+            <div className="lk-prose">{renderRichText(current.body)}</div>
+          </div>
 
           {current.transcript ? (
-            <details className="admin-card p-5">
-              <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-[0.1em] text-navy">
+            <details className="lk-paper group p-5 sm:px-7">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-[13px] font-bold uppercase tracking-[0.1em] text-navy [&::-webkit-details-marker]:hidden">
+                <ArrowRight aria-hidden className="h-4 w-4 text-[#a5811a] transition-transform duration-200 group-open:rotate-90" />
                 Transcript / teaching notes
               </summary>
-              <p className="mt-3 whitespace-pre-line text-[12.5px] leading-relaxed text-stone-700">{current.transcript}</p>
+              <p className="lk-lined mt-3 whitespace-pre-line text-[14px] text-stone-700">{current.transcript}</p>
             </details>
           ) : null}
 
           {activities.length > 0 ? (
-            <div className="admin-card p-5">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <ListChecks className="h-3.5 w-3.5 text-gold-dark" /> Lesson activities
-              </p>
-              <ul className="mt-2 space-y-2">
+            <Panel title="Lesson activities" icon={ListChecks}>
+              <ul className="space-y-3">
                 {activities.map((activity) => (
-                  <li key={activity.id} className="rounded-lg border border-navy/10 bg-cream/30 px-3 py-2">
+                  <li key={activity.id} className="lk-well px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[12.5px] font-medium text-navy">{activity.title}</p>
-                      <span className="rounded-full bg-paper px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-stone-600">
+                      <p className="text-[14px] font-semibold text-navy">{activity.title}</p>
+                      <Chip>
                         {activity.kind} · {activity.estimatedMinutes} min
-                      </span>
+                      </Chip>
                     </div>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-stone-600">{activity.instruction}</p>
+                    <p className="mt-1 text-[14px] leading-relaxed text-stone-600">{activity.instruction}</p>
                   </li>
                 ))}
               </ul>
-            </div>
+            </Panel>
           ) : null}
 
           {current.practicePrompt ? (
-            <div className="rounded-xl border border-gold/40 bg-gold/10 p-5">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-gold-dark">
-                <Sparkles className="h-3.5 w-3.5" /> Practice this week
+            <div className="lk-note">
+              <p className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-[#6b4a05]">
+                <Sparkles aria-hidden className="h-4 w-4" /> Practice this week
               </p>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-stone-700">{current.practicePrompt}</p>
-              <Link
-                href="/learn/reflections"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-navy px-3.5 py-2 text-[11.5px] font-semibold text-paper hover:bg-navy-700"
-              >
-                <NotebookPen className="h-3.5 w-3.5" /> Write your reflection
+              <p className="mt-2 font-serif text-[16px] italic leading-relaxed">{current.practicePrompt}</p>
+              <Link href="/learn/reflections" className={cn(btn.navy, btn.sm, "mt-4")}>
+                <NotebookPen aria-hidden className="h-4 w-4" /> Write your reflection
               </Link>
             </div>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-navy/10 pt-4">
-            <div className="flex gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[rgba(18,42,77,0.2)] pt-5">
+            <div className="flex gap-2.5">
               {previous ? (
-                <Link
-                  href={`/learn/courses/${course.slug}/${previous.id}`}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 px-4 text-[11.5px] font-medium text-navy hover:bg-cream"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" /> Previous
+                <Link href={`/learn/courses/${course.slug}/${previous.id}`} className={cn(btn.paper, btn.sm)}>
+                  <ArrowLeft aria-hidden className="h-4 w-4" /> Previous
                 </Link>
               ) : null}
               {next && next.unlocked ? (
-                <Link
-                  href={`/learn/courses/${course.slug}/${next.id}`}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 px-4 text-[11.5px] font-medium text-navy hover:bg-cream"
-                >
-                  Next <ArrowRight className="h-3.5 w-3.5" />
+                <Link href={`/learn/courses/${course.slug}/${next.id}`} className={cn(btn.paper, btn.sm)}>
+                  Next <ArrowRight aria-hidden className="h-4 w-4" />
                 </Link>
               ) : null}
             </div>
-            {context.canComplete ? <form action={toggleLessonCompletion}>
-              <input type="hidden" name="lessonId" value={current.id} />
-              <input type="hidden" name="courseSlug" value={course.slug} />
-              <button
-                type="submit"
-                className={cn(
-                  "inline-flex h-10 items-center gap-2 rounded-full px-5 text-[12px] font-semibold transition-colors",
-                  completed ? "border border-source/30 bg-source/10 text-source" : "bg-gold text-ink hover:bg-gold-dark hover:text-paper",
-                )}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {completed ? "Completed — mark as in progress" : "Mark lesson complete"}
-              </button>
-            </form> : <p className="text-[12px] text-stone-600">Enroll in this level to record progress.</p>}
+            {context.canComplete ? (
+              <form action={toggleLessonCompletion}>
+                <input type="hidden" name="lessonId" value={current.id} />
+                <input type="hidden" name="courseSlug" value={course.slug} />
+                <SubmitButton className={cn("lk-btn", completed ? "lk-btn-down" : "lk-btn-brass")}>
+                  <CheckCircle2 aria-hidden className="h-4 w-4" />
+                  {completed ? "Completed — mark as in progress" : "Mark lesson complete"}
+                </SubmitButton>
+              </form>
+            ) : (
+              <p className="text-[14px] text-stone-600">Enroll in this level to record progress.</p>
+            )}
           </div>
         </article>
 
-        <aside className="space-y-4 xl:sticky xl:top-24">
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-4 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Course outline</p>
-              <p className="text-[10.5px] text-stone-500">{progression.length} lessons · progression mode</p>
-            </div>
-            <ul className="max-h-[32rem] divide-y divide-navy/8 overflow-y-auto">
-              {progression.map((lesson) => (
-                <li key={lesson.id}>
-                  <Link
-                    href={lesson.unlocked ? `/learn/courses/${course.slug}/${lesson.id}` : `/learn/courses/${course.slug}`}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2.5 text-[11.5px]",
-                      lesson.id === current.id ? "bg-cream/70 font-semibold text-navy" : lesson.unlocked ? "text-stone-700 hover:bg-cream/40" : "text-stone-400",
-                    )}
-                  >
-                    {lesson.id === current.id ? (
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
-                    ) : lesson.completion === "completed" ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-source" />
-                    ) : lesson.unlocked ? (
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-stone-300" />
-                    ) : (
-                      <Lock className="h-3 w-3 shrink-0" />
-                    )}
-                    <span className="line-clamp-2">
-                      {lesson.position}. {lesson.title}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+        <aside className="space-y-5 xl:sticky xl:top-24">
+          <Panel title="Course outline" kicker={`${progression.length} lessons · progression mode`} bodyClassName="px-2 pb-3 pt-3">
+            <ul className="max-h-[32rem] overflow-y-auto overscroll-contain">
+              {progression.map((lesson) => {
+                const isCurrent = lesson.id === current.id;
+                return (
+                  <li key={lesson.id} className="relative">
+                    {/* A crimson ribbon marks your place, like a bookmark between pages. */}
+                    {isCurrent ? <span aria-hidden className="absolute inset-y-1 left-0 w-1.5 rounded-r bg-[linear-gradient(180deg,#b13a44,#7a1d26)] shadow-[1px_0_2px_rgba(0,0,0,0.25)]" /> : null}
+                    <Link
+                      href={lesson.unlocked ? `/learn/courses/${course.slug}/${lesson.id}` : `/learn/courses/${course.slug}`}
+                      aria-current={isCurrent ? "page" : undefined}
+                      className={cn(
+                        "flex min-h-11 items-center gap-2.5 rounded-lg py-2 pl-5 pr-3 text-[13px] transition-colors duration-150",
+                        isCurrent ? "bg-[rgba(201,162,39,0.12)] font-semibold text-navy" : lesson.unlocked ? "text-stone-700 hover:bg-[rgba(201,162,39,0.07)]" : "text-stone-500",
+                      )}
+                    >
+                      {lesson.completion === "completed" && !isCurrent ? (
+                        <CheckCircle2 aria-hidden className="h-4 w-4 shrink-0 text-source" />
+                      ) : lesson.unlocked || isCurrent ? (
+                        <span aria-hidden className={cn("h-2 w-2 shrink-0 rounded-full", isCurrent ? "bg-[#9b2c35]" : "bg-stone-300")} />
+                      ) : (
+                        <Lock aria-hidden className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="line-clamp-2">
+                        {lesson.position}. {lesson.title}
+                      </span>
+                      {lesson.completion === "completed" ? <span className="sr-only">(completed)</span> : !lesson.unlocked ? <span className="sr-only">(locked)</span> : null}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="rounded-xl border border-navy/10 bg-paper p-4 text-[11.5px] leading-relaxed text-stone-600">
-            <p className="font-semibold text-navy">Need a conversation?</p>
-            <p className="mt-1">Bring this lesson to your clarity coach or the live session feed.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Link href="/learn/mentor" className="font-semibold text-gold-dark hover:underline">
-                My mentor →
+          <div className="lk-paper p-5">
+            <p className="inline-flex items-center gap-2 font-serif text-[1.05rem] text-navy">
+              <MessagesSquare aria-hidden className="h-4 w-4 text-[#a5811a]" /> Need a conversation?
+            </p>
+            <p className="mt-1 text-[14px] leading-relaxed text-stone-600">Bring this lesson to your clarity coach or the live session feed.</p>
+            <div className="mt-2 flex flex-wrap gap-x-4">
+              <Link href="/learn/mentor" className="lk-link">
+                My mentor <ArrowRight aria-hidden className="h-4 w-4" />
               </Link>
-              <Link href="/learn/live" className="font-semibold text-gold-dark hover:underline">
-                Live sessions →
+              <Link href="/learn/live" className="lk-link">
+                Live sessions <ArrowRight aria-hidden className="h-4 w-4" />
               </Link>
             </div>
           </div>

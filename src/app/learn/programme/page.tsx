@@ -1,14 +1,18 @@
-import { CheckCircle2, Circle, Clock } from "lucide-react";
+import { CheckCircle2, Circle, Clock, Info } from "lucide-react";
 import Link from "next/link";
 import { SessionToggle } from "@/components/learn/forms";
 import { getStudentWorkspace } from "@/db/academy";
 import { getSessionUser } from "@/lib/auth";
 import { accentClasses } from "@/components/site/principle-icon";
 import { cn } from "@/lib/utils";
+import { BrassDial, Chip, DeskHeading, LearnHero } from "@/components/learn/kit";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Programme" };
+
+/* An enamel level badge: the level's own colour under a domed highlight. */
+const ENAMEL = "shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-3px_4px_rgba(0,0,0,0.3),0_0_0_2px_#e3c463,0_0_0_3px_#8f6f12,0_3px_6px_rgba(10,26,48,0.35)]";
 
 export default async function StudentProgrammePage() {
   const user = await getSessionUser();
@@ -16,121 +20,116 @@ export default async function StudentProgrammePage() {
   if (!workspace) return null;
 
   const { enrollment, programmeGroups, sessions, completedIds, level, completedInLevel, levelSessions, totalSessions, completedTotal, programmeModules } = workspace;
+  const overall = totalSessions ? Math.round((completedTotal / totalSessions) * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl text-navy">The {totalSessions}-session programme checklist</h1>
-          <p className="text-[12.5px] text-stone-600">
-            {completedTotal} of {totalSessions} sessions checked across your enrolments · {completedInLevel} of {levelSessions.length} in your
-            current level ({level?.name ?? "not enrolled"}).
-          </p>
-        </div>
-        <div className="rounded-xl border border-navy/10 bg-paper px-4 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-stone-500">Self-reported checklist</p>
-          <div className="mt-1.5 flex items-center gap-2">
-            <span className="h-1.5 w-28 overflow-hidden rounded-full bg-cream">
-              <span
-                className="block h-full rounded-full bg-gold"
-                style={{ width: `${totalSessions ? Math.round((completedTotal / totalSessions) * 100) : 0}%` }}
-              />
-            </span>
-            <span className="text-[11px] font-semibold text-navy">
-              {totalSessions ? Math.round((completedTotal / totalSessions) * 100) : 0}%
-            </span>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <LearnHero
+        eyebrow="Self-reported checklist"
+        title={`The ${totalSessions}-session programme checklist`}
+        description={
+          <>
+            {completedTotal} of {totalSessions} sessions checked across your enrolments · {completedInLevel} of {levelSessions.length} in your current level ({level?.name ?? "not enrolled"}).
+          </>
+        }
+        aside={<BrassDial value={overall} label="Self-reported checklist" caption={`${completedTotal}/${totalSessions} sessions`} size={148} />}
+      />
 
-      <div className="rounded-xl border border-navy/10 bg-paper p-4 text-sm leading-relaxed text-stone-600">
-        Record sessions you have attended or reviewed. This checklist does not complete digital lessons, pass assessments or issue certificates.
-        {" "}<Link href="/learn/courses" className="font-semibold text-navy underline">Open digital lessons</Link>{" "}
-        for recorded learning progress. Linked modules show the available digital material; some programme sessions do not yet have a published digital module.
+      <div className="lk-well flex items-start gap-3 p-4 text-[14px] leading-relaxed text-stone-700">
+        <Info aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-[#7a5d0d]" />
+        <p>
+          Record sessions you have attended or reviewed. This checklist does not complete digital lessons, pass assessments or issue certificates.{" "}
+          <Link href="/learn/courses" className="font-semibold text-navy underline decoration-[#a5811a] decoration-2 underline-offset-4">
+            Open digital lessons
+          </Link>{" "}
+          for recorded learning progress. Linked modules show the available digital material; some programme sessions do not yet have a published digital module.
+        </p>
       </div>
 
       {programmeGroups.map(({ programme, levels }) => (
-        <section key={programme.id} className="space-y-4 rounded-2xl border border-navy/10 bg-cream/25 p-3 sm:p-4">
-          <header className="px-2 py-2 sm:px-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">Programme catalogue</p>
-            <h2 className="mt-1 font-serif text-2xl text-navy">{programme.name}</h2>
-            <p className="mt-1 max-w-3xl text-[12px] leading-relaxed text-stone-600">{programme.description}</p>
-          </header>
+        <section key={programme.id} aria-labelledby={`programme-${programme.id}`} className="space-y-5">
+          <div className="space-y-2">
+            <DeskHeading id={`programme-${programme.id}`}>{programme.name}</DeskHeading>
+            <p className="max-w-3xl text-[14px] leading-relaxed text-stone-600">{programme.description}</p>
+          </div>
+
           {levels.map((programmeLevel) => {
-        const accent = accentClasses(programmeLevel.accent);
-        const sessionsForLevel = sessions.filter((session) => session.levelId === programmeLevel.id);
-        const isMine = level?.id === programmeLevel.id;
-        const done = sessionsForLevel.filter((session) => completedIds.has(session.id)).length;
-        return (
-          <section key={programmeLevel.id} className="admin-card overflow-hidden">
-            <div className={cn("flex flex-wrap items-center justify-between gap-3 border-b border-navy/10 px-5 py-4", isMine ? "bg-cream/60" : "")}>
-              <div className="flex items-center gap-3">
-                <span className={cn("flex h-10 w-10 items-center justify-center rounded-full font-serif text-lg text-paper", accent.bg)}>
-                  {programmeLevel.levelNumber}
-                </span>
-                <div>
-                  <p className="font-serif text-lg text-navy">
-                    {programmeLevel.name} <span className="text-stone-400">· {programmeLevel.tagline}</span>
-                  </p>
-                  <p className="text-[11px] uppercase tracking-[0.1em] text-stone-500">
-                    {programmeLevel.weeks} weeks · {done}/{sessionsForLevel.length} checked
-                  </p>
+            const accent = accentClasses(programmeLevel.accent);
+            const sessionsForLevel = sessions.filter((session) => session.levelId === programmeLevel.id);
+            const isMine = level?.id === programmeLevel.id;
+            const done = sessionsForLevel.filter((session) => completedIds.has(session.id)).length;
+            return (
+              <section key={programmeLevel.id} className={cn("lk-paper overflow-hidden", isMine && "lk-stack")}>
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(120,96,52,0.16)] px-5 py-4 sm:px-6",
+                    isMine && "bg-[linear-gradient(180deg,#fbf3dc,#fffdf8)]",
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-serif text-lg text-paper", accent.bg, ENAMEL)}>
+                      {programmeLevel.levelNumber}
+                    </span>
+                    <div>
+                      <h3 className="font-serif text-[1.2rem] text-navy">
+                        {programmeLevel.name} <span className="text-stone-600">· {programmeLevel.tagline}</span>
+                      </h3>
+                      <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-stone-600">
+                        {programmeLevel.weeks} weeks · {done}/{sessionsForLevel.length} checked
+                      </p>
+                    </div>
+                  </div>
+                  {isMine ? <Chip tone="gold">Your current level</Chip> : <Chip>Preview</Chip>}
                 </div>
-              </div>
-              {isMine ? (
-                <span className={cn("rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-paper", accent.bg)}>
-                  your current level
-                </span>
-              ) : (
-                <span className="rounded-full border border-navy/12 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-500">
-                  {isMine ? "" : "preview"}
-                </span>
-              )}
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {sessionsForLevel.map((session) => {
-                const completed = completedIds.has(session.id);
-                return (
-                  <li key={session.id} id={`session-${session.id}`} className="scroll-mt-24 px-5 py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em]">
-                          {completed ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-source" />
+                <ul className="lk-ledger px-3 sm:px-4">
+                  {sessionsForLevel.map((session) => {
+                    const completed = completedIds.has(session.id);
+                    const modules = programmeModules.filter((module) => module.sessionCode === session.code && module.levelId === programmeLevel.id);
+                    return (
+                      <li key={session.id} id={`session-${session.id}`} className="scroll-mt-24 px-2 py-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.1em] text-[#7a5d0d]">
+                              {completed ? <CheckCircle2 aria-hidden className="h-4 w-4 text-source" /> : <Circle aria-hidden className="h-4 w-4 text-stone-400" />}
+                              {session.code}
+                              <span className="sr-only">{completed ? " (checked)" : " (not checked)"}</span>
+                            </p>
+                            <h4 className="mt-1 font-serif text-[1.1rem] leading-snug text-navy">{session.title}</h4>
+                          </div>
+                          {isMine && enrollment?.status === "enrolled" ? <SessionToggle sessionId={session.id} completed={completed} compact /> : null}
+                        </div>
+                        <p className="mt-2 text-[14px] leading-relaxed text-stone-600">{session.summary}</p>
+                        <div className="mt-2 text-[13px] text-stone-600">
+                          {modules.length ? (
+                            <ul className="space-y-1">
+                              {modules.map((module) => (
+                                <li key={module.id}>
+                                  <Link href={`/learn/courses/${module.courseSlug}`} className="font-semibold text-navy underline decoration-[#a5811a] decoration-2 underline-offset-4">
+                                    {module.title}
+                                  </Link>{" "}
+                                  · {module.lessons} published digital lessons
+                                </li>
+                              ))}
+                            </ul>
                           ) : (
-                            <Circle className="h-3.5 w-3.5 text-stone-300" />
+                            <p>Digital module not yet published for this session.</p>
                           )}
-                          <span className={accent.fg}>{session.code}</span>
-                        </p>
-                        <p className="mt-1 font-serif text-[16px] leading-snug text-navy">{session.title}</p>
-                      </div>
-                      {isMine && enrollment?.status === "enrolled" ? <SessionToggle sessionId={session.id} completed={completed} compact /> : null}
-                    </div>
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-stone-600">{session.summary}</p>
-                    <div className="mt-2 text-xs text-stone-600">
-                      {programmeModules.some((module) => module.sessionCode === session.code && module.levelId === programmeLevel.id) ? (
-                        <ul className="space-y-1">{programmeModules.filter((module) => module.sessionCode === session.code && module.levelId === programmeLevel.id).map((module) => (
-                          <li key={module.id}><Link href={`/learn/courses/${module.courseSlug}`} className="font-semibold text-navy underline">{module.title}</Link> · {module.lessons} published digital lessons</li>
-                        ))}</ul>
-                      ) : <p>Digital module not yet published for this session.</p>}
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-cream px-2 py-0.5 text-[10px] text-stone-600">
-                        <Clock className="h-2.5 w-2.5" /> {session.durationMinutes} min
-                      </span>
-                      <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] text-stone-600">{session.format}</span>
-                      {session.focusQuestions.map((question) => (
-                        <span key={question} className="rounded-full border border-navy/10 px-2 py-0.5 text-[10px] text-stone-500">
-                          {question}
-                        </span>
-                      ))}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <Chip icon={Clock}>{session.durationMinutes} min</Chip>
+                          <Chip>{session.format}</Chip>
+                          {session.focusQuestions.map((question) => (
+                            <Chip key={question} className="whitespace-normal font-medium">
+                              {question}
+                            </Chip>
+                          ))}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            );
           })}
         </section>
       ))}

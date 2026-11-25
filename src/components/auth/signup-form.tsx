@@ -5,7 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { applyForAccount, type AdmissionState } from "@/app/actions/admissions";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { PasswordInput } from "@/components/auth/password-input";
-export function SignupForm() {
+export function SignupForm({ defaults, emailVerified = false }: { defaults?: { fullName?: string; email?: string }; emailVerified?: boolean } = {}) {
   const [state, action, pending] = useActionState<AdmissionState, FormData>(
     applyForAccount,
     {},
@@ -45,9 +45,10 @@ export function SignupForm() {
           maxLength={160}
           autoComplete="name"
           placeholder="Your full name"
+          defaultValue={defaults?.fullName || undefined}
         />
       </Field>
-      <Field label="Email address">
+      <Field label="Email address" hint={emailVerified ? "Confirmed by Google" : undefined}>
         <Input
           name="email"
           type="email"
@@ -55,9 +56,12 @@ export function SignupForm() {
           maxLength={255}
           autoComplete="email"
           placeholder="you@example.com"
+          defaultValue={defaults?.email || undefined}
+          readOnly={emailVerified}
+          className={emailVerified ? "bg-cream/60" : undefined}
         />
       </Field>
-      <Field label="Password" hint="at least 12 characters">
+      <Field label="Password" hint="at least 15 characters">
         <PasswordInput
           name="password"
           required

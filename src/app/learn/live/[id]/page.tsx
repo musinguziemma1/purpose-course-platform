@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, Radio, Users, Video } from "lucide-react";
+import { CalendarClock, Info, ListOrdered, Users, Video } from "lucide-react";
 import { LiveRoom } from "@/components/academy/live-room";
 import { getLiveSessionRoom } from "@/db/courses";
 import { getSessionUser } from "@/lib/auth";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime, initials } from "@/lib/utils";
 import { toggleRsvp } from "@/app/actions/academy";
 import { ensureRoomCode } from "@/db/conference";
 import { nativeConferenceAvailable } from "@/lib/conference-config";
 import { sessionStillOpen } from "@/db/live-lifecycle";
+import { BackLink, Chip, Coin, LeatherChip, LearnHero, OnAirSign, Panel, Ticket, btn } from "@/components/learn/kit";
+import { SubmitButton } from "@/components/learn/forms";
 
 export const dynamic = "force-dynamic";
 
@@ -30,63 +32,56 @@ export default async function StudentLiveRoomPage({ params }: Params) {
 
   const meta = await dbRsvpState(room.session.id, user.profileId);
   const roomCode = nativeConferenceAvailable() && sessionStillOpen(room.session) ? room.session.roomCode ?? (await ensureRoomCode(room.session.id)) : null;
+  const live = room.session.status === "live";
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Link href="/learn/live" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> All live sessions
-        </Link>
-        <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-dark">
-              {room.session.status === "live" ? (
-                <>
-                  <span className="live-pulse h-2 w-2 rounded-full bg-source" /> live now
-                </>
-              ) : (
-                <>
-                  <Radio className="h-3 w-3" /> {TYPE_LABEL[room.session.type] ?? "Session"}
-                </>
-              )}
-            </p>
-            <h1 className="mt-1 font-serif text-3xl text-navy">{room.session.title}</h1>
-            <p className="text-[12.5px] text-stone-600">
-              Hosted by {room.hostName ?? "Purpose Course faculty"}
-              {room.courseTitle ? ` · ${room.courseTitle}` : ""} · {room.session.durationMinutes} minutes
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-6">
+      <BackLink href="/learn/live">All live sessions</BackLink>
+
+      <LearnHero
+        size="md"
+        eyebrow={<OnAirSign live={live}>{live ? "On air · live now" : TYPE_LABEL[room.session.type] ?? "Session"}</OnAirSign>}
+        title={room.session.title}
+        description={
+          <>
+            Hosted by {room.hostName ?? "Purpose Course faculty"}
+            {room.courseTitle ? ` · ${room.courseTitle}` : ""} · {room.session.durationMinutes} minutes
+          </>
+        }
+        meta={
+          <>
+            <LeatherChip icon={CalendarClock}>{formatDateTime(room.session.startsAt)}</LeatherChip>
+            <LeatherChip icon={Users}>{room.attendees.length} going</LeatherChip>
+          </>
+        }
+        actions={
+          <>
             {roomCode ? (
-              <Link
-                href={`/room/${roomCode}`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-4 text-[11px] font-semibold text-paper hover:bg-navy-700"
-              >
-                <Video className="h-3.5 w-3.5" /> Join video class
+              <Link href={`/room/${roomCode}`} className={btn.brass}>
+                <Video aria-hidden className="h-4 w-4" /> Join video class
               </Link>
             ) : null}
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-navy/12 bg-paper px-3 py-1.5 text-[11px] text-stone-600">
-              <CalendarClock className="h-3.5 w-3.5 text-gold-dark" /> {formatDateTime(room.session.startsAt)}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-navy/12 bg-paper px-3 py-1.5 text-[11px] text-stone-600">
-              <Users className="h-3.5 w-3.5 text-gold-dark" /> {room.attendees.length} going
-            </span>
             <form action={toggleRsvp}>
               <input type="hidden" name="sessionId" value={room.session.id} />
-              <button
-                type="submit"
-                className={`inline-flex h-9 items-center rounded-full px-3.5 text-[11px] font-semibold ${
-                  meta ? "border border-source/30 bg-source/5 text-source" : "bg-gold text-ink hover:bg-gold-dark hover:text-paper"
-                }`}
-              >
-                {meta ? "Going — cancel RSVP" : "RSVP to this session"}
-              </button>
+              <SubmitButton className={cn("lk-btn", meta ? "lk-btn-down" : "lk-btn-paper")}>{meta ? "Going — cancel RSVP" : "RSVP to this session"}</SubmitButton>
             </form>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+        aside={
+          <Ticket date={room.session.startsAt} className="w-full max-w-xs rotate-1 text-ink sm:w-72">
+            <p className="lk-kicker">Admit one</p>
+            <p className="mt-0.5 line-clamp-2 font-serif text-[1.05rem] leading-snug text-navy">{room.session.title}</p>
+            <p className="mt-1 text-[13px] text-stone-600">
+              {new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" }).format(new Date(room.session.startsAt))} · {room.session.durationMinutes} min
+            </p>
+            <p className="mt-1.5">
+              <Chip tone={meta ? "green" : "plain"}>{meta ? "RSVP confirmed" : "No RSVP yet"}</Chip>
+            </p>
+          </Ticket>
+        }
+      />
 
-      <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
+      <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr] xl:items-start">
         <div className="space-y-4">
           <LiveRoom
             sessionId={room.session.id}
@@ -101,62 +96,48 @@ export default async function StudentLiveRoomPage({ params }: Params) {
             initialStatus={room.session.status}
             recordingUrl={room.session.recordingUrl}
             defaultName={user.fullName}
-            isLive={room.session.status === "live"}
+            isLive={live}
           />
           {room.session.recordingUrl ? (
-            <a
-              href={room.session.recordingUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="inline-flex h-9 items-center gap-2 rounded-full border border-navy/15 bg-paper px-4 text-[11.5px] font-medium text-navy hover:bg-cream"
-            >
-              <Video className="h-3.5 w-3.5" /> Watch the recording
+            <a href={room.session.recordingUrl} target="_blank" rel="noreferrer noopener" className={btn.paper}>
+              <Video aria-hidden className="h-4 w-4" /> Watch the recording
             </a>
           ) : null}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {room.session.description ? (
-            <div className="admin-card p-5">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">About this session</p>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-stone-700">{room.session.description}</p>
-            </div>
+            <Panel title="About this session" icon={Info}>
+              <p className="text-[14px] leading-relaxed text-stone-700">{room.session.description}</p>
+            </Panel>
           ) : null}
           {room.session.agenda ? (
-            <div className="admin-card p-5">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Agenda & group brief</p>
-              <p className="mt-1.5 whitespace-pre-line text-[12.5px] leading-relaxed text-stone-700">{room.session.agenda}</p>
-            </div>
+            <Panel title="Agenda & group brief" icon={ListOrdered}>
+              <p className="lk-lined whitespace-pre-line text-[14px] text-stone-700">{room.session.agenda}</p>
+            </Panel>
           ) : null}
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">In the room</p>
-            </div>
-            <ul className="divide-y divide-navy/8">
+          <Panel title="In the room" icon={Users} bodyClassName="px-3 pb-3 pt-2 sm:px-4">
+            <ul className="lk-ledger">
               {room.attendees.length === 0 ? (
-                <li className="px-5 py-4 text-[12px] text-stone-500">No RSVPs yet. Be the first.</li>
+                <li className="px-2 py-4 text-[14px] text-stone-600">No RSVPs yet. Be the first.</li>
               ) : (
                 room.attendees.map((attendee, index) => (
-                  <li key={`${attendee.name}-${index}`} className="flex items-center gap-2.5 px-5 py-2.5">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy text-[10px] font-semibold text-paper">
-                      {attendee.name
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((part) => part[0])
-                        .join("")}
-                    </span>
+                  <li key={`${attendee.name}-${index}`} className="flex items-center gap-3 px-2 py-2.5">
+                    <Coin tone="navy" className="h-9 w-9 text-[12px]">
+                      {initials(attendee.name)}
+                    </Coin>
                     <div>
-                      <p className="text-[11.5px] font-medium text-navy">{attendee.name}</p>
-                      <p className="text-[10px] text-stone-500">{attendee.title ?? "Participant"}</p>
+                      <p className="text-[14px] font-medium text-navy">{attendee.name}</p>
+                      <p className="text-[12px] text-stone-600">{attendee.title ?? "Participant"}</p>
                     </div>
                   </li>
                 ))
               )}
             </ul>
-          </div>
-          <div className="rounded-xl border border-[#bcd9db] bg-[#e3eff0]/50 p-4 text-[11.5px] leading-relaxed text-stone-700">
-            <p className="font-semibold text-[#155e63]">Round-table rules apply</p>
-            <p className="mt-1">Speak from your own experience. Ask before advising. Confidentiality is not optional.</p>
+          </Panel>
+          <div className="lk-note lk-note-r">
+            <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-[#6b4a05]">Round-table rules apply</p>
+            <p className="mt-2 font-serif text-[15px] italic leading-relaxed">Speak from your own experience. Ask before advising. Confidentiality is not optional.</p>
           </div>
         </div>
       </div>

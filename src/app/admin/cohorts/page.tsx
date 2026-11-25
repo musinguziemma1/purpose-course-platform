@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { and, count, desc, eq } from "drizzle-orm";
+import { ArrowRight, CalendarPlus, UsersRound } from "lucide-react";
 import { db } from "@/db";
 import { cohortMembers, cohorts, courses } from "@/db/schema";
 import { getProgrammeLevelOptions } from "@/db/programme-options";
 import { requireAdminPage } from "@/lib/page-access";
 import { CohortSetupForm } from "@/components/academy/cohort-forms";
+import { GlassMeter, Led, Odometer } from "@/components/admin/console/instruments";
+import { ConsoleEmpty, ConsoleHeader, Panel, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Cohort setup" };
+
+const STATUS_LED = { active: "green", draft: "gold", completed: "blue", archived: "off" } as const;
 
 export default async function AdminCohortsPage() {
   await requireAdminPage("/admin/cohorts");
@@ -35,60 +40,58 @@ export default async function AdminCohortsPage() {
   const levelLabels = new Map(levels.map((level) => [level.id, level.name]));
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-3xl text-navy">Cohort setup</h1>
-        <p className="mt-2 max-w-3xl text-sm text-stone-600">
-          Set learning dates, programme level and capacity, then place approved
-          learners and authorised faculty. Account approval remains separate
-          from level enrolment and cohort placement.
-        </p>
-        <Link
-          href="/admin/enrollments"
-          className="mt-3 inline-block text-sm font-semibold text-gold-dark underline"
-        >
-          Manage enrolments →
-        </Link>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Academy"
+        title="Cohort setup"
+        description="Set learning dates, programme level and capacity, then place approved learners and authorised faculty. Account approval remains separate from level enrolment and cohort placement."
+        actions={
+          <Link href="/admin/enrollments" className={keyClass("paper")}>
+            Manage enrolments <ArrowRight aria-hidden />
+          </Link>
+        }
+      />
       <div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]">
-        <section className="space-y-4">
-          {rows.map(({ cohort, size }) => (
-            <article key={cohort.id} className="admin-card p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-source">
-                {cohort.status} ·{" "}
-                {levelLabels.get(cohort.levelId ?? -1) ?? "Level needs review"}
-              </p>
-              <h2 className="mt-2 font-serif text-2xl text-navy">
-                {cohort.name}
-              </h2>
-              <p className="mt-2 text-sm text-stone-500">
-                {cohort.startsAt.toISOString().slice(0, 10)} to{" "}
-                {cohort.endsAt.toISOString().slice(0, 10)} · {size} /{" "}
-                {cohort.capacity} learners
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-stone-600">
-                {cohort.description}
-              </p>
-              <Link
-                href={`/admin/cohorts/${cohort.id}`}
-                className="mt-4 inline-block rounded-full bg-navy px-4 py-2 text-sm font-semibold text-paper"
-              >
-                Manage cohort
-              </Link>
-            </article>
-          ))}
+        <section aria-label="Cohorts" className="k-stagger space-y-4">
+          {rows.map(({ cohort, size }, index) => {
+            const learners = Number(size);
+            const open = Math.max(0, cohort.capacity - learners);
+            return (
+              <article key={cohort.id} style={staggerStyle(index)} className="k-ticket-wrap">
+                <div className="k-ticket">
+                  <div className="p-5 sm:p-6">
+                    <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-source">
+                      <Led tone={STATUS_LED[cohort.status as keyof typeof STATUS_LED] ?? "off"} />
+                      {cohort.status} · {levelLabels.get(cohort.levelId ?? -1) ?? "Level needs review"}
+                    </p>
+                    <h2 className="mt-2 font-serif text-[1.5rem] leading-tight text-navy">{cohort.name}</h2>
+                    <p className="numeric mt-1.5 text-[13px] text-stone-600">
+                      {cohort.startsAt.toISOString().slice(0, 10)} → {cohort.endsAt.toISOString().slice(0, 10)}
+                    </p>
+                    {cohort.description ? <p className="mt-3 text-[14px] leading-relaxed text-stone-700">{cohort.description}</p> : null}
+                    <Link href={`/admin/cohorts/${cohort.id}`} className={keyClass("navy", "sm", "mt-4")}>
+                      Manage cohort <ArrowRight aria-hidden />
+                    </Link>
+                  </div>
+                  <div className="k-ticket-stub flex flex-col justify-center gap-2 p-5">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-600">Seats taken</p>
+                    <p className="text-[1.75rem] leading-none text-navy">
+                      <Odometer value={`${learners}/${cohort.capacity}`} />
+                    </p>
+                    <GlassMeter value={learners} max={Math.max(cohort.capacity, 1)} tone={open === 0 ? "amber" : "source"} label={`${learners} of ${cohort.capacity} seats taken`} />
+                    <p className="text-[12.5px] text-stone-600">{open ? `${open} places available` : "Cohort is full"}</p>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
           {!rows.length ? (
-            <p className="admin-card p-6 text-sm text-stone-500">
-              Create the first cohort, then add approved students and faculty.
-            </p>
+            <ConsoleEmpty icon={UsersRound} title="No cohorts yet." description="Create the first cohort, then add approved students and faculty." />
           ) : null}
         </section>
-        <section className="admin-card p-5">
-          <h2 className="mb-4 font-serif text-xl text-navy">
-            Create a cohort
-          </h2>
+        <Panel title="Create a cohort" icon={CalendarPlus} riveted bodyClassName="px-5 pb-6 pt-4 sm:px-6">
           <CohortSetupForm levels={levels} courses={courseRows} />
-        </section>
+        </Panel>
       </div>
     </div>
   );

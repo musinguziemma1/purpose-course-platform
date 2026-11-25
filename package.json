@@ -22,7 +22,7 @@
     "db:migrate:supabase": "node scripts/migrate-supabase.mjs",
     "test:migrations": "node --test scripts/migrate-supabase.test.mjs",
     "test:database": "node --test scripts/database-config.test.mjs",
-    "test:security": "node --import tsx --test tests/*.test.mjs",
+    "test:security": "node --import tsx --test --test-concurrency=1 --test-timeout=120000 --test-force-exit tests/*.test.mjs",
     "admin:manage": "node scripts/manage-admin.mjs",
     "demo:manage": "node scripts/manage-demo-accounts.mjs",
     "curriculum:audit": "node scripts/audit-academic-programmes.mjs",
