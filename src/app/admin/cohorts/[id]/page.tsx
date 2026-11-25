@@ -20,6 +20,10 @@ import {
 } from "@/components/academy/cohort-forms";
 import { getProgrammeLevelOptions } from "@/db/programme-options";
 import { can } from "@/lib/rbac";
+import { ArrowRight, CalendarDays, Settings2, UserPlus, UsersRound } from "lucide-react";
+import { initials } from "@/lib/utils";
+import { GlassMeter, Led } from "@/components/admin/console/instruments";
+import { ConsoleHeader, Panel, keyClass } from "@/components/admin/console/surfaces";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Manage cohort" };
 export default async function CohortDetail({
@@ -111,89 +115,71 @@ export default async function CohortDetail({
   const size = members.filter(
     (row) => row.member.role === "learner" && row.member.status === "active",
   ).length;
+  const open = Math.max(0, cohort.capacity - size);
+  const editable = ["draft", "active"].includes(cohort.status);
   return (
-    <div className="space-y-5">
-      <Link
-        href="/admin/cohorts"
-        className="text-sm font-semibold text-gold-dark underline"
+    <div className="space-y-6">
+      <ConsoleHeader
+        back={{ href: "/admin/cohorts", label: "Cohorts" }}
+        eyebrow={cohort.status}
+        title={cohort.name}
+        description={`${size} / ${cohort.capacity} active learners · ${open} places available`}
       >
-        ← Cohorts
-      </Link>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-source">
-          {cohort.status}
-        </p>
-        <h1 className="mt-2 font-serif text-3xl text-navy">{cohort.name}</h1>
-        <p className="mt-2 text-sm text-stone-600">
-          {size} / {cohort.capacity} active learners ·{" "}
-          {Math.max(0, cohort.capacity - size)} places available
-        </p>
-      </div>
-      <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <div className="max-w-md">
+          <GlassMeter value={size} max={Math.max(cohort.capacity, 1)} tone={open === 0 ? "amber" : "source"} label={`${size} of ${cohort.capacity} seats taken`} />
+        </div>
+      </ConsoleHeader>
+      <div className="grid items-start gap-5 xl:grid-cols-[1.4fr_1fr]">
         <div className="space-y-5">
-          <section className="admin-card p-5">
-            <h2 className="mb-4 font-serif text-xl text-navy">
-              Members and faculty
-            </h2>
-            <ul className="divide-y divide-navy/10">
-              {members.map(({ member, name, email }) => (
-                <li
-                  key={member.id}
-                  className="flex flex-wrap items-center justify-between gap-4 py-4"
-                >
-                  <div>
-                    <p className="font-semibold text-navy">{name}</p>
-                    <p className="break-all text-xs text-stone-500">{email}</p>
-                    <p className="mt-1 text-xs text-stone-500">
-                      {member.role} · {member.status}
-                    </p>
-                  </div>
-                  {["draft", "active"].includes(cohort.status) ? (
-                    <CohortMembershipControl
-                      cohortId={id}
-                      profileId={member.profileId}
-                      role={member.role}
-                      status={member.status}
-                    />
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            {!members.length ? (
-              <p className="text-sm text-stone-500">
-                Add approved learners and faculty to prepare this cohort.
-              </p>
-            ) : null}
-          </section>
-          {["draft", "active"].includes(cohort.status) ? (
-            <section className="admin-card p-5">
-              <h2 className="mb-4 font-serif text-xl text-navy">
-                Place a member
-              </h2>
+          <Panel title="Members and faculty" icon={UsersRound} action={<span className="text-[12.5px] text-stone-600">{members.length} people</span>}>
+            {members.length ? (
+              <ul className="divide-y divide-navy/8">
+                {members.map(({ member, name, email }) => (
+                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+                    <div className="flex min-w-0 items-center gap-3.5">
+                      <span aria-hidden className="k-coin">{initials(name)}</span>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-navy">{name}</p>
+                        <p className="break-all text-[12.5px] text-stone-600">{email}</p>
+                        <p className="mt-1 flex items-center gap-1.5 text-[12px] uppercase tracking-[0.08em] text-stone-600">
+                          <Led tone={member.status === "active" ? "green" : "off"} /> {member.role} · {member.status}
+                        </p>
+                      </div>
+                    </div>
+                    {editable ? (
+                      <CohortMembershipControl cohortId={id} profileId={member.profileId} role={member.role} status={member.status} />
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-5 py-5 text-[14px] text-stone-600">Add approved learners and faculty to prepare this cohort.</p>
+            )}
+          </Panel>
+          {editable ? (
+            <Panel title="Place a member" icon={UserPlus} riveted bodyClassName="px-5 pb-6 pt-4">
               <CohortMemberForm cohortId={id} people={candidates} />
-              <Link
-                href="/admin/enrollments"
-                className="mt-4 inline-block text-sm font-semibold text-gold-dark underline"
-              >
-                Manage level enrolments
+              <Link href="/admin/enrollments" className={keyClass("paper", "sm", "mt-4")}>
+                Manage level enrolments <ArrowRight aria-hidden />
               </Link>
-            </section>
+            </Panel>
           ) : null}
           {weeks.length ? (
-            <section className="admin-card p-5">
-              <h2 className="font-serif text-xl text-navy">Week plan</h2>
-              <ol className="mt-4 space-y-2 text-sm text-stone-600">
+            <Panel title="Week plan" icon={CalendarDays}>
+              <ol className="k-ledger">
                 {weeks.map((week) => (
-                  <li key={week.id}>
-                    Week {week.weekNumber}: {week.title} · {week.theme}
+                  <li key={week.id} className="flex gap-3 py-3 pl-[1.45rem] pr-5 text-[14px] text-stone-700">
+                    <span aria-hidden className="k-rivet mt-1" />
+                    <span className="pl-6">
+                      <strong className="text-navy">Week {week.weekNumber}:</strong> {week.title} · {week.theme}
+                    </span>
                   </li>
                 ))}
               </ol>
-            </section>
+            </Panel>
           ) : null}
         </div>
-        <section className="admin-card p-5">
-          <h2 className="mb-4 font-serif text-xl text-navy">Cohort settings</h2>
+        <Panel title="Cohort settings" icon={Settings2} riveted bodyClassName="px-5 pb-6 pt-4 sm:px-6">
           <CohortSetupForm
             key={cohort.id}
             levels={levels}
@@ -205,7 +191,7 @@ export default async function CohortDetail({
               updatedAt: cohort.updatedAt.toISOString(),
             }}
           />
-        </section>
+        </Panel>
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowRight, Award, CheckCircle2, ClipboardCheck, Lock, RotateCcw, Target } from "lucide-react";
+import { ArrowRight, Award, CheckCircle2, ClipboardCheck, Info, Lock, RotateCcw, Target } from "lucide-react";
 import { getAssessmentsForStudent } from "@/db/assessments";
 import { getStudentAcademy } from "@/db/courses";
 import { getSessionUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { Chip, DeskHeading, Groove, LeatherFigures, LearnHero, Stamp, btn } from "@/components/learn/kit";
 
 export const dynamic = "force-dynamic";
 
@@ -30,159 +31,146 @@ export default async function StudentAssessmentsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl text-navy">Assessments</h1>
-          <p className="text-[12.5px] text-stone-600">
-            Complete the relevant lessons before starting a timed assessment. Your results are graded and recorded when you submit.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Average", value: average === null ? "—" : `${average}%` },
-            { label: "Passed", value: `${passed}/${cards.length}` },
-            { label: "Best", value: scores.length ? `${Math.max(...scores)}%` : "—" },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl border border-navy/10 bg-paper px-3 py-2 text-center">
-              <p className="font-serif text-lg text-navy">{stat.value}</p>
-              <p className="text-[9.5px] uppercase tracking-[0.08em] text-stone-500">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-8">
+      <LearnHero
+        eyebrow="Timed and auto-graded"
+        title="Assessments"
+        description="Complete the relevant lessons before starting a timed assessment. Your results are graded and recorded when you submit."
+        aside={
+          <LeatherFigures
+            items={[
+              { label: "Average", value: average === null ? "—" : `${average}%` },
+              { label: "Passed", value: `${passed}/${cards.length}` },
+              { label: "Best", value: scores.length ? `${Math.max(...scores)}%` : "—" },
+            ]}
+          />
+        }
+      />
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <ClipboardCheck className="h-4 w-4 text-gold-dark" />
-          <h2 className="font-serif text-lg text-navy">Session assessments</h2>
-          <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold text-stone-600">{sessionQuizzes.length}</span>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {sessionQuizzes.map((quiz) => {
+      <section aria-labelledby="session-assessments" className="space-y-4">
+        <DeskHeading id="session-assessments" icon={ClipboardCheck} count={sessionQuizzes.length}>
+          Session assessments
+        </DeskHeading>
+        <div className="grid gap-5 lg:grid-cols-2">
+          {sessionQuizzes.map((quiz, index) => {
             const locked = quiz.attemptsUsed >= quiz.maxAttempts && !quiz.hasActiveSession;
             return (
-              <div key={quiz.id} className="admin-card flex flex-col p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
+              <article key={quiz.id} className="lk-paper relative flex flex-col overflow-hidden p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-dark">
-                      {quiz.courseTitle ?? "Course"}{quiz.moduleTitle ? ` · ${quiz.moduleTitle}` : ""}
+                    <p className="lk-kicker">
+                      {quiz.courseTitle ?? "Course"}
+                      {quiz.moduleTitle ? ` · ${quiz.moduleTitle}` : ""}
                     </p>
-                    <p className="mt-0.5 font-serif text-[15px] leading-snug text-navy">{quiz.title}</p>
-                    <p className="text-[11px] text-stone-500">
+                    <h3 className="mt-1 font-serif text-[1.15rem] leading-snug text-navy">{quiz.title}</h3>
+                    <p className="mt-0.5 text-[13px] text-stone-600">
                       {quiz.questionCount} questions · {quiz.timeLimitMinutes} min · pass {quiz.passMark}%
                     </p>
                   </div>
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.08em]",
-                      quiz.passed ? "bg-source/10 text-source" : quiz.bestScore !== null ? "bg-amber-100 text-amber-800" : "bg-cream text-stone-600",
-                    )}
-                  >
-                    {quiz.passed ? "passed" : quiz.bestScore !== null ? "retake" : "not started"}
-                  </span>
+                  {quiz.passed ? (
+                    <Stamp>Passed</Stamp>
+                  ) : (
+                    <Chip tone={quiz.bestScore !== null ? "amber" : "plain"}>{quiz.bestScore !== null ? "retake" : "not started"}</Chip>
+                  )}
                 </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-cream">
-                    <span
-                      className={cn("block h-full rounded-full", quiz.passed ? "bg-source" : "bg-gold")}
-                      style={{ width: `${quiz.bestScore ?? 0}%` }}
-                    />
-                  </span>
-                  <span className="text-[11px] font-semibold text-navy">{quiz.bestScore ?? 0}%</span>
+                <div className="mt-4 flex items-center gap-3">
+                  <Groove
+                    value={quiz.bestScore ?? 0}
+                    label={`${quiz.title} best score`}
+                    color={quiz.passed ? "#2f6b40" : undefined}
+                    index={Math.min(index, 6)}
+                    className="flex-1"
+                  />
+                  <span className="text-[13px] font-semibold tabular-nums text-navy">{quiz.bestScore ?? 0}%</span>
                 </div>
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-stone-400">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[rgba(18,42,77,0.16)] pt-3">
+                  <p className="text-[12px] uppercase tracking-[0.08em] text-stone-600">
                     {quiz.attemptsUsed}/{quiz.maxAttempts} attempts used
                   </p>
                   {locked ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-navy/12 px-3 py-1.5 text-[10.5px] text-stone-500">
-                      <Lock className="h-3 w-3" /> Mentor review needed
+                    <span className="lk-well inline-flex min-h-9 items-center gap-1.5 px-3 text-[13px] text-stone-600">
+                      <Lock aria-hidden className="h-3.5 w-3.5" /> Mentor review needed
                     </span>
                   ) : (
-                    <Link
-                      href={`/learn/assessments/${quiz.id}`}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-navy px-3.5 text-[11px] font-semibold text-paper hover:bg-navy-700"
-                    >
-                      {quiz.passed ? <RotateCcw className="h-3 w-3" /> : <ArrowRight className="h-3 w-3" />}
+                    <Link href={`/learn/assessments/${quiz.id}`} className={cn(btn.navy, btn.sm)}>
+                      {quiz.passed ? <RotateCcw aria-hidden className="h-3.5 w-3.5" /> : <ArrowRight aria-hidden className="h-3.5 w-3.5" />}
                       {quiz.passed ? "Retake" : quiz.attemptsUsed > 0 ? "Try again" : "Start"}
                     </Link>
                   )}
                 </div>
-              </div>
+              </article>
             );
           })}
-          {sessionQuizzes.length === 0 ? (
-            <p className="admin-card p-5 text-[12.5px] text-stone-600">No session assessments published yet.</p>
-          ) : null}
+          {sessionQuizzes.length === 0 ? <p className="lk-well p-5 text-[14px] text-stone-600">No session assessments published yet.</p> : null}
         </div>
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-gold-dark" />
-          <h2 className="font-serif text-lg text-navy">Level examinations</h2>
-          <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold text-stone-600">{levelExams.length}</span>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
+      <section aria-labelledby="level-exams" className="space-y-4">
+        <DeskHeading id="level-exams" icon={Target} count={levelExams.length}>
+          Level examinations
+        </DeskHeading>
+        <div className="grid gap-5 lg:grid-cols-3">
           {levelExams.map((exam) => {
             const progress = levelProgress(exam.levelId);
-            const unlocked = Boolean(progress && progress.percent === 100) && sessionQuizzes.filter((quiz) => quiz.levelId === exam.levelId).every((quiz) => quiz.passed) && (exam.attemptsUsed < exam.maxAttempts || exam.hasActiveSession);
+            const unlocked =
+              Boolean(progress && progress.percent === 100) &&
+              sessionQuizzes.filter((quiz) => quiz.levelId === exam.levelId).every((quiz) => quiz.passed) &&
+              (exam.attemptsUsed < exam.maxAttempts || exam.hasActiveSession);
             return (
-              <div key={exam.id} className="admin-card flex flex-col p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-dark">{exam.levelName} level</p>
-                  <span className="rounded-full bg-navy px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-paper">
-                    {exam.questionCount} questions
-                  </span>
+              <article key={exam.id} className="lk-paper lk-stack flex flex-col p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="lk-kicker">{exam.levelName} level</p>
+                  <Chip tone="navy">{exam.questionCount} questions</Chip>
                 </div>
-                <p className="mt-1.5 font-serif text-[16px] leading-snug text-navy">{exam.title}</p>
-                <p className="text-[11px] text-stone-500">
+                <h3 className="mt-2 font-serif text-[1.15rem] leading-snug text-navy">{exam.title}</h3>
+                <p className="text-[13px] text-stone-600">
                   Pass mark {exam.passMark}% · {exam.maxAttempts} attempts
                 </p>
                 {progress ? (
-                  <div className="mt-2.5">
-                    <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.08em] text-stone-500">
+                  <div className="mt-4">
+                    <div className="mb-1.5 flex items-center justify-between text-[12px] font-semibold uppercase tracking-[0.08em] text-stone-600">
                       <span>Level readiness</span>
-                      <span>{progress.percent}%</span>
+                      <span className="tabular-nums">{progress.percent}%</span>
                     </div>
-                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-cream">
-                      <span className="block h-full rounded-full bg-navy" style={{ width: `${progress.percent}%` }} />
-                    </span>
+                    <Groove value={progress.percent} label={`${exam.levelName} level readiness`} color="#1b3a63" />
                   </div>
                 ) : null}
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-navy/8 pt-2.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-stone-500">
-                    {exam.passed ? <><CheckCircle2 className="h-3 w-3 text-source" /> passed</> : `${exam.bestScore ?? 0}% best`}
+                <div className="mt-auto pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-[rgba(18,42,77,0.16)] pt-3">
+                  <span className="inline-flex items-center gap-1.5 text-[13px] text-stone-600">
+                    {exam.passed ? (
+                      <>
+                        <CheckCircle2 aria-hidden className="h-4 w-4 text-source" /> Passed
+                      </>
+                    ) : (
+                      `${exam.bestScore ?? 0}% best`
+                    )}
                   </span>
                   {unlocked ? (
-                    <Link
-                      href={`/learn/assessments/${exam.id}`}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-gold px-3.5 text-[11px] font-semibold text-ink hover:bg-gold-dark hover:text-paper"
-                    >
-                      <Award className="h-3 w-3" /> {exam.passed ? "Retake exam" : "Sit the exam"}
+                    <Link href={`/learn/assessments/${exam.id}`} className={cn(btn.brass, btn.sm)}>
+                      <Award aria-hidden className="h-4 w-4" /> {exam.passed ? "Retake exam" : "Sit the exam"}
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-navy/12 px-3 py-1.5 text-[10.5px] text-stone-500">
-                      <Lock className="h-3 w-3" /> Complete the level first
+                    <span className="lk-well inline-flex min-h-9 items-center gap-1.5 px-3 text-[13px] text-stone-600">
+                      <Lock aria-hidden className="h-3.5 w-3.5" /> Complete the level first
                     </span>
                   )}
                 </div>
-              </div>
+                </div>
+              </article>
             );
           })}
-          {levelExams.length === 0 ? (
-            <p className="admin-card p-5 text-[12.5px] text-stone-600">Level exams are published at the end of each level.</p>
-          ) : null}
+          {levelExams.length === 0 ? <p className="lk-well p-5 text-[14px] text-stone-600">Level exams are published at the end of each level.</p> : null}
         </div>
       </section>
 
-      <div className="rounded-xl border border-gold/30 bg-gold/10 p-4 text-[11.5px] leading-relaxed text-stone-700">
-        <p className="font-semibold text-gold-dark">How scoring works</p>
-        <p className="mt-1">
-          Each answer is graded instantly. Your percentage is stored with the attempt, shared with your mentor, and a
-          failing score triggers a follow-up notification so no one drifts quietly. Level exams use the level pass mark
-          (80% by default, set per level by the faculty).
+      <div className="lk-note max-w-3xl">
+        <p className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em] text-[#6b4a05]">
+          <Info aria-hidden className="h-4 w-4" /> How scoring works
+        </p>
+        <p className="mt-2 text-[14px] leading-relaxed">
+          Each answer is graded instantly. Your percentage is stored with the attempt, shared with your mentor, and a failing score triggers a follow-up notification so no one
+          drifts quietly. Level exams use the level pass mark (80% by default, set per level by the faculty).
         </p>
       </div>
     </div>

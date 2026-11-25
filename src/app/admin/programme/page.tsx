@@ -1,17 +1,19 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AlertTriangle, ArrowRight, Bell, Building2, CalendarDays, Users } from "lucide-react";
-import { asc, eq } from "drizzle-orm";
+import { AlertTriangle, ArrowRight, Bell, Building2, CalendarDays, CalendarPlus, FlaskConical, ShieldCheck, Users } from "lucide-react";
+import { asc } from "drizzle-orm";
 import { db } from "@/db";
 import { courseLevels, profiles } from "@/db/schema";
 import { getCohorts, getInstrumentResultsOverview, getOpenReports, getOrganizations, getOutboxWithNames, getRoleMatrix } from "@/db/learning";
 import { canManagePeople, getSessionUser } from "@/lib/auth";
 import { PERMISSION_LIST, ROLE_DEFINITIONS, can } from "@/lib/rbac";
 import { CohortForm, OrgForm } from "@/components/platform/forms";
-import { moderateThread, resolveReport } from "@/app/actions/platform";
+import { resolveReport } from "@/app/actions/platform";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { getAttendanceForSession } from "@/db/learning";
+import { Led } from "@/components/admin/console/instruments";
+import { ConsoleEmpty, ConsoleHeader, MetricTile, Panel, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export default async function AdminProgrammePage() {
   if (!user) redirect("/login");
   if (!can(user, "cohort.manage") && !canManagePeople(user)) redirect("/admin");
 
-  const [cohorts, levels, organizations, roles, instrumentResults, outbox, reports, people] = await Promise.all([
+  const [cohorts, levels, organizations, roles, instrumentResults, outbox, reports] = await Promise.all([
     getCohorts(),
     db.select().from(courseLevels).orderBy(asc(courseLevels.sortOrder)),
     getOrganizations(),
@@ -36,213 +38,194 @@ export default async function AdminProgrammePage() {
 
   const primaryCohort = cohorts[0];
   const attendance = primaryCohort ? await getAttendanceForSession(0).catch(() => []) : [];
+  const openReports = reports.filter((row) => row.report.status === "open").length;
+  const queued = outbox.filter((row) => row.outbox.status === "queued").length;
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-2xl text-navy">Programme control</h1>
-        <p className="text-[12.5px] text-stone-600">
-          Cohorts, organisations, the RBAC matrix, instrument results, moderation reports and the notification outbox.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Programme"
+        title="Programme control"
+        description="Cohorts, organisations, the RBAC matrix, instrument results, moderation reports and the notification outbox."
+      />
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "Cohorts", value: cohorts.length, icon: CalendarDays },
-          { label: "Organisations", value: organizations.length, icon: Building2 },
-          { label: "Open reports", value: reports.filter((row) => row.report.status === "open").length, icon: AlertTriangle },
-          { label: "Outbox queued", value: outbox.filter((row) => row.outbox.status === "queued").length, icon: Bell },
-        ].map((card) => (
-          <div key={card.label} className="admin-card p-4">
-            <card.icon className="h-4 w-4 text-gold-dark" />
-            <p className="mt-2 font-serif text-2xl text-navy">{card.value}</p>
-            <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">{card.label}</p>
-          </div>
-        ))}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile label="Cohorts" value={cohorts.length} icon={CalendarDays} />
+        <MetricTile label="Organisations" value={organizations.length} icon={Building2} tone="destiny" />
+        <MetricTile label="Open reports" value={openReports} icon={AlertTriangle} tone={openReports ? "rose" : "source"} led={openReports ? { tone: "red", pulse: true } : { tone: "green" }} />
+        <MetricTile label="Outbox queued" value={queued} icon={Bell} tone="gold" led={queued ? { tone: "amber", pulse: true } : undefined} />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] xl:items-start">
-        <div className="space-y-4">
-          {cohorts.map((row) => (
-            <div key={row.cohort.id} className="admin-card overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy/10 bg-cream/40 px-5 py-3">
-                <div>
-                  <p className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-gold-dark">
-                    {row.cohort.status} · {row.levelName ?? "—"}
-                  </p>
-                  <p className="font-serif text-[15px] text-navy">{row.cohort.name}</p>
-                  <p className="text-[10px] text-stone-500">
-                    {formatDate(row.cohort.startsAt, "short")} → {formatDate(row.cohort.endsAt, "short")} · {row.learnerCount} learners ·{" "}
-                    {row.mentorCount} faculty · {row.weekCount} weeks
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                                    <Link href={"/admin/cohorts/"+row.cohort.id} className="inline-flex items-center gap-1 rounded-full bg-navy px-2.5 py-1 text-[10px] font-semibold text-paper">
-                    Manage cohort <ArrowRight className="h-2.5 w-2.5" />
+        <div className="space-y-5">
+          {cohorts.length ? (
+            <ul className="k-stagger space-y-3.5" aria-label="Cohorts">
+              {cohorts.map((row, index) => (
+                <li key={row.cohort.id} style={staggerStyle(index)}>
+                  <Link href={`/admin/cohorts/${row.cohort.id}`} className="admin-card group flex flex-wrap items-center gap-4 p-5">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-[0.12em] text-gold-dark">
+                        <Led tone={row.cohort.status === "active" ? "green" : row.cohort.status === "draft" ? "gold" : "off"} />
+                        {row.cohort.status} · {row.levelName ?? "—"}
+                      </p>
+                      <p className="mt-1 font-serif text-[18px] text-navy">{row.cohort.name}</p>
+                      <p className="numeric text-[12.5px] text-stone-600">
+                        {formatDate(row.cohort.startsAt, "short")} → {formatDate(row.cohort.endsAt, "short")} · {row.learnerCount} learners · {row.mentorCount} faculty · {row.weekCount} weeks
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-navy">
+                      Manage enrolments, capacity and members <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    </span>
                   </Link>
-                </div>
-              </div>
-              <div className="px-5 py-3">
-                <Link href={"/admin/cohorts/"+row.cohort.id} className="text-sm font-semibold text-gold-dark underline">Manage enrolments, capacity and members</Link>
-              </div>
-            </div>
-          ))}
-          {cohorts.length === 0 ? (
-            <div className="admin-card p-6 text-[12px] text-stone-600">No cohorts yet. Create the first one on the right.</div>
-          ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ConsoleEmpty icon={CalendarDays} title="No cohorts yet." description="Create the first one with the form alongside." />
+          )}
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">RBAC matrix</p>
-              <p className="text-[10.5px] text-stone-500">Organisation → people → role → permission. {PERMISSION_LIST.length} permissions, {ROLE_DEFINITIONS.length} roles.</p>
-            </div>
+          <Panel
+            title="RBAC matrix"
+            icon={ShieldCheck}
+            description={`Organisation → people → role → permission. ${PERMISSION_LIST.length} permissions, ${ROLE_DEFINITIONS.length} roles.`}
+          >
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[42rem] text-left text-[11.5px]">
-                <thead className="bg-cream/40 text-[9.5px] uppercase tracking-[0.08em] text-stone-500">
+              <table className="w-full min-w-[42rem] text-left text-[13px]">
+                <thead className="text-[11px] uppercase tracking-[0.08em] text-stone-600">
                   <tr>
-                    <th className="px-4 py-2 font-semibold">Role</th>
-                    <th className="px-4 py-2 font-semibold">Scope</th>
-                    <th className="px-4 py-2 font-semibold">Level</th>
-                    <th className="px-4 py-2 font-semibold">Permissions</th>
-                    <th className="px-4 py-2 font-semibold">People</th>
+                    <th className="px-4 py-2.5 font-bold">Role</th>
+                    <th className="px-4 py-2.5 font-bold">Scope</th>
+                    <th className="px-4 py-2.5 font-bold">Level</th>
+                    <th className="px-4 py-2.5 font-bold">Permissions</th>
+                    <th className="px-4 py-2.5 font-bold">People</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-navy/8">
                   {roles.map((role) => (
-                    <tr key={role.id} className="hover:bg-cream/30">
-                      <td className="px-4 py-2 font-medium text-navy">{role.name}</td>
-                      <td className="px-4 py-2 text-stone-600">
-                        {ROLE_DEFINITIONS.find((definition) => definition.slug === role.slug)?.scope ?? "organisation"}
-                      </td>
-                      <td className="px-4 py-2 text-stone-600">{role.level}</td>
-                      <td className="px-4 py-2 text-[10px] text-stone-500">{role.permissions.length}</td>
-                      <td className="px-4 py-2 text-stone-600">{role.members}</td>
+                    <tr key={role.id} className="transition-colors hover:bg-cream/50">
+                      <td className="px-4 py-2.5 font-medium text-navy">{role.name}</td>
+                      <td className="px-4 py-2.5 text-stone-700">{ROLE_DEFINITIONS.find((definition) => definition.slug === role.slug)?.scope ?? "organisation"}</td>
+                      <td className="numeric px-4 py-2.5 text-stone-700">{role.level}</td>
+                      <td className="numeric px-4 py-2.5 text-stone-700">{role.permissions.length}</td>
+                      <td className="numeric px-4 py-2.5 text-stone-700">{role.members}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <Link href="/admin/people" className="flex items-center justify-between border-t border-navy/8 px-5 py-2.5 text-[11px] font-semibold text-gold-dark">
+            <Link href="/admin/people" className="k-strip flex items-center justify-between border-t border-navy/10 px-5 py-3 text-[13px] font-semibold text-gold-dark hover:text-navy">
               <span>Assign roles & manage organisations</span>
-              <ArrowRight className="h-3 w-3" />
+              <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
-          </div>
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Assessment engine results</p>
-            </div>
+          <Panel title="Assessment engine results" icon={FlaskConical}>
             <ul className="divide-y divide-navy/8">
               {instrumentResults.map((row) => (
-                <li key={row.result.id} className="px-5 py-2.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-cream px-2 py-0.5 text-[9.5px] font-semibold text-navy">{row.result.overallScore}</span>
-                    <p className="min-w-0 flex-1 truncate text-[11.5px] text-navy">
+                <li key={row.result.id} className="px-5 py-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="k-lcd text-[13px] font-semibold">{row.result.overallScore}</span>
+                    <p className="min-w-0 flex-1 truncate text-[13.5px] text-navy">
                       {row.studentName} · {row.instrumentTitle}
                     </p>
-                    <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-500">v{row.version} · {row.result.bandLabel}</span>
+                    <span className="text-[11.5px] uppercase tracking-[0.08em] text-stone-600">
+                      v{row.version} · {row.result.bandLabel}
+                    </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {row.result.dimensions.map((dimension) => (
-                      <span key={dimension.slug} className="rounded bg-cream px-1.5 py-0.5 text-[9px] text-stone-600">
+                      <span key={dimension.slug} className="ui-badge rounded-full border border-navy/10 bg-cream px-2 py-0.5 text-[11.5px] text-stone-700">
                         {dimension.name} {dimension.score}
                       </span>
                     ))}
                   </div>
                 </li>
               ))}
-              {instrumentResults.length === 0 ? <li className="px-5 py-4 text-[12px] text-stone-500">No results yet.</li> : null}
+              {instrumentResults.length === 0 ? <li className="px-5 py-4 text-[13px] text-stone-600">No results yet.</li> : null}
             </ul>
-          </div>
+          </Panel>
         </div>
 
-        <div className="space-y-4">
-          <div className="admin-card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Create a cohort</p>
-            <div className="mt-2">
-              <CohortForm levels={levels.map((level) => ({ id: level.id, name: level.name }))} />
-            </div>
-          </div>
+        <div className="space-y-5">
+          <Panel title="Create a cohort" icon={CalendarPlus} riveted bodyClassName="px-5 pb-6 pt-4">
+            <CohortForm levels={levels.map((level) => ({ id: level.id, name: level.name }))} />
+          </Panel>
 
-          <div className="admin-card p-4">
-            <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-              <Building2 className="h-3.5 w-3.5 text-gold-dark" /> Organisations
-            </p>
-            <ul className="mt-2 space-y-1">
+          <Panel title="Organisations" icon={Building2} bodyClassName="px-5 py-3">
+            <ul className="divide-y divide-navy/8">
               {organizations.map((row) => (
-                <li key={row.organization.id} className="flex items-center justify-between gap-2 border-b border-navy/8 py-1 text-[11.5px]">
+                <li key={row.organization.id} className="flex items-center justify-between gap-2 py-2 text-[13px]">
                   <span className="text-navy">{row.organization.name}</span>
-                  <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-500">{row.organization.plan} · {row.memberCount}</span>
+                  <span className="text-[11.5px] uppercase tracking-[0.08em] text-stone-600">
+                    {row.organization.plan} · {row.memberCount}
+                  </span>
                 </li>
               ))}
             </ul>
-            <div className="mt-2"><OrgForm /></div>
-          </div>
-
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-4 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <AlertTriangle className="h-3.5 w-3.5 text-rose-600" /> Moderation reports
-              </p>
+            <div className="mt-3">
+              <OrgForm />
             </div>
+          </Panel>
+
+          <Panel title="Moderation reports" icon={AlertTriangle}>
             <ul className="divide-y divide-navy/8">
               {reports.slice(0, 6).map((row) => (
-                <li key={row.report.id} className="px-4 py-2">
-                  <p className="text-[11.5px] font-medium text-navy">{row.report.reason} · {row.report.targetType} #{row.report.targetId}</p>
-                  <p className="text-[10px] text-stone-500">{row.reporterName ?? "Anonymous"} · {formatDateTime(row.report.createdAt)}</p>
+                <li key={row.report.id} className="px-5 py-3">
+                  <p className="flex items-center gap-2 text-[13.5px] font-medium text-navy">
+                    <Led tone={row.report.status === "open" ? "red" : "green"} pulse={row.report.status === "open"} />
+                    {row.report.reason} · {row.report.targetType} #{row.report.targetId}
+                  </p>
+                  <p className="text-[12px] text-stone-600">
+                    {row.reporterName ?? "Anonymous"} · {formatDateTime(row.report.createdAt)}
+                  </p>
                   {row.report.status === "open" ? (
-                    <form action={resolveReport} className="mt-1 flex gap-1">
+                    <form action={resolveReport} className="mt-2 flex gap-2">
                       <input type="hidden" name="reportId" value={row.report.id} />
-                      <input name="moderatorNote" placeholder="Action taken" className="h-7 flex-1 rounded border border-navy/15 px-2 text-[10.5px]" />
-                      <button type="submit" className="rounded-full bg-navy px-2.5 py-1 text-[10px] font-semibold text-paper">Resolve</button>
+                      <input name="moderatorNote" aria-label="Action taken" placeholder="Action taken" className="h-9 min-w-0 flex-1 rounded-full border px-3.5 text-[16px] sm:text-[13px]" />
+                      <button type="submit" className={keyClass("navy", "sm")}>
+                        Resolve
+                      </button>
                     </form>
                   ) : (
-                    <p className="text-[10px] text-source">resolved</p>
+                    <p className="text-[12px] text-source">resolved</p>
                   )}
                 </li>
               ))}
-              {reports.length === 0 ? <li className="px-4 py-4 text-[12px] text-stone-500">No reports. The rooms are healthy.</li> : null}
+              {reports.length === 0 ? <li className="px-5 py-4 text-[13px] text-stone-600">No reports. The rooms are healthy.</li> : null}
             </ul>
-            <Link href="/admin/community" className="flex items-center justify-between border-t border-navy/8 px-4 py-2 text-[10.5px] font-semibold text-gold-dark">
-              Community moderation <ArrowRight className="h-3 w-3" />
+            <Link href="/admin/community" className="k-strip flex items-center justify-between border-t border-navy/10 px-5 py-3 text-[13px] font-semibold text-gold-dark hover:text-navy">
+              Community moderation <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
-          </div>
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-4 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <Bell className="h-3.5 w-3.5 text-gold-dark" /> Notification outbox
-              </p>
-            </div>
+          <Panel title="Notification outbox" icon={Bell}>
             <ul className="divide-y divide-navy/8">
               {outbox.map((row) => (
-                <li key={row.outbox.id} className="px-4 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="min-w-0 flex-1 truncate text-[11.5px] text-navy">{row.outbox.subject}</p>
-                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${row.outbox.status === "sent" ? "bg-source/10 text-source" : "bg-cream text-stone-600"}`}>
-                      {row.outbox.channel}
-                    </span>
+                <li key={row.outbox.id} className="flex gap-3 px-5 py-2.5">
+                  <Led tone={row.outbox.status === "sent" || row.outbox.status === "delivered" ? "green" : row.outbox.status === "queued" ? "gold" : "off"} className="mt-1.5" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 flex-1 truncate text-[13px] text-navy">{row.outbox.subject}</p>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-600">{row.outbox.channel}</span>
+                    </div>
+                    <p className="text-[12px] text-stone-600">
+                      {row.recipient} · <span className="k-mono text-[11.5px]">{row.outbox.templateKey}</span> · {row.outbox.status}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-stone-500">{row.recipient} · {row.outbox.templateKey}</p>
-                  <p className="text-[10px] text-stone-500">{row.outbox.status}</p>
                 </li>
               ))}
-              {outbox.length === 0 ? <li className="px-4 py-4 text-[12px] text-stone-500">Outbox is empty.</li> : null}
+              {outbox.length === 0 ? <li className="px-5 py-4 text-[13px] text-stone-600">Outbox is empty.</li> : null}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="admin-card p-4 text-[11px] leading-relaxed text-stone-600">
-            <p className="inline-flex items-center gap-1.5 font-semibold text-navy">
-              <Users className="h-3.5 w-3.5 text-gold-dark" /> Attendance
+          <Panel title="Attendance" icon={Users} bodyClassName="px-5 py-4 text-[13.5px] leading-relaxed text-stone-700">
+            <p>
+              Mark attendance from the mentor desk. {attendance.length} records are visible for session review; cohort attendance rolls into learner progress and certificate eligibility.
             </p>
-            <p className="mt-1">
-              Mark attendance from the mentor desk. {attendance.length} records are visible for session review; cohort
-              attendance rolls into learner progress and certificate eligibility.
-            </p>
-            <Link href="/mentor/learners" className="mt-2 inline-flex font-semibold text-gold-dark hover:underline">
-              Open mentor desk →
+            <Link href="/mentor/learners" className={keyClass("paper", "sm", "mt-3")}>
+              Open mentor desk <ArrowRight aria-hidden />
             </Link>
-          </div>
+          </Panel>
         </div>
       </div>
     </div>

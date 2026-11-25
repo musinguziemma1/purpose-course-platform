@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarPlus, Check, Circle, Loader2, NotebookPen, Send } from "lucide-react";
+import { CalendarPlus, Check, Loader2, NotebookPen, Send } from "lucide-react";
 import {
   requestCoaching,
   saveReflection,
@@ -10,22 +10,45 @@ import {
   toggleSessionComplete,
   type LearningState,
 } from "@/app/actions/learning";
-import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { PRINCIPLE_INFO, PRINCIPLE_KEYS } from "@/lib/purpose-journey";
 import { cn } from "@/lib/utils";
 import { FileUpload } from "@/components/media/file-upload";
+import { btn } from "@/components/learn/kit";
 
 function StateNote({ state }: { state: LearningState }) {
   if (state.error) {
-    return <p className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11.5px] text-rose-700">{state.error}</p>;
+    return <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[13px] text-rose-700">{state.error}</p>;
   }
   if (state.ok) {
     return (
-      <p className="rounded-md border border-source/30 bg-source/5 px-2.5 py-2 text-[11.5px] text-source">{state.message}</p>
+      <p role="status" className="rounded-lg border border-source/30 bg-source/5 px-3 py-2 text-[13px] text-source">{state.message}</p>
     );
   }
   return null;
+}
+
+/** A tactile submit button that shows the press is being handled. */
+export function SubmitButton({
+  children,
+  className,
+  name,
+  value,
+  disabled = false,
+}: {
+  children: ReactNode;
+  className: string;
+  name?: string;
+  value?: string;
+  disabled?: boolean;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" name={name} value={value} disabled={disabled || pending} aria-busy={pending || undefined} className={className}>
+      {pending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
+      {children}
+    </button>
+  );
 }
 
 export function SessionToggle({
@@ -49,25 +72,16 @@ export function SessionToggle({
 function SessionToggleButton({ completed, compact }: { completed: boolean; compact: boolean }) {
   const { pending } = useFormStatus();
   return (
+      // A key on the desk: raised until pressed, then it stays down with a green tick.
       <button
         type="submit"
         disabled={pending}
         aria-label={completed ? "Uncheck self-reported session" : "Check self-reported session"}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border text-[11px] font-medium transition-colors disabled:opacity-60",
-          compact ? "h-7 px-2.5" : "h-8 px-3",
-          completed
-            ? "border-source/30 bg-source/10 text-source hover:bg-source/15"
-            : "border-navy/15 bg-paper text-navy hover:border-navy/35",
-        )}
+        className={cn("lk-btn lk-btn-sm gap-2", completed ? "lk-btn-down" : "lk-btn-paper", compact && "px-3")}
       >
-        {pending ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : completed ? (
-          <Check className="h-3.5 w-3.5" />
-        ) : (
-          <Circle className="h-3.5 w-3.5" />
-        )}
+        <span aria-hidden className={cn("lk-tickbox", completed && "lk-tickbox-on")}>
+          {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : completed ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+        </span>
         {completed ? "Checked" : "Mark attended"}
       </button>
   );
@@ -108,30 +122,16 @@ export function AssignmentForm({
       />
       </Field>
       {status !== "reviewed" ? <FileUpload purpose="submission" onUploaded={asset => setAttachmentId(asset.id)} onBusyChange={setUploading} /> : null}
-      {attachmentId ? <div className="flex gap-4 text-xs"><a href={`/api/media/${attachmentId}?download=1`} className="font-semibold text-gold-dark">Download attached file</a>{status !== "reviewed" ? <button type="button" onClick={() => setAttachmentId("")} className="text-stone-500">Remove attachment</button> : null}</div> : null}
+      {attachmentId ? <div className="flex flex-wrap gap-4 text-[13px]"><a href={`/api/media/${attachmentId}?download=1`} className="lk-link">Download attached file</a>{status !== "reviewed" ? <button type="button" onClick={() => setAttachmentId("")} className="min-h-9 text-stone-600 hover:text-navy">Remove attachment</button> : null}</div> : null}
       <StateNote state={state} />
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="submit"
-          name="intent"
-          value="submit"
-          disabled={status === "reviewed" || uploading}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-4 text-[11.5px] font-semibold text-paper hover:bg-navy-700"
-        >
-          <Send className="h-3.5 w-3.5" /> {status === "reviewed" ? "Graded response" : "Submit for review"}
-        </button>
-        <button
-          type="submit"
-          name="intent"
-          value="draft"
-          disabled={status === "reviewed" || uploading}
-          className="inline-flex h-9 items-center rounded-full border border-navy/15 px-4 text-[11.5px] font-medium text-navy hover:bg-cream"
-        >
+      <div className="flex flex-wrap items-center gap-2.5 pt-1">
+        <SubmitButton name="intent" value="submit" disabled={status === "reviewed" || uploading} className={cn(btn.navy, btn.sm)}>
+          <Send aria-hidden className="h-3.5 w-3.5" /> {status === "reviewed" ? "Graded response" : "Submit for review"}
+        </SubmitButton>
+        <SubmitButton name="intent" value="draft" disabled={status === "reviewed" || uploading} className={cn(btn.paper, btn.sm)}>
           Save draft
-        </button>
-        {status ? (
-          <span className="text-[10.5px] uppercase tracking-[0.1em] text-stone-500">current: {status}</span>
-        ) : null}
+        </SubmitButton>
+        {status ? <span className="text-[12px] font-semibold uppercase tracking-[0.1em] text-stone-600">Current: {status}</span> : null}
       </div>
     </form>
   );
@@ -147,10 +147,10 @@ export function ReflectionForm({ sessions, defaultPrinciple = "" }: { sessions: 
       <Field label="Reflection" hint="minimum 40 characters">
         <Textarea
           name="body"
-          rows={5}
+          rows={6}
           required
+          className="lk-ruled-field pl-12 leading-7"
           placeholder="Write honestly. This is a learning record, not a performance."
-          
         />
       </Field>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -183,9 +183,9 @@ export function ReflectionForm({ sessions, defaultPrinciple = "" }: { sessions: 
         </Field>
       </div>
       <StateNote state={state} />
-      <Button type="submit" size="sm" className="w-full">
-        <NotebookPen className="h-3.5 w-3.5" /> Save reflection
-      </Button>
+      <SubmitButton className={cn(btn.navy, "w-full")}>
+        <NotebookPen aria-hidden className="h-4 w-4" /> Save reflection
+      </SubmitButton>
     </form>
   );
 }
@@ -211,9 +211,9 @@ export function CoachingRequestForm() {
         />
       </Field>
       <StateNote state={state} />
-      <Button type="submit" size="sm" className="w-full">
-        <CalendarPlus className="h-3.5 w-3.5" /> Request coaching session
-      </Button>
+      <SubmitButton className={cn(btn.brass, "w-full")}>
+        <CalendarPlus aria-hidden className="h-4 w-4" /> Request coaching session
+      </SubmitButton>
     </form>
   );
 }

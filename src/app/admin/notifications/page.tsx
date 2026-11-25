@@ -1,7 +1,7 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bell, Mail, CheckCheck, Clock } from "lucide-react";
+import { ArrowRight, Bell, CheckCheck, Clock, Inbox, Library, Mail, MailOpen, Route } from "lucide-react";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { emailEvents, notificationOutbox, profiles } from "@/db/schema";
@@ -11,10 +11,17 @@ import { NOTIFICATION_CATEGORIES, TEMPLATES } from "@/lib/notifications";
 import { formatDateTime, relativeTime } from "@/lib/utils";
 import { emailConfigurationError } from "@/lib/email";
 import { EmailDeliveryForm } from "@/components/admin/email-delivery-form";
+import { Led, type LedTone } from "@/components/admin/console/instruments";
+import { ConsoleHeader, MetricTile, Panel, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Notifications" };
+
+const outboxLed = (status: string): LedTone =>
+  status === "delivered" || status === "sent" ? "green" : status === "queued" ? "gold" : status === "failed" ? "red" : "off";
+const eventLed = (event: string): LedTone =>
+  event === "sent" || event === "delivered" ? "green" : event === "opened" ? "gold" : event === "bounced" || event === "failed" ? "red" : "off";
 
 export default async function AdminNotificationsPage() {
   await requireAdminPage("/admin/notifications");
@@ -42,98 +49,101 @@ export default async function AdminNotificationsPage() {
   const templates = Object.values(TEMPLATES);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-2xl text-navy">Notification service</h1>
-        <p className="max-w-2xl text-[12.5px] leading-relaxed text-stone-600">
-          One reusable service fans a single event out to in-app rows and a channel outbox, respecting each learner&apos;s
-          preferences. {templates.length} templates across {NOTIFICATION_CATEGORIES.length} categories.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Messaging"
+        title="Notification service"
+        description={
+          <>
+            One reusable service fans a single event out to in-app rows and a channel outbox, respecting each learner&apos;s preferences. {templates.length} templates across{" "}
+            {NOTIFICATION_CATEGORIES.length} categories.
+          </>
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "Templates", value: templates.length, icon: Bell },
-          { label: "Queued", value: queued, icon: Clock },
-          { label: "Delivered", value: sent, icon: CheckCheck },
-          { label: "Email events", value: emailRows.length, icon: Mail },
-        ].map((card) => (
-          <div key={card.label} className="admin-card p-4">
-            <card.icon className="h-4 w-4 text-gold-dark" />
-            <p className="mt-2 font-serif text-2xl text-navy">{card.value}</p>
-            <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">{card.label}</p>
-          </div>
-        ))}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile label="Templates" value={templates.length} icon={Bell} />
+        <MetricTile label="Queued" value={queued} icon={Clock} tone="gold" led={queued ? { tone: "amber", pulse: true } : undefined} />
+        <MetricTile label="Delivered" value={sent} icon={CheckCheck} tone="source" />
+        <MetricTile label="Email events" value={emailRows.length} icon={Mail} tone="destiny" />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
-        <div className="admin-card overflow-hidden">
-          <div className="border-b border-navy/10 px-5 py-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Outbox queue</p>
-            <p className="text-[10.5px] text-stone-500">Latest 50 messages. Accepted means Resend received the request; delivered requires a signed provider callback.</p>
+        <Panel title="Outbox queue" icon={Inbox} description="Latest 50 messages. Accepted means Resend received the request; delivered requires a signed provider callback.">
+          <div className="border-b border-navy/8 px-5 py-3">
             <EmailDeliveryForm error={emailConfigurationError()} />
           </div>
-          <ul className="divide-y divide-navy/8">
-            {outbox.map(({ outbox: row, recipient }) => (
-              <li key={row.id} className="px-5 py-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate text-[12px] font-medium text-navy">{row.subject}</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${row.status === "sent" ? "bg-source/10 text-source" : "bg-cream text-stone-600"}`}>
-                    {row.channel} · {row.status}
-                  </span>
+          <ul className="k-stagger divide-y divide-navy/8">
+            {outbox.map(({ outbox: row, recipient }, index) => (
+              <li key={row.id} style={staggerStyle(index)} className="flex gap-3 px-5 py-3">
+                <Led tone={outboxLed(row.status)} className="mt-1.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate text-[13.5px] font-medium text-navy">{row.subject}</p>
+                    <span className="ui-badge rounded-full border border-navy/10 bg-cream px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-stone-700">
+                      {row.channel} · {row.status}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-stone-600">
+                    {recipient ?? row.recipientEmail ?? "unknown"} · <span className="k-mono text-[11.5px]">{row.templateKey}</span> · {relativeTime(row.createdAt)}
+                  </p>
+                  <p className="text-[12px] text-stone-600">
+                    Attempts: {row.attempts}
+                    {row.error ? <span className="text-rose-700"> · {row.error}</span> : ""}
+                  </p>
                 </div>
-                <p className="text-[10px] text-stone-500">
-                  {recipient ?? row.recipientEmail ?? "unknown"} · {row.templateKey} · {relativeTime(row.createdAt)}
-                </p>
-                <p className="text-[10px] text-stone-500">Attempts: {row.attempts}{row.error ? ` · ${row.error}` : ""}</p>
               </li>
             ))}
-            {outbox.length === 0 ? <li className="px-5 py-6 text-[12px] text-stone-500">Outbox is empty.</li> : null}
+            {outbox.length === 0 ? <li className="px-5 py-6 text-[13px] text-stone-600">Outbox is empty.</li> : null}
           </ul>
-        </div>
+        </Panel>
 
-        <div className="space-y-4">
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Template registry</p>
-            </div>
+        <div className="space-y-5">
+          <Panel title="Template registry" icon={Library}>
             <ul className="divide-y divide-navy/8">
               {templates.map((template) => (
-                <li key={template.key} className="px-5 py-2">
-                  <p className="font-mono text-[10.5px] text-navy">{template.key}</p>
-                  <p className="text-[10px] text-stone-500">
+                <li key={template.key} className="px-5 py-2.5">
+                  <p className="k-mono text-navy">{template.key}</p>
+                  <p className="text-[12px] text-stone-600">
                     {template.category} · {template.defaultChannels.join(", ")} · “{template.title({})}”
                   </p>
                 </li>
               ))}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Email lifecycle</p>
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {emailRows.map(({ event, recipient }) => (
-                <li key={event.id} className="flex flex-wrap items-center gap-2 px-5 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${event.event === "sent" ? "bg-source/10 text-source" : event.event === "opened" ? "bg-gold/15 text-gold-dark" : "bg-cream text-stone-600"}`}>
-                    {event.event}
+          <Panel title="Email lifecycle" icon={MailOpen}>
+            <ul className="k-stagger divide-y divide-navy/8">
+              {emailRows.map(({ event, recipient }, index) => (
+                <li key={event.id} style={staggerStyle(index)} className="flex flex-wrap items-center gap-2.5 px-5 py-2.5">
+                  <Led tone={eventLed(event.event)} />
+                  <span className="w-16 text-[11.5px] font-bold uppercase tracking-[0.08em] text-navy">{event.event}</span>
+                  <p className="min-w-0 flex-1 truncate text-[13px] text-stone-700">{event.detail ?? event.provider}</p>
+                  <span className="text-[12px] text-stone-500">
+                    {recipient ?? "—"} · {formatDateTime(event.createdAt)}
                   </span>
-                  <p className="min-w-0 flex-1 truncate text-[11px] text-stone-700">{event.detail ?? event.provider}</p>
-                  <span className="text-[9.5px] text-stone-400">{recipient ?? "—"} · {formatDateTime(event.createdAt)}</span>
                 </li>
               ))}
-              {emailRows.length === 0 ? <li className="px-5 py-4 text-[12px] text-stone-500">No email events yet.</li> : null}
+              {emailRows.length === 0 ? <li className="px-5 py-4 text-[13px] text-stone-600">No email events yet.</li> : null}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="rounded-xl border border-navy/10 bg-cream/40 p-4 text-[11px] leading-relaxed text-stone-600">
-            <p className="font-semibold text-navy">Channel roadmap</p>
-            <p className="mt-1">In-app notifications are available. Email requires a verified Resend sender, API key, signed webhook and scheduled worker. Push delivery is not configured.</p>
-            <Link href="/learn/notifications" className="mt-2 inline-flex font-semibold text-gold-dark hover:underline">
-              See the learner inbox →
+          <Panel title="Channel roadmap" icon={Route} bodyClassName="px-5 py-4 text-[13.5px] leading-relaxed text-stone-700">
+            <ul className="space-y-2">
+              <li className="flex items-start gap-2.5">
+                <Led tone="green" className="mt-1.5" /> In-app notifications are available.
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Led tone="gold" className="mt-1.5" /> Email requires a verified Resend sender, API key, signed webhook and scheduled worker.
+              </li>
+              <li className="flex items-start gap-2.5">
+                <Led tone="off" className="mt-1.5" /> Push delivery is not configured.
+              </li>
+            </ul>
+            <Link href="/learn/notifications" className={keyClass("paper", "sm", "mt-4")}>
+              See the learner inbox <ArrowRight aria-hidden />
             </Link>
-          </div>
+          </Panel>
         </div>
       </div>
     </div>

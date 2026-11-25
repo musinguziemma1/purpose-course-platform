@@ -2,7 +2,34 @@ import { PackageCheck, ShoppingBag, TriangleAlert } from "lucide-react";
 import { AdminStore } from "@/components/bookstore/admin-store";
 import { getStoreAdmin } from "@/db/bookstore";
 import { requireAdminPage } from "@/lib/page-access";
+import { ConsoleHeader, MetricTile } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Bookstore operations" };
-export default async function AdminStorePage() { const user = await requireAdminPage("/admin/store"); const data = await getStoreAdmin(user); if (!data) return null; const open = data.orders.filter(({ order }) => !["completed", "cancelled"].includes(order.status)).length; const low = data.books.filter((book) => book.status === "active" && book.variants.some((variant) => variant.isActive && variant.deliveryKind === "physical" && variant.inventoryCount <= book.lowStockThreshold)).length; return <div className="space-y-6"><div><p className="text-[10px] font-semibold uppercase tracking-[.16em] text-gold-dark">Commerce operations</p><h1 className="mt-1 font-serif text-2xl text-navy">Bookstore</h1><p className="mt-1 text-sm text-stone-600">Manage titles, stock, payment confirmation and fulfilment without leaving the platform.</p></div><div className="grid gap-3 sm:grid-cols-3">{[[ShoppingBag, String(data.orders.length), "Total orders"], [PackageCheck, String(open), "Open fulfilments"], [TriangleAlert, String(low), "Low-stock titles"]].map(([Icon, value, label]) => { const MetricIcon = Icon as typeof ShoppingBag; return <div key={String(label)} className="admin-card flex items-center gap-4 p-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-cream text-gold-dark"><MetricIcon className="h-5 w-5" /></span><div><p className="font-serif text-2xl text-navy">{String(value)}</p><p className="text-[11px] text-stone-500">{String(label)}</p></div></div>; })}</div><AdminStore books={data.books} orders={data.orders} reviews={data.reviews} /></div>; }
+
+export default async function AdminStorePage() {
+  const user = await requireAdminPage("/admin/store");
+  const data = await getStoreAdmin(user);
+  if (!data) return null;
+  const open = data.orders.filter(({ order }) => !["completed", "cancelled"].includes(order.status)).length;
+  const low = data.books.filter(
+    (book) =>
+      book.status === "active" &&
+      book.variants.some((variant) => variant.isActive && variant.deliveryKind === "physical" && variant.inventoryCount <= book.lowStockThreshold),
+  ).length;
+  return (
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Commerce operations"
+        title="Bookstore"
+        description="Manage titles, stock, payment confirmation and fulfilment without leaving the platform."
+      />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MetricTile label="Total orders" value={data.orders.length} icon={ShoppingBag} />
+        <MetricTile label="Open fulfilments" value={open} icon={PackageCheck} tone="gold" led={open ? { tone: "amber", pulse: true } : { tone: "green" }} />
+        <MetricTile label="Low-stock titles" value={low} icon={TriangleAlert} tone={low ? "rose" : "source"} led={low ? { tone: "red", pulse: true } : { tone: "green" }} />
+      </div>
+      <AdminStore books={data.books} orders={data.orders} reviews={data.reviews} />
+    </div>
+  );
+}

@@ -342,8 +342,7 @@ The CMS supports:
 - Preview
 - Scheduled publishing
 - Editorial review
-- Approval workflows
-- SEO metadata
+- Approval workflow- SEO metadata
 - Media management
 - Content versioning
 - Audit trails

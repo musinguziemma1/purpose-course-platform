@@ -8,6 +8,7 @@ import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { coachingReadable, learnerReadable } from "@/db/learner-access";
 import { profileIsComplete } from "@/lib/profile";
 import { mentorNavigation, workspacesFor } from "@/lib/navigation";
+import "./mentor-desk.css";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function MentorLayout({ children }: { children: ReactNode }
       reviewMode={Boolean(user.isDemo)}
       banner={user.isDemoAccount ? <p className="border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-navy sm:px-6">Demo mentor account · Explore the assigned demo student and practice coaching records.</p> : null}
     >
-      {children}
+      <div className="mentor-desk mx-auto max-w-[88rem]">{children}</div>
     </WorkspaceShell>
   );
 }

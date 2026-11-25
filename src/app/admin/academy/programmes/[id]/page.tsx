@@ -1,7 +1,8 @@
 import { requireAdminPage } from "@/lib/page-access";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Plus } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
+import { Led } from "@/components/admin/console/instruments";
+import { Caption, ConsoleHeader, Panel } from "@/components/admin/console/surfaces";
 import { AddProgrammeLevelForm, AddProgrammeModuleForm, ProgrammeLevelEditor, ProgrammeModuleEditor, ProgrammeSettingsForm } from "@/components/academy/programme-editor-forms";
 import { getProgrammeOutlines } from "@/db/programmes";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
@@ -28,27 +29,20 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
   const moduleCount = programme.levels.reduce((sum, level) => sum + level.modules.length, 0);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Link href="/admin/academy" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> Academy builder
-        </Link>
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">
-          Programme outline · {programme.status}
+    <div className="space-y-6">
+      <ConsoleHeader
+        back={{ href: "/admin/academy", label: "Academy builder" }}
+        eyebrow={`Programme outline · ${programme.status}`}
+        title={programme.name}
+        description={`${programme.levels.length} levels · ${moduleCount} outline modules · no learner-facing lessons`}
+      >
+        <p className="flex max-w-3xl items-start gap-2.5 rounded-xl border border-gold/30 bg-gold/10 px-4 py-3 text-[13px] leading-relaxed text-stone-700">
+          <Led tone="gold" className="mt-1" />
+          Saving level or module changes returns this programme to draft. Publishing makes its outline visible in the public catalogue; it does not create or publish digital lessons.
         </p>
-        <h1 className="font-serif text-2xl text-navy">{programme.name}</h1>
-        <p className="text-[12px] text-stone-600">
-          {programme.levels.length} levels · {moduleCount} outline modules · no learner-facing lessons
-        </p>
-        <p className="mt-2 max-w-3xl rounded-lg border border-gold/30 bg-gold/10 px-3 py-2 text-[11.5px] leading-relaxed text-stone-700">
-          Saving level or module changes returns this programme to draft. Publishing makes its outline visible in the public catalogue;
-          it does not create or publish digital lessons.
-        </p>
-      </div>
+      </ConsoleHeader>
 
-      <section className="admin-card p-5">
-        <h2 className="font-serif text-lg text-navy">Programme details</h2>
-        <p className="mb-4 text-[11px] text-stone-500">Saving as a draft hides this outline from the public catalogue.</p>
+      <Panel title="Programme details" icon={SlidersHorizontal} riveted description="Saving as a draft hides this outline from the public catalogue." bodyClassName="px-5 pb-6 pt-4 sm:px-6">
         <ProgrammeSettingsForm
           programme={{
             id: programme.id,
@@ -58,22 +52,24 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
             description: programme.description,
           }}
         />
-      </section>
+      </Panel>
 
       <section className="space-y-4">
         <div>
-          <h2 className="font-serif text-lg text-navy">Levels and modules</h2>
-          <p className="text-[11.5px] text-stone-600">Edit names, add or remove outline items, and publish the completed structure when ready.</p>
+          <Caption>Structure</Caption>
+          <h2 className="mt-1 font-serif text-[1.5rem] text-navy">Levels and modules</h2>
+          <p className="text-[14px] text-stone-600">Edit names, add or remove outline items, and publish the completed structure when ready.</p>
         </div>
         {programme.levels.map((level, levelIndex) => {
           const { stage, focus } = getProgrammeLevelPresentation(level.name, levelIndex);
           return (
             <section key={level.id} className="admin-card overflow-hidden">
-              <div className="border-b border-navy/10 bg-cream/40 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-gold-dark">
+              <div className="k-strip p-4 sm:p-5">
+                <p className="flex items-center gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.1em] text-gold-dark">
+                  <span className="k-well font-serif text-[14px] text-navy">{levelIndex + 1}</span>
                   Level {levelIndex + 1} · {stage} · {focus}
                 </p>
-                <p className="mb-3 mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-500">
+                <p className="mb-3 mt-1.5 text-[11.5px] font-semibold uppercase tracking-[0.1em] text-stone-600">
                   {level.modules.length} outline modules
                 </p>
                 <ProgrammeLevelEditor
@@ -86,7 +82,7 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
               <div className="space-y-3 p-4">
                 {level.modules.map((module, moduleIndex) => (
                   <div key={module.id} className="flex items-start gap-2">
-                    <span className="mt-3 w-5 shrink-0 text-right text-[11px] text-stone-400">{moduleIndex + 1}.</span>
+                    <span className="numeric mt-3 w-5 shrink-0 text-right text-[12px] text-stone-500">{moduleIndex + 1}.</span>
                     <ProgrammeModuleEditor
                       programmeId={programme.id}
                       levelId={level.id}
@@ -97,7 +93,7 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
                   </div>
                 ))}
                 {level.modules.length === 0 ? (
-                  <p className="text-[11px] text-stone-500">No outline modules yet. Add one before publishing.</p>
+                  <p className="text-[13px] text-stone-600">No outline modules yet. Add one before publishing.</p>
                 ) : null}
                 <div className="border-t border-navy/8 pt-3">
                   <AddProgrammeModuleForm programmeId={programme.id} levelId={level.id} />
@@ -107,14 +103,11 @@ export default async function AdminProgrammeEditorPage({ params }: Params) {
           );
         })}
         {programme.levels.length === 0 ? (
-          <div className="admin-card p-4 text-[11.5px] text-stone-600">No levels yet. Add a level to begin the outline.</div>
+          <div className="admin-card p-5 text-[13.5px] text-stone-600">No levels yet. Add a level to begin the outline.</div>
         ) : null}
-        <section className="admin-card p-5">
-          <h3 className="mb-3 inline-flex items-center gap-1.5 font-serif text-base text-navy">
-            <Plus className="h-4 w-4 text-gold-dark" /> Add a level
-          </h3>
+        <Panel title="Add a level" icon={Plus} riveted bodyClassName="px-5 pb-6 pt-4">
           <AddProgrammeLevelForm programmeId={programme.id} />
-        </section>
+        </Panel>
       </section>
     </div>
   );

@@ -1,7 +1,9 @@
 import { requireAdminPage } from "@/lib/page-access";
-import { Download, Mail, Users } from "lucide-react";
+import { CheckCircle2, Download, GraduationCap, Hourglass, Mail, PieChart, Send, Users } from "lucide-react";
 import { getEnrollments, getNewsletterPrincipleCounts, getSubscribers } from "@/db/queries";
 import { formatDate } from "@/lib/utils";
+import { GlassMeter } from "@/components/admin/console/instruments";
+import { ConsoleHeader, MetricTile, Panel, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
@@ -16,121 +18,91 @@ export default async function AdminStudentsPage() {
   ]);
 
   const waitlist = enrollments.filter((item) => item.status === "waitlist");
+  const principleTotal = Math.max(principleCounts.reduce((sum, item) => sum + Number(item.value), 0), 1);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl text-navy">Audience & students</h1>
-          <p className="text-[12.5px] text-stone-600">
-            The bridge from reader to learner: newsletter subscribers, resource downloads and the Academy waitlist.
-          </p>
-        </div>
-        <a
-          href="/api/subscribers/export"
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-navy/15 bg-paper px-4 text-[12px] font-medium text-navy hover:bg-cream"
-        >
-          <Download className="h-3.5 w-3.5" /> Export subscribers (CSV)
-        </a>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Audience"
+        title="Audience & students"
+        description="The bridge from reader to learner: newsletter subscribers, resource downloads and the Academy waitlist."
+        actions={
+          <a href="/api/subscribers/export" className={keyClass("paper")}>
+            <Download aria-hidden /> Export subscribers (CSV)
+          </a>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricTile label="Subscribers" value={subscribers.length} icon={Mail} />
+        <MetricTile label="Waitlist" value={waitlist.length} icon={Hourglass} tone="amber" />
+        <MetricTile label="Enrolled" value={enrollments.filter((item) => item.status === "enrolled").length} icon={GraduationCap} tone="source" />
+        <MetricTile label="Completed" value={enrollments.filter((item) => item.status === "completed").length} icon={CheckCircle2} tone="gold" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "Subscribers", value: subscribers.length, icon: Mail },
-          { label: "Waitlist", value: waitlist.length, icon: Users },
-          { label: "Enrolled", value: enrollments.filter((item) => item.status === "enrolled").length, icon: Users },
-          { label: "Completed", value: enrollments.filter((item) => item.status === "completed").length, icon: Users },
-        ].map((card) => (
-          <div key={card.label} className="admin-card p-4">
-            <card.icon className="h-4 w-4 text-gold-dark" />
-            <p className="mt-2 font-serif text-2xl text-navy">{card.value}</p>
-            <p className="text-[10.5px] uppercase tracking-[0.1em] text-stone-500">{card.label}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-        <div className="admin-card overflow-hidden">
-          <div className="flex items-center justify-between border-b border-navy/10 px-5 py-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">Academy interest list</p>
-            <span className="text-[11px] text-stone-500">{enrollments.length} records</span>
-          </div>
+      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+        <Panel title="Academy interest list" icon={Users} action={<span className="text-[12.5px] text-stone-600">{enrollments.length} records</span>}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-left text-[12px]">
-              <thead className="bg-cream/40 text-[10px] uppercase tracking-[0.1em] text-stone-500">
+            <table className="w-full min-w-[36rem] text-left text-[13px]">
+              <thead className="text-[11px] uppercase tracking-[0.1em] text-stone-600">
                 <tr>
-                  <th className="px-4 py-2 font-semibold">Name</th>
-                  <th className="px-4 py-2 font-semibold">Level</th>
-                  <th className="px-4 py-2 font-semibold">Cohort</th>
-                  <th className="px-4 py-2 font-semibold">Status</th>
-                  <th className="px-4 py-2 font-semibold">Joined</th>
+                  <th className="px-4 py-2.5 font-bold">Name</th>
+                  <th className="px-4 py-2.5 font-bold">Level</th>
+                  <th className="px-4 py-2.5 font-bold">Cohort</th>
+                  <th className="px-4 py-2.5 font-bold">Status</th>
+                  <th className="px-4 py-2.5 font-bold">Joined</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy/8">
                 {enrollments.map((row) => (
-                  <tr key={row.id} className="hover:bg-cream/30">
+                  <tr key={row.id} className="transition-colors hover:bg-cream/50">
                     <td className="px-4 py-2.5">
                       <p className="font-medium text-navy">{row.fullName}</p>
-                      <p className="text-[10.5px] text-stone-500">{row.email}</p>
+                      <p className="text-[12px] text-stone-600">{row.email}</p>
                     </td>
-                    <td className="px-4 py-2.5 text-stone-600">{row.levelName ?? "Undecided"}</td>
-                    <td className="px-4 py-2.5 text-stone-600">{row.cohort ?? "—"}</td>
+                    <td className="px-4 py-2.5 text-stone-700">{row.levelName ?? "Undecided"}</td>
+                    <td className="px-4 py-2.5 text-stone-700">{row.cohort ?? "—"}</td>
                     <td className="px-4 py-2.5">
-                      <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-600">
-                        {row.status}
-                      </span>
+                      <span className="ui-badge rounded-full border border-navy/10 bg-cream px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-700">{row.status}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-[11px] text-stone-500">{formatDate(row.createdAt, "short")}</td>
+                    <td className="numeric px-4 py-2.5 text-[12.5px] text-stone-600">{formatDate(row.createdAt, "short")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </Panel>
 
         <div className="space-y-5">
-          <div className="admin-card p-5">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">Subscribers by principle</p>
-            <ul className="mt-3 space-y-2">
-              {principleCounts.map((row) => {
-                const total = Math.max(
-                  principleCounts.reduce((sum, item) => sum + Number(item.value), 0),
-                  1,
-                );
-                return (
-                  <li key={row.principle ?? "unknown"} className="flex items-center gap-2.5">
-                    <span className="w-20 text-[11px] text-stone-600">{row.principle ?? "Unspecified"}</span>
-                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-cream">
-                      <span
-                        className="block h-full rounded-full bg-navy"
-                        style={{ width: `${(Number(row.value) / total) * 100}%` }}
-                      />
-                    </span>
-                    <span className="w-6 text-right text-[11px] font-semibold text-navy">{Number(row.value)}</span>
-                  </li>
-                );
-              })}
+          <Panel title="Subscribers by principle" icon={PieChart} bodyClassName="px-5 py-4">
+            <ul className="space-y-3">
+              {principleCounts.map((row, index) => (
+                <li key={row.principle ?? "unknown"} className="grid grid-cols-[6rem_1fr_2rem] items-center gap-3">
+                  <span className="truncate text-[13px] text-stone-700">{row.principle ?? "Unspecified"}</span>
+                  <GlassMeter value={Number(row.value)} max={principleTotal} tone="navy" index={index} />
+                  <span className="numeric text-right text-[13px] font-semibold text-navy">{Number(row.value)}</span>
+                </li>
+              ))}
+              {principleCounts.length === 0 ? <li className="text-[13px] text-stone-600">No subscribers yet.</li> : null}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">Recent subscribers</p>
-            </div>
-            <ul className="max-h-72 divide-y divide-navy/8 overflow-y-auto">
-              {subscribers.slice(0, 12).map((row) => (
-                <li key={row.id} className="px-5 py-2.5">
+          <Panel title="Recent subscribers" icon={Send}>
+            <ul className="k-stagger max-h-80 divide-y divide-navy/8 overflow-y-auto">
+              {subscribers.slice(0, 12).map((row, index) => (
+                <li key={row.id} style={staggerStyle(index)} className="px-5 py-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[12px] font-medium text-navy">{row.fullName ?? "Reader"}</p>
-                    <span className="text-[10px] text-stone-400">{formatDate(row.createdAt, "short")}</span>
+                    <p className="text-[13.5px] font-medium text-navy">{row.fullName ?? "Reader"}</p>
+                    <span className="numeric text-[12px] text-stone-500">{formatDate(row.createdAt, "short")}</span>
                   </div>
-                  <p className="text-[10.5px] text-stone-500">
+                  <p className="break-all text-[12px] text-stone-600">
                     {row.email} · {row.principle ?? "no principle"} · via {row.source}
                   </p>
                 </li>
               ))}
+              {subscribers.length === 0 ? <li className="px-5 py-4 text-[13px] text-stone-600">No subscribers yet.</li> : null}
             </ul>
-          </div>
+          </Panel>
         </div>
       </div>
     </div>

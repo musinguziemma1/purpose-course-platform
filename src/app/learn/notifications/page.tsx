@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { Bell, CheckCheck, Mail, MessageSquare, MailOpen } from "lucide-react";
+import { ArrowRight, Award, Bell, Mail, MailOpen, MessageSquare } from "lucide-react";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { messages, notifications, profiles } from "@/db/schema";
 import { getPreferences } from "@/lib/notifications";
 import { getAchievements } from "@/db/analytics";
 import { getSessionUser } from "@/lib/auth";
-import { formatDateTime, relativeTime } from "@/lib/utils";
-import { updateNotificationPreference } from "@/app/actions/platform";
+import { cn, formatDateTime, relativeTime } from "@/lib/utils";
+import { Chip, LeatherFigures, LearnHero, Panel, WaxSeal } from "@/components/learn/kit";
+import { PreferenceList } from "@/components/learn/preference-list";
 
 export const dynamic = "force-dynamic";
 
@@ -35,150 +36,138 @@ export default async function LearnerNotificationsPage() {
   const points = earned.reduce((sum, row) => sum + row.achievement.points, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-serif text-2xl text-navy">Notifications & messages</h1>
-          <p className="text-[12.5px] text-stone-600">
-            One inbox for mentor feedback, assessment results, session reminders and community replies — plus direct
-            messages from your faculty.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <span className="rounded-xl border border-navy/10 bg-paper px-3.5 py-2 text-center">
-            <p className="font-serif text-lg text-navy">{unread}</p>
-            <p className="text-[9px] uppercase tracking-[0.08em] text-stone-500">unread</p>
-          </span>
-          <span className="rounded-xl border border-navy/10 bg-paper px-3.5 py-2 text-center">
-            <p className="font-serif text-lg text-navy">{earned.length}</p>
-            <p className="text-[9px] uppercase tracking-[0.08em] text-stone-500">achievements</p>
-          </span>
-        </div>
-      </div>
+    <div className="space-y-7">
+      <LearnHero
+        size="md"
+        eyebrow="One inbox"
+        title="Notifications & messages"
+        description="One inbox for mentor feedback, assessment results, session reminders and community replies — plus direct messages from your faculty."
+        aside={
+          <LeatherFigures
+            items={[
+              { label: "Unread", value: unread },
+              { label: "Achievements", value: earned.length },
+              { label: "Points", value: points },
+            ]}
+          />
+        }
+      />
 
-      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] xl:items-start">
-        <div className="space-y-4">
-          <div className="admin-card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-navy/10 px-5 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <Bell className="h-3.5 w-3.5 text-gold-dark" /> In-app notifications
-              </p>
-              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.08em] text-stone-500">
-                <CheckCheck className="h-3 w-3" /> {notificationRows.length} total
-              </span>
-            </div>
-            <ul className="divide-y divide-navy/8">
+      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr] xl:items-start">
+        <div className="space-y-6">
+          <Panel
+            title="In-app notifications"
+            icon={Bell}
+            action={<Chip>{notificationRows.length} total</Chip>}
+            bodyClassName="px-3 pb-3 pt-2 sm:px-4"
+          >
+            <ul className="lk-ledger">
               {notificationRows.length === 0 ? (
-                <li className="px-5 py-8 text-center text-[12.5px] text-stone-500">
-                  Nothing yet. Notifications arrive when a mentor reviews your work, an assessment is graded or someone
-                  replies in a community.
+                <li className="px-2 py-8 text-center text-[14px] text-stone-600">
+                  Nothing yet. Notifications arrive when a mentor reviews your work, an assessment is graded or someone replies in a community.
                 </li>
               ) : (
                 notificationRows.map((row) => (
-                  <li key={row.id} className={row.isRead ? "" : "bg-gold/5"}>
-                    <Link href={row.href ?? "/learn"} className="block px-5 py-3 hover:bg-cream/40">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[12.5px] font-medium text-navy">{row.title}</p>
-                        <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-400">{relativeTime(row.createdAt)}</span>
-                      </div>
-                      {row.body ? <p className="mt-0.5 text-[11.5px] leading-relaxed text-stone-600">{row.body}</p> : null}
-                      <p className="mt-1 flex flex-wrap gap-2 text-[9px] uppercase tracking-[0.08em] text-stone-400">
-                        <span className="rounded-full bg-cream px-1.5 py-0.5">{row.type}</span>
-                        <span className="rounded-full bg-cream px-1.5 py-0.5">{row.channel}</span>
-                        {row.templateKey ? <span className="rounded-full bg-cream px-1.5 py-0.5">{row.templateKey}</span> : null}
-                        {!row.isRead ? <span className="rounded-full bg-gold/25 px-1.5 py-0.5 text-gold-dark">unread</span> : null}
-                      </p>
+                  <li key={row.id}>
+                    <Link
+                      href={row.href ?? "/learn"}
+                      className={cn(
+                        "flex gap-3 rounded-xl px-2 py-3.5 transition-colors duration-150 hover:bg-[rgba(201,162,39,0.07)]",
+                        !row.isRead && "bg-[rgba(201,162,39,0.06)]",
+                      )}
+                    >
+                      {/* A wax dot marks what you have not opened yet. */}
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "mt-1.5 h-3 w-3 shrink-0 rounded-full",
+                          row.isRead
+                            ? "border border-[rgba(18,42,77,0.2)] bg-[#f1ead9] shadow-[inset_0_1px_2px_rgba(10,26,48,0.2)]"
+                            : "bg-[radial-gradient(circle_at_35%_30%,#d65a63,#9b2c35_60%,#561017)] shadow-[0_1px_2px_rgba(86,16,23,0.5)]",
+                        )}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center justify-between gap-2">
+                          <span className={cn("text-[14px] text-navy", row.isRead ? "font-medium" : "font-semibold")}>{row.title}</span>
+                          <span className="text-[12px] text-stone-600">{relativeTime(row.createdAt)}</span>
+                        </span>
+                        {row.body ? <span className="mt-0.5 block text-[14px] leading-relaxed text-stone-600">{row.body}</span> : null}
+                        <span className="mt-2 flex flex-wrap gap-1.5">
+                          <Chip>{row.type}</Chip>
+                          <Chip>{row.channel}</Chip>
+                          {row.templateKey ? <Chip>{row.templateKey}</Chip> : null}
+                          {!row.isRead ? <Chip tone="gold">unread</Chip> : null}
+                        </span>
+                      </span>
                     </Link>
                   </li>
                 ))
               )}
             </ul>
-          </div>
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <MessageSquare className="h-3.5 w-3.5 text-gold-dark" /> Direct messages
-              </p>
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {messageRows.length === 0 ? (
-                <li className="px-5 py-6 text-[12px] text-stone-500">No messages yet.</li>
-              ) : (
-                messageRows.map(({ message, senderName }) => (
-                  <li key={message.id} className="px-5 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[12.5px] font-medium text-navy">{message.subject}</p>
-                      <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-400">{formatDateTime(message.createdAt)}</span>
+          <Panel title="Direct messages" icon={MessageSquare}>
+            {messageRows.length === 0 ? (
+              <p className="text-[14px] text-stone-600">No messages yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {messageRows.map(({ message, senderName }) => (
+                  // A letter: an airmail edge, the subject as its heading and a postmark date.
+                  <li
+                    key={message.id}
+                    className="relative overflow-hidden rounded-xl border border-[rgba(120,96,52,0.18)] bg-[#fffcf3] p-4 pt-5 shadow-[0_1px_1px_rgba(60,44,16,0.07)]"
+                  >
+                    <span
+                      aria-hidden
+                      className="absolute inset-x-0 top-0 h-1.5 bg-[repeating-linear-gradient(135deg,#9b2c35_0_10px,#fffcf3_10px_16px,#1b3a63_16px_26px,#fffcf3_26px_32px)]"
+                    />
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-serif text-[1.05rem] text-navy">{message.subject}</p>
+                      <span className="rounded-full border border-dashed border-[rgba(18,42,77,0.3)] px-2.5 py-0.5 text-[12px] text-stone-600">
+                        {formatDateTime(message.createdAt)}
+                      </span>
                     </div>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-stone-700">{message.body}</p>
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-stone-400">from {senderName ?? "Purpose Course"}</p>
+                    <p className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-stone-700">{message.body}</p>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-stone-600">
+                      <Mail aria-hidden className="h-3.5 w-3.5" /> From {senderName ?? "Purpose Course"}
+                    </p>
                   </li>
-                ))
-              )}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            )}
+          </Panel>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-5 py-3">
-              <p className="inline-flex items-center justify-between gap-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                <span>Achievements</span>
-                <span className="text-gold-dark">{points} pts</span>
-              </p>
-            </div>
-            <ul className="grid gap-2 p-4 sm:grid-cols-2">
+          <Panel
+            title="Achievements"
+            icon={Award}
+            action={<Chip tone="gold">{points} pts</Chip>}
+          >
+            <ul className="grid gap-3 sm:grid-cols-2">
               {achievements.map(({ achievement, awardedAt }) => (
-                <li
-                  key={achievement.id}
-                  className={`rounded-lg border px-3 py-2 ${awardedAt ? "border-gold/40 bg-gold/10" : "border-navy/10 bg-cream/30 opacity-70"}`}
-                >
-                  <p className="text-[11.5px] font-semibold text-navy">{achievement.name}</p>
-                  <p className="text-[10px] leading-relaxed text-stone-600">{achievement.description}</p>
-                  <p className="mt-0.5 text-[9px] uppercase tracking-[0.08em] text-stone-500">
-                    {awardedAt ? `awarded ${formatDateTime(awardedAt)}` : achievement.criteria}
-                  </p>
+                <li key={achievement.id} className={cn("flex items-start gap-3 p-3", awardedAt ? "lk-paper" : "lk-well")}>
+                  <WaxSeal tone="gold" size={46} muted={!awardedAt} />
+                  <div className="min-w-0">
+                    <p className={cn("text-[14px] font-semibold", awardedAt ? "text-navy" : "text-stone-600")}>{achievement.name}</p>
+                    <p className="text-[13px] leading-relaxed text-stone-600">{achievement.description}</p>
+                    <p className="mt-1 text-[12px] uppercase tracking-[0.08em] text-stone-600">
+                      {awardedAt ? `Awarded ${formatDateTime(awardedAt)}` : achievement.criteria}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
-            <Link href="/learn/certificates" className="flex items-center justify-between border-t border-navy/8 px-5 py-2.5 text-[11px] font-semibold text-gold-dark">
-              Certificates <span>→</span>
+            <Link href="/learn/certificates" className="lk-link mt-4">
+              Certificates <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
-          </div>
+          </Panel>
         </div>
 
-        <div className="admin-card overflow-hidden xl:sticky xl:top-6">
-          <div className="flex items-center gap-2 border-b border-navy/10 px-5 py-3">
-            <MailOpen className="h-3.5 w-3.5 text-gold-dark" />
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Delivery preferences</p>
-          </div>
-          <ul className="divide-y divide-navy/8">
-            {preferences.map((preference) => (
-              <li key={preference.category} className="px-5 py-2.5">
-                <form action={updateNotificationPreference} className="flex flex-wrap items-center gap-2">
-                  <input type="hidden" name="category" value={preference.category} />
-                  <p className="min-w-0 flex-1 text-[12px] capitalize text-navy">{preference.category}</p>
-                  {([
-                    ["inApp", "In-app", preference.inApp],
-                    ["email", "Email", preference.email],
-                    ["push", "Push", preference.push],
-                  ] as const).map(([name, label, checked]) => (
-                    <label key={name} className="inline-flex items-center gap-1 text-[10px] text-stone-600">
-                      <input type="checkbox" name={name} defaultChecked={checked} className="h-3 w-3 rounded border-navy/30" />
-                      {label}
-                    </label>
-                  ))}
-                  <button type="submit" className="rounded-full border border-navy/15 px-2 py-0.5 text-[10px] font-semibold text-navy hover:bg-cream">
-                    Save
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-          <p className="border-t border-navy/8 bg-cream/40 px-5 py-2.5 text-[10px] leading-relaxed text-stone-500">
-            <Mail className="mr-1 inline h-3 w-3" /> Email and push are queued to the platform outbox and respect these
-            settings. In-app notifications appear in the bell in the header.
+        <Panel title="Delivery preferences" icon={MailOpen} className="xl:sticky xl:top-24" bodyClassName="px-3 pb-2 pt-2 sm:px-4">
+          <PreferenceList preferences={preferences} />
+          <p className="lk-well mt-2 px-3 py-2.5 text-[13px] leading-relaxed text-stone-600">
+            Email and push are queued to the platform outbox and respect these settings. In-app notifications appear in the bell in the header.
           </p>
-        </div>
+        </Panel>
       </div>
     </div>
   );

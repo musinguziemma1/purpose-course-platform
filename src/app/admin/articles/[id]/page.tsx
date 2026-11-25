@@ -1,15 +1,18 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, ExternalLink, History, MessageSquare } from "lucide-react";
+import { BookMarked, Clock, ExternalLink, History, MessageSquare } from "lucide-react";
 import { ArticleForm } from "@/components/admin/article-form";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { WorkflowPanel } from "@/components/admin/workflow-panel";
 import { getArticleForAdmin } from "@/db/queries";
 import { canPublishArticles, canReviewArticles, getSessionUser } from "@/lib/auth";
 import { formatDateTime, relativeTime, STATUS_META, type ArticleStatusValue } from "@/lib/utils";
+import { ConsoleHeader, Panel, keyClass } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
+
+const PIPELINE: ArticleStatusValue[] = ["draft", "submitted", "in_review", "approved", "scheduled", "published"];
 
 export default async function EditArticlePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminPage("/admin/articles/[id]");
@@ -20,37 +23,56 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
   const canReview = canReviewArticles(user);
   const isOwner = user?.profileId === record.article.authorId;
   const article = record.article;
+  const stage = PIPELINE.indexOf(article.status as ArticleStatusValue);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link href="/admin/articles" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to articles
-          </Link>
-          <h1 className="mt-2 max-w-2xl font-serif text-2xl leading-snug text-navy">{article.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2.5">
+    <div className="space-y-6">
+      <ConsoleHeader
+        back={{ href: "/admin/articles", label: "Back to articles" }}
+        eyebrow={record.categoryName ?? "Uncategorised"}
+        title={article.title}
+        meta={
+          <>
             <StatusBadge status={article.status} />
-            <span className="text-[11px] text-stone-500">{record.categoryName ?? "Uncategorised"}</span>
-            <span className="text-[11px] text-stone-500">by {record.authorName}</span>
-            <span className="text-[11px] text-stone-400">updated {relativeTime(article.updatedAt)}</span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {article.status === "published" ? (
-            <Link
-              href={`/blog/${article.slug}`}
-              target="_blank"
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 bg-paper px-3.5 text-[11.5px] font-medium text-navy hover:bg-cream"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> View live
-            </Link>
-          ) : null}
-          <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 bg-paper px-3.5 text-[11.5px] text-stone-600">
-            <Clock className="h-3.5 w-3.5" /> {article.readingMinutes} min read
-          </span>
-        </div>
-      </div>
+            <span className="text-[13px] text-stone-600">by {record.authorName}</span>
+            <span className="text-[13px] text-stone-500">updated {relativeTime(article.updatedAt)}</span>
+          </>
+        }
+        actions={
+          <>
+            {article.status === "published" ? (
+              <Link href={`/blog/${article.slug}`} target="_blank" className={keyClass("paper", "sm")}>
+                <ExternalLink aria-hidden /> View live
+              </Link>
+            ) : null}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-cream/70 px-3.5 py-2 text-[12.5px] text-stone-700 shadow-[inset_0_1px_2px_rgba(10,26,48,0.12)]">
+              <Clock aria-hidden className="h-3.5 w-3.5" /> {article.readingMinutes} min read
+            </span>
+          </>
+        }
+      >
+        {stage >= 0 ? (
+          <ol aria-label="Publishing stage" className="flex flex-wrap items-center gap-1.5">
+            {PIPELINE.map((step, index) => {
+              const done = index < stage;
+              const current = index === stage;
+              return (
+                <li key={step} aria-current={current ? "step" : undefined} className="flex items-center gap-1.5">
+                  <span
+                    className={`ui-badge inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${
+                      current ? "border-gold/50 bg-gold/20 text-navy" : done ? "border-source/25 bg-source/10 text-source" : "border-navy/10 bg-paper text-stone-500"
+                    }`}
+                  >
+                    <span aria-hidden className={`k-led ${current ? "k-led-gold k-led-pulse" : done ? "k-led-green" : "k-led-off"}`} style={{ width: 8, height: 8 }} />
+                    {STATUS_META[step].label}
+                  </span>
+                  {index < PIPELINE.length - 1 ? <span aria-hidden className="h-px w-3 bg-navy/20" /> : null}
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+      </ConsoleHeader>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_19rem] xl:items-start">
         <div className="min-w-0">
@@ -77,59 +99,52 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
             currentUserId={user?.profileId ?? ""}
           />
 
-          <div className="mt-6 grid gap-5 lg:grid-cols-2">
-            <div className="admin-card overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-navy/10 px-4 py-3">
-                <MessageSquare className="h-3.5 w-3.5 text-gold-dark" />
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">Review history</p>
-              </div>
+          <div className="mt-6 grid gap-5 lg:grid-cols-2 lg:items-start">
+            <Panel title="Review history" icon={MessageSquare}>
               <ul className="divide-y divide-navy/8">
                 {record.reviews.length === 0 ? (
-                  <li className="px-4 py-6 text-[12px] text-stone-500">No review events yet.</li>
+                  <li className="px-5 py-6 text-[13px] text-stone-600">No review events yet.</li>
                 ) : (
                   record.reviews.map((review) => (
-                    <li key={review.id} className="px-4 py-3">
+                    <li key={review.id} className="px-5 py-3">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11.5px] font-semibold capitalize text-navy">{review.action.replace(/_/g, " ")}</p>
-                        <p className="text-[10px] text-stone-400">{formatDateTime(review.createdAt)}</p>
+                        <p className="text-[13px] font-semibold capitalize text-navy">{review.action.replace(/_/g, " ")}</p>
+                        <p className="text-[12px] text-stone-500">{formatDateTime(review.createdAt)}</p>
                       </div>
-                      <p className="mt-0.5 text-[10.5px] text-stone-500">
+                      <p className="mt-0.5 text-[12.5px] text-stone-600">
                         {review.reviewerName ?? "System"}
                         {review.toStatus ? ` · → ${STATUS_META[review.toStatus as ArticleStatusValue].label}` : ""}
                       </p>
                       {review.comment ? (
-                        <p className="mt-1.5 rounded-md bg-cream/70 px-2.5 py-1.5 text-[11.5px] leading-relaxed text-stone-700">
-                          {review.comment}
-                        </p>
+                        <p className="mt-2 rounded-xl bg-cream/60 px-3.5 py-2 text-[13px] leading-relaxed text-stone-800 shadow-[inset_0_1px_2px_rgba(10,26,48,0.1)]">{review.comment}</p>
                       ) : null}
                     </li>
                   ))
                 )}
               </ul>
-            </div>
+            </Panel>
 
-            <div className="admin-card overflow-hidden">
-              <div className="flex items-center gap-2 border-b border-navy/10 px-4 py-3">
-                <History className="h-3.5 w-3.5 text-gold-dark" />
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">Revisions</p>
-              </div>
-              <ul className="divide-y divide-navy/8">
+            <Panel title="Revisions" icon={History}>
+              <ol className="k-ledger">
                 {record.revisions.map((revision) => (
-                  <li key={revision.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[11.5px] font-semibold text-navy">Revision {revision.revisionNumber}</p>
-                      <p className="text-[10px] text-stone-400">{formatDateTime(revision.createdAt)}</p>
+                  <li key={revision.id} className="flex gap-3 py-3 pl-[1.45rem] pr-5">
+                    <span aria-hidden className="k-rivet mt-1" />
+                    <div className="min-w-0 flex-1 pl-6">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-navy">Revision {revision.revisionNumber}</p>
+                        <p className="text-[12px] text-stone-500">{formatDateTime(revision.createdAt)}</p>
+                      </div>
+                      <p className="mt-0.5 line-clamp-1 text-[12.5px] text-stone-700">{revision.title}</p>
+                      <p className="mt-0.5 text-[12px] text-stone-600">{revision.changeNote ?? "No note"}</p>
                     </div>
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-stone-600">{revision.title}</p>
-                    <p className="mt-0.5 text-[10.5px] text-stone-500">{revision.changeNote ?? "No note"}</p>
                   </li>
                 ))}
-              </ul>
-            </div>
+              </ol>
+            </Panel>
           </div>
         </div>
 
-        <div className="xl:sticky xl:top-6">
+        <div className="space-y-4 xl:sticky xl:top-24">
           <WorkflowPanel
             articleId={article.id}
             status={article.status}
@@ -139,11 +154,9 @@ export default async function EditArticlePage({ params }: { params: Promise<{ id
             updatedAt={article.updatedAt}
             scheduledFor={article.scheduledFor}
           />
-          <div className="mt-4 rounded-xl border border-navy/10 bg-cream/50 p-4 text-[11px] leading-relaxed text-stone-600">
-            <p className="mb-1 font-semibold text-navy">Publishing rules</p>
-            Draft → Submitted → In review → Approved → Scheduled → Published. Revision requests and rejections return
-            the article with comments to the author. Scheduled pieces publish automatically.
-          </div>
+          <Panel title="Publishing rules" icon={BookMarked} bodyClassName="px-5 py-4 text-[13px] leading-relaxed text-stone-700">
+            Draft → Submitted → In review → Approved → Scheduled → Published. Revision requests and rejections return the article with comments to the author. Scheduled pieces publish automatically.
+          </Panel>
         </div>
       </div>
     </div>
