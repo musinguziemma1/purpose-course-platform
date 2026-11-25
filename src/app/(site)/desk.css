@@ -1,0 +1,915 @@
+/* ==========================================================================
+ * Desk: paper, card stock and brass for the public /resources and /events
+ * pages. Imported only by app/(site)/resources/page.tsx and
+ * app/(site)/events/page.tsx. Shares its materials with the Atelier surfaces
+ * on home and /course (grainy paper, brass, rubber-stamp ink, tactile
+ * buttons) but does not depend on them.
+ *
+ * Resources: a linen desk with a fanned stack of worksheets and a taped
+ * snapshot, divider tabs, manila folders whose sheet slides up on hover,
+ * punched and dog-eared documents, a perforated request slip.
+ * Events: a felt wall with a ring-bound desk calendar that flips open, a
+ * recessed two-way switch, admission tickets with a perforated stub, an
+ * on-air lamp, pinned index cards.
+ *
+ * Motion: transform and opacity only. Entrances run once on arrival; hover
+ * motion only for fine pointers; reduced motion keeps fades, drops movement.
+ * ========================================================================== */
+
+@layer properties, theme, base, components, utilities;
+
+:root {
+  --dk-ease: var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  --dk-ease-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --dk-type: "Courier Prime", "Courier New", ui-monospace, monospace;
+  --dk-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.06'/%3E%3C/svg%3E");
+  --dk-fibre: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)' opacity='.16'/%3E%3C/svg%3E");
+  --dk-linen-tone: #f1e9d8;
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- *
+   * Surfaces
+   * ---------------------------------------------------------------- */
+  .dk-linen {
+    --dk-under: var(--dk-linen-tone);
+    background-color: var(--dk-linen-tone);
+    background-image:
+      var(--dk-grain),
+      radial-gradient(70% 60% at 18% 0%, rgba(255, 250, 235, 0.85), transparent 70%),
+      repeating-linear-gradient(0deg, rgba(110, 86, 36, 0.045) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(90deg, rgba(110, 86, 36, 0.035) 0 1px, transparent 1px 4px),
+      linear-gradient(180deg, #f5eee0 0%, #ece2cc 100%);
+  }
+  .dk-felt {
+    background-color: #0d203e;
+    background-image:
+      var(--dk-fibre),
+      radial-gradient(55% 60% at 12% 0%, rgba(201, 162, 39, 0.18), transparent 62%),
+      radial-gradient(50% 60% at 100% 100%, rgba(21, 94, 99, 0.32), transparent 62%),
+      linear-gradient(180deg, #12294b 0%, #0a1a30 100%);
+  }
+  .dk-type {
+    font-family: var(--dk-type);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Brass, foil, ink
+   * ---------------------------------------------------------------- */
+  .dk-plate {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 0.4rem;
+    padding: 0.38rem 0.65rem;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #3b2c06;
+    background: linear-gradient(180deg, #f6e0a0 0%, #dbb54f 46%, #b98f26 54%, #e5c76f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+      0 1px 0 rgba(0, 0, 0, 0.25),
+      0 4px 8px -3px rgba(10, 26, 48, 0.45);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .dk-plate::before,
+  .dk-plate::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #fff3c9 0%, #a07a1a 70%);
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  }
+  .dk-foil {
+    background: linear-gradient(100deg, #c99a2a 0%, #8f6a10 34%, #d6b04c 58%, #8a650f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .dk-foil-dark {
+    background: linear-gradient(100deg, #f6e7b9 0%, #d4ad3c 38%, #f0d98f 60%, #c49a2c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+  }
+
+  /* Rubber stamp. Ink colour from data-ink. */
+  .dk-stamp {
+    --ink: #155e63;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.3rem;
+    border: 2px solid var(--ink);
+    outline: 1px solid var(--ink);
+    outline-offset: 1.5px;
+    padding: 0.16rem 0.5rem;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink);
+    opacity: 0.92;
+    mix-blend-mode: multiply;
+    transform: rotate(-3deg);
+  }
+  .dk-stamp[data-ink="rust"] { --ink: #9a3f16; }
+  .dk-stamp[data-ink="navy"] { --ink: #122a4d; }
+  .dk-stamp[data-ink="gold"] { --ink: #7d5e0c; }
+  .dk-stamp[data-ink="stone"] { --ink: #57534e; }
+
+  /* Embossed label tape (label-maker). */
+  .dk-dymo {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    font-family: var(--dk-type);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #f4f1e8;
+    background: linear-gradient(180deg, #24467a 0%, #122a4d 60%, #0e2140 100%);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28), 0 -1px 0 rgba(0, 0, 0, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  }
+  .dk-dymo:nth-child(2) { transform: rotate(-1.2deg); }
+  .dk-dymo:nth-child(3) { transform: rotate(0.8deg); }
+
+  /* Embossed type label on paper. */
+  .dk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.45rem;
+    padding: 0.3rem 0.65rem;
+    font-family: var(--dk-type);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #3d2f0a;
+    background: linear-gradient(180deg, #f8edcc 0%, #ecdcab 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      inset 0 -1px 0 rgba(120, 90, 20, 0.25),
+      0 1px 1px rgba(10, 26, 48, 0.12);
+  }
+
+  /* Round foil sticker. */
+  .dk-sticker {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 9999px;
+    padding: 0.35rem;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: 0.08em;
+    text-align: center;
+    text-transform: uppercase;
+    color: #3b2c06;
+    background: radial-gradient(circle at 35% 30%, #fbecbd 0%, #d9b24a 60%, #b48a22 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 3px 6px -2px rgba(60, 40, 5, 0.45);
+    transform: rotate(10deg);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Tactile buttons
+   * ---------------------------------------------------------------- */
+  .dk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.18);
+    padding: 0 1.5rem;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #122a4d;
+    background: linear-gradient(180deg, #fffefb 0%, #efe7d5 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(18, 42, 77, 0.14), 0 6px 14px -8px rgba(10, 26, 48, 0.45);
+    transition: transform 150ms var(--dk-ease), box-shadow 150ms var(--dk-ease), filter 180ms ease;
+  }
+  .dk-btn > svg { width: 1rem; height: 1rem; flex: none; }
+  .dk-btn[data-size="sm"] {
+    min-height: 2.75rem;
+    padding: 0 1.15rem;
+    font-size: 13px;
+  }
+  .dk-btn[data-variant="navy"] {
+    color: #fffdf8;
+    border-color: #0a1a30;
+    background: linear-gradient(180deg, #24467a 0%, #122a4d 55%, #0e2140 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 0 #07111f, 0 10px 20px -10px rgba(10, 26, 48, 0.8);
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  }
+  .dk-btn[data-variant="brass"] {
+    color: #2e2205;
+    border-color: #8f6c12;
+    background: linear-gradient(180deg, #f5df9a 0%, #d8b24a 50%, #c09626 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 #6f530c, 0 10px 20px -10px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .dk-btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: inset 0 2px 5px rgba(10, 26, 48, 0.3);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Resources hero: a fanned stack of worksheets and a taped snapshot
+   * ---------------------------------------------------------------- */
+  .dk-stack {
+    position: relative;
+    width: min(100%, 26rem);
+    aspect-ratio: 5 / 5.7;
+    margin-inline: auto;
+  }
+  .dk-sheet,
+  .dk-polaroid {
+    transform: translate3d(var(--x, 0), var(--y, 0), 0) rotate(var(--r, 0deg));
+    animation: dk-deal 820ms var(--dk-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 110ms + 140ms);
+  }
+  .dk-sheet {
+    position: absolute;
+    inset: 4% 9% 8% 7%;
+    border-radius: 6px;
+    background-color: #fffdf8;
+    background-image: var(--dk-grain), linear-gradient(180deg, #fffefb 0%, #f8f2e4 100%);
+    box-shadow:
+      0 1px 1px rgba(10, 26, 48, 0.08),
+      0 2px 4px -2px rgba(10, 26, 48, 0.18),
+      0 28px 40px -26px rgba(10, 26, 48, 0.55);
+  }
+  .dk-sheet[data-pos="back"] {
+    --x: -7%;
+    --y: 3%;
+    --r: -8deg;
+    --i: 0;
+    background-image: var(--dk-grain), linear-gradient(180deg, #f9f1dd 0%, #f0e5cb 100%);
+  }
+  .dk-sheet[data-pos="mid"] { --x: 6%; --y: 1%; --r: 5deg; --i: 1; }
+  .dk-sheet[data-pos="top"] {
+    --r: -1.5deg;
+    --i: 2;
+    padding: 11% 9% 8% 15%;
+  }
+  /* Red margin rule and blue ruling on the top worksheet. */
+  .dk-sheet[data-pos="top"]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10%;
+    width: 1.5px;
+    background: rgba(196, 72, 72, 0.42);
+  }
+  .dk-sheet-lines {
+    position: absolute;
+    inset: 38% 7% 9% 10%;
+    background: repeating-linear-gradient(180deg, transparent 0 1.6rem, rgba(21, 94, 99, 0.18) 1.6rem calc(1.6rem + 1px));
+  }
+  .dk-sheet-box {
+    display: inline-block;
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 1.5px solid rgba(18, 42, 77, 0.45);
+    border-radius: 2px;
+  }
+  .dk-clip {
+    position: absolute;
+    z-index: 2;
+    top: -1.15rem;
+    left: 17%;
+    width: 1.55rem;
+    height: 4.3rem;
+    transform: rotate(-6deg);
+    filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.3));
+  }
+  .dk-polaroid {
+    --x: -10%;
+    --y: 0%;
+    --r: -9deg;
+    --i: 4;
+    position: absolute;
+    z-index: 3;
+    left: 0;
+    bottom: -3%;
+    width: 44%;
+    padding: 4.5% 4.5% 14%;
+    background: #fffefa;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08), 0 20px 30px -16px rgba(10, 26, 48, 0.6);
+  }
+  .dk-polaroid-photo {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: #e8dfc9;
+  }
+  .dk-tape {
+    position: absolute;
+    top: -0.75rem;
+    left: 50%;
+    width: 52%;
+    height: 1.45rem;
+    transform: translateX(-50%) rotate(3deg);
+    background: linear-gradient(180deg, rgba(246, 232, 190, 0.92) 0%, rgba(232, 212, 152, 0.88) 100%);
+    clip-path: polygon(0 12%, 3% 0, 6% 14%, 9% 2%, 91% 0, 94% 14%, 97% 2%, 100% 12%, 100% 88%, 97% 100%, 94% 86%, 91% 98%, 9% 100%, 6% 86%, 3% 98%, 0 88%);
+  }
+  @keyframes dk-deal {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 28px, 0) rotate(0deg);
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Divider tabs over a drawer
+   * ---------------------------------------------------------------- */
+  .dk-tabs {
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding: 0.75rem 0.5rem 0;
+    scrollbar-width: none;
+  }
+  .dk-tabs::-webkit-scrollbar { display: none; }
+  .dk-tab {
+    --tab: #f2dea9;
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.9rem;
+    border: 1px solid rgba(110, 86, 36, 0.22);
+    border-bottom: 0;
+    border-radius: 0.75rem 0.75rem 0 0;
+    padding: 0 1.1rem;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #4a3a12;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tab) 55%, white) 0%, var(--tab) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    transform: translateY(6px);
+    transition: transform 180ms var(--dk-ease-strong);
+  }
+  .dk-tab > svg { width: 0.95rem; height: 0.95rem; }
+  .dk-tab[data-tone="guide"] { --tab: #cfe3df; }
+  .dk-tab[data-tone="template"] { --tab: #f1d3c8; }
+  .dk-tab[data-tone="audio"] { --tab: #ddd3ee; }
+  .dk-tab[data-tone="video"] { --tab: #d3e0f0; }
+  .dk-tab[data-tone="all"] { --tab: #efe4c8; }
+  .dk-tab[aria-current="page"] {
+    z-index: 1;
+    color: #122a4d;
+    background: #fbf6ea;
+    box-shadow: inset 0 1px 0 #fff, 0 -6px 12px -8px rgba(10, 26, 48, 0.4);
+    transform: translateY(1px);
+  }
+  .dk-tab-count {
+    font-family: var(--dk-type);
+    font-size: 11.5px;
+    opacity: 0.7;
+  }
+  .dk-drawer {
+    --dk-under: #fbf6ea;
+    position: relative;
+    border: 1px solid rgba(110, 86, 36, 0.22);
+    border-radius: 0 0 1.4rem 1.4rem;
+    padding: 2.25rem 1.25rem 2.5rem;
+    background-color: #fbf6ea;
+    background-image: var(--dk-grain);
+    box-shadow:
+      inset 0 10px 18px -14px rgba(60, 40, 5, 0.35),
+      0 30px 50px -36px rgba(10, 26, 48, 0.5);
+  }
+  @media (min-width: 640px) {
+    .dk-drawer { padding: 2.75rem 2.25rem 3rem; }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Manila folder with a sheet that slides up on hover
+   * ---------------------------------------------------------------- */
+  .dk-folder {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-top: 1.75rem;
+  }
+  .dk-folder-back {
+    position: absolute;
+    inset: 1.75rem 0 0;
+    border-radius: 0.5rem 0.9rem 0.9rem 0.9rem;
+    background: linear-gradient(180deg, #dcc07f 0%, #d0b06a 100%);
+    box-shadow: 0 1px 1px rgba(60, 40, 5, 0.15), 0 26px 36px -24px rgba(10, 26, 48, 0.55);
+  }
+  .dk-folder-tab {
+    position: absolute;
+    top: 0.5rem;
+    right: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    height: 1.7rem;
+    border-radius: 0.55rem 0.55rem 0 0;
+    padding: 0 0.85rem 0.3rem;
+    font-family: var(--dk-type);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4f3c0c;
+    background: #dcc07f;
+  }
+  .dk-folder-sheet {
+    position: absolute;
+    z-index: 1;
+    top: 0.85rem;
+    left: 1rem;
+    right: 8.75rem;
+    height: 7.5rem;
+    overflow: hidden;
+    border-radius: 4px;
+    padding: 0.55rem 0.7rem;
+    font-family: var(--dk-type);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(18, 42, 77, 0.7);
+    background-color: #fffdf8;
+    background-image:
+      var(--dk-grain),
+      repeating-linear-gradient(180deg, transparent 0 0.95rem, rgba(21, 94, 99, 0.14) 0.95rem calc(0.95rem + 1px));
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.18);
+    transform: rotate(-1.2deg);
+    transition: transform 320ms var(--dk-ease);
+  }
+  .dk-folder-front {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    margin-top: 1.1rem;
+    border-radius: 0.9rem;
+    padding: 1.5rem;
+    background-color: #efd697;
+    background-image: var(--dk-grain), linear-gradient(180deg, #f4e0aa 0%, #e8ca86 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 -1px 0 rgba(120, 90, 20, 0.18),
+      0 12px 20px -14px rgba(60, 40, 5, 0.55);
+  }
+  .dk-folder:focus-within .dk-folder-sheet {
+    transform: translateY(-0.85rem) rotate(-2.5deg);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Punched, dog-eared document on a second sheet
+   * ---------------------------------------------------------------- */
+  .dk-doc-wrap {
+    position: relative;
+    height: 100%;
+  }
+  .dk-doc-wrap::before {
+    content: "";
+    position: absolute;
+    inset: 0.5rem -0.35rem -0.45rem 0.35rem;
+    border-radius: 4px;
+    background: #f3ead6;
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.12), 0 20px 28px -22px rgba(10, 26, 48, 0.5);
+    transform: rotate(1.6deg);
+  }
+  .dk-doc {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 4px;
+    padding: 1.35rem 1.35rem 1.15rem 2.6rem;
+    background-color: #fffdf8;
+    background-image: var(--dk-grain), linear-gradient(180deg, #fffefb 0%, #faf5e9 100%);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.08), 0 3px 6px -3px rgba(10, 26, 48, 0.14);
+    transition: transform 220ms var(--dk-ease), box-shadow 220ms ease;
+  }
+  /* Folded top-right corner. */
+  .dk-doc::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-bottom-left-radius: 5px;
+    background: linear-gradient(225deg, var(--dk-under, #f1e9d8) 0 50%, #e9dcbf 50% 58%, #fbf5e6 100%);
+  }
+  .dk-holes {
+    position: absolute;
+    top: 1.5rem;
+    bottom: 1.5rem;
+    left: 0.8rem;
+    width: 0.85rem;
+    background:
+      radial-gradient(circle at 50% 50%, var(--dk-under, #f1e9d8) 0 0.3rem, rgba(10, 26, 48, 0.25) 0.34rem, transparent 0.44rem)
+      0 0 / 100% 33.333% repeat-y;
+  }
+
+  /* Request slip with a torn-off scalloped top edge. */
+  .dk-slip {
+    position: relative;
+    border-radius: 0 0 8px 8px;
+    padding: 2.25rem 1.5rem 2rem;
+    background-color: #fffdf8;
+    background-image: var(--dk-grain), linear-gradient(180deg, #fffefb 0%, #f9f3e4 100%);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.08), 0 30px 46px -30px rgba(10, 26, 48, 0.55);
+  }
+  .dk-slip::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 12px;
+    background: radial-gradient(circle at 7px 0, var(--dk-under, #f1e9d8) 0 6px, transparent 6.5px) 0 0 / 14px 12px repeat-x;
+  }
+  @media (min-width: 640px) {
+    .dk-slip { padding: 2.75rem 2.75rem 2.5rem; }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Events hero: ring-bound desk calendar that flips open
+   * ---------------------------------------------------------------- */
+  .dk-cal {
+    position: relative;
+    width: min(100%, 21rem);
+    margin-inline: auto;
+    padding-top: 0.9rem;
+    perspective: 1400px;
+  }
+  .dk-cal-under {
+    position: absolute;
+    inset: 1.6rem 0.6rem -0.55rem;
+    border-radius: 0 0 1rem 1rem;
+    background: #efe6d2;
+    box-shadow: 0 22px 34px -18px rgba(0, 0, 0, 0.65);
+  }
+  .dk-cal-under + .dk-cal-under {
+    inset: 1.6rem 1.25rem -1.05rem;
+    z-index: -1;
+    background: #e2d5b9;
+  }
+  .dk-cal-page {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.6rem 0.6rem 1rem 1rem;
+    background-color: #fffdf8;
+    background-image: var(--dk-grain), linear-gradient(180deg, #fffefb 0%, #f7f0e1 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 34px 54px -30px rgba(0, 0, 0, 0.8);
+    transform-origin: 50% 0;
+    animation: dk-flip 950ms var(--dk-ease) 220ms backwards;
+  }
+  .dk-cal-head {
+    position: relative;
+    padding: 1.55rem 1rem 0.95rem;
+    text-align: center;
+    font-family: var(--dk-type);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #fff6ea;
+    background: linear-gradient(180deg, #ad3328 0%, #8c241c 100%);
+    box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  }
+  /* Punched holes for the rings (eight, evenly spaced). */
+  .dk-cal-holes {
+    position: absolute;
+    top: 0.32rem;
+    left: 0;
+    right: 0;
+    height: 0.6rem;
+    background: radial-gradient(circle, #3b0f0b 0 3.5px, transparent 4px) 0 0 / 12.5% 100% repeat-x;
+  }
+  .dk-rings {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    pointer-events: none;
+  }
+  .dk-ring {
+    width: 0.42rem;
+    height: 1.55rem;
+    border-radius: 0.3rem;
+    background: linear-gradient(90deg, #5f646c 0%, #eef0f3 45%, #9aa0a8 70%, #5f646c 100%);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+  }
+  .dk-cal-body {
+    padding: 1.1rem 1.4rem 1.6rem;
+    text-align: center;
+    color: #122a4d;
+  }
+  .dk-cal-kicker {
+    font-family: var(--dk-type);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #8c241c;
+  }
+  .dk-cal-day {
+    font-family: var(--font-serif);
+    font-size: clamp(5.5rem, 16vw, 7.25rem);
+    font-weight: 600;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-shadow: 0 1px 0 #fff;
+  }
+  .dk-cal-note {
+    margin-top: 1rem;
+    padding: 0.35rem 0.25rem 0.6rem;
+    background: repeating-linear-gradient(180deg, transparent 0 1.55rem, rgba(21, 94, 99, 0.2) 1.55rem calc(1.55rem + 1px));
+  }
+  @keyframes dk-flip {
+    0% {
+      opacity: 0;
+      transform: rotateX(-88deg);
+    }
+    35% { opacity: 1; }
+    100% { transform: rotateX(0deg); }
+  }
+
+  /* On-air lamp: a glass bulb whose glow breathes. */
+  .dk-lamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 9999px;
+    padding: 0.32rem 0.7rem 0.32rem 0.45rem;
+    font-family: var(--dk-type);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #ffe1da;
+    background: linear-gradient(180deg, #2c0e0b 0%, #1a0706 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(0, 0, 0, 0.5);
+  }
+  .dk-lamp-bulb {
+    position: relative;
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #ffd1c7 0%, #ff4a36 45%, #a3140a 100%);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
+  }
+  .dk-lamp-bulb::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 74, 54, 0.6) 0%, transparent 70%);
+    animation: dk-glow 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes dk-glow {
+    from { opacity: 0.3; }
+    to { opacity: 1; }
+  }
+
+  /* Recessed two-way switch with a brass thumb that slides between views. */
+  .dk-switch {
+    position: relative;
+    display: inline-grid;
+    grid-template-columns: 1fr 1fr;
+    max-width: 100%;
+    border-radius: 9999px;
+    padding: 0.3rem;
+    background: linear-gradient(180deg, #071427 0%, #0d1f3a 100%);
+    box-shadow:
+      inset 0 2px 5px rgba(0, 0, 0, 0.6),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+      0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .dk-switch-thumb {
+    position: absolute;
+    top: 0.3rem;
+    bottom: 0.3rem;
+    left: 0.3rem;
+    width: calc(50% - 0.3rem);
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #f5df9a 0%, #d8b24a 52%, #c09626 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 #6f530c, 0 6px 12px -6px rgba(0, 0, 0, 0.7);
+    transition: transform 280ms var(--dk-ease-strong);
+  }
+  .dk-switch[data-state="past"] .dk-switch-thumb { transform: translateX(100%); }
+  .dk-switch-option {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    border-radius: 9999px;
+    padding: 0 0.95rem;
+    font-size: 13.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: rgba(255, 253, 248, 0.78);
+    transition: color 200ms ease;
+  }
+  .dk-switch-option[aria-current="page"] {
+    color: #2e2205;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  @media (min-width: 640px) {
+    .dk-switch-option { padding: 0 1.35rem; font-size: 14px; }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Admission tickets with a perforated, card-stock date stub
+   * ---------------------------------------------------------------- */
+  .dk-ticket-lift {
+    position: relative;
+    height: 100%;
+    filter: drop-shadow(0 1px 1px rgba(10, 26, 48, 0.12)) drop-shadow(0 12px 14px rgba(10, 26, 48, 0.16));
+    transition: transform 220ms var(--dk-ease);
+  }
+  .dk-ticket {
+    --stub: 6.4rem;
+    --notch: 0.7rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--stub);
+    height: 100%;
+    overflow: hidden;
+    border-radius: 1rem;
+    background-color: #fffdf8;
+    background-image: var(--dk-grain), linear-gradient(180deg, #fffefb 0%, #f9f3e5 100%);
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 0, transparent calc(var(--notch) - 0.5px), #000 var(--notch)) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 100%, transparent calc(var(--notch) - 0.5px), #000 var(--notch)) bottom / 100% 51% no-repeat;
+    mask:
+      radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 0, transparent calc(var(--notch) - 0.5px), #000 var(--notch)) top / 100% 51% no-repeat,
+      radial-gradient(circle var(--notch) at calc(100% - var(--stub)) 100%, transparent calc(var(--notch) - 0.5px), #000 var(--notch)) bottom / 100% 51% no-repeat;
+  }
+  .dk-ticket-body {
+    position: relative;
+    min-width: 0;
+    border-right: 2px dashed rgba(18, 42, 77, 0.16);
+    padding: 1.25rem 1.1rem 1.25rem 1.25rem;
+  }
+  .dk-stub {
+    --stock-a: #24467a;
+    --stock-b: #122a4d;
+    --stock-ink: #fffdf8;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.1rem 0.5rem;
+    text-align: center;
+    color: var(--stock-ink);
+    background-color: var(--stock-b);
+    background-image: var(--dk-grain), linear-gradient(180deg, var(--stock-a) 0%, var(--stock-b) 100%);
+  }
+  .dk-ticket[data-tone="group_work"] .dk-stub { --stock-a: #237479; --stock-b: #155e63; }
+  .dk-ticket[data-tone="discussion"] .dk-stub { --stock-a: #ecce73; --stock-b: #c99f30; --stock-ink: #2e2205; }
+  .dk-ticket[data-tone="office_hours"] .dk-stub { --stock-a: #6f4f9f; --stock-b: #5a3a8a; }
+  .dk-stub-weekday,
+  .dk-stub-month {
+    font-family: var(--dk-type);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .dk-stub-day {
+    font-family: var(--font-serif);
+    font-size: 2.6rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .dk-stub-time {
+    margin-top: 0.55rem;
+    border-top: 1px solid color-mix(in srgb, var(--stock-ink) 28%, transparent);
+    padding-top: 0.5rem;
+    font-family: var(--dk-type);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .dk-stub-length { font-size: 11.5px; opacity: 0.85; }
+  .dk-barcode {
+    width: 72%;
+    height: 1.35rem;
+    margin-top: 0.75rem;
+    opacity: 0.5;
+    background: repeating-linear-gradient(
+      90deg,
+      currentColor 0 1px, transparent 1px 3px, currentColor 3px 5px, transparent 5px 6px,
+      currentColor 6px 7px, transparent 7px 10px, currentColor 10px 13px, transparent 13px 15px
+    );
+  }
+  .dk-ticket[data-status="cancelled"] { filter: grayscale(0.8); }
+  .dk-ticket[data-status="cancelled"] .dk-ticket-body,
+  .dk-ticket[data-status="ended"] .dk-ticket-body { opacity: 0.88; }
+  @media (min-width: 640px) {
+    .dk-ticket { --stub: 8.5rem; }
+    .dk-ticket-body { padding: 1.5rem 1.5rem 1.4rem 1.6rem; }
+    .dk-stub-day { font-size: 3.2rem; }
+  }
+  .dk-ticket-empty {
+    border: 2px dashed rgba(18, 42, 77, 0.22);
+    border-radius: 1rem;
+    padding: 2.75rem 1.5rem;
+    text-align: center;
+    background: rgba(255, 253, 248, 0.6);
+  }
+  .dk-month {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .dk-month-rule {
+    flex: 1;
+    height: 0;
+    border-top: 2px dashed rgba(110, 86, 36, 0.3);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Pinned index cards
+   * ---------------------------------------------------------------- */
+  .dk-index {
+    position: relative;
+    height: 100%;
+    border-radius: 3px;
+    padding: 2.4rem 1.4rem 1.4rem;
+    background-color: #fffefb;
+    background-image:
+      linear-gradient(180deg, transparent 0 2.9rem, rgba(196, 72, 72, 0.42) 2.9rem calc(2.9rem + 1.5px), transparent calc(2.9rem + 1.5px)),
+      repeating-linear-gradient(180deg, transparent 0 1.55rem, rgba(21, 94, 99, 0.13) 1.55rem calc(1.55rem + 1px));
+    background-position: 0 0, 0 3rem;
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.1), 0 18px 26px -18px rgba(10, 26, 48, 0.55);
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform 240ms var(--dk-ease);
+  }
+  .dk-pin {
+    position: absolute;
+    top: 0.65rem;
+    left: 50%;
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-left: -0.525rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #fff3c9 0%, #e1b84a 35%, #9b7413 100%);
+    box-shadow: 0 3px 3px -1px rgba(0, 0, 0, 0.45), inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Hover motion: only with a fine pointer, and only when motion is welcome. */
+  @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+    .dk-btn:hover { filter: brightness(1.05); }
+    .dk-tab:not([aria-current="page"]):hover { transform: translateY(2px); }
+    .dk-folder:hover .dk-folder-sheet { transform: translateY(-0.85rem) rotate(-2.5deg); }
+    .dk-doc-wrap:hover .dk-doc {
+      transform: translateY(-4px) rotate(-0.7deg);
+      box-shadow: 0 1px 1px rgba(10, 26, 48, 0.08), 0 16px 22px -14px rgba(10, 26, 48, 0.35);
+    }
+    .dk-ticket-lift:hover { transform: translateY(-3px) rotate(-0.3deg); }
+    .dk-index:hover { transform: rotate(0deg) translateY(-3px); }
+    .dk-switch-option:not([aria-current="page"]):hover { color: #fffdf8; }
+  }
+}
+
+@keyframes dk-fade {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dk-sheet,
+  .dk-polaroid,
+  .dk-cal-page { animation-name: dk-fade; }
+  .dk-lamp-bulb::after { animation: none; opacity: 0.8; }
+  .dk-folder:focus-within .dk-folder-sheet { transform: rotate(-1.2deg); }
+}

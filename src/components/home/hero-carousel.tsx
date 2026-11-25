@@ -2,25 +2,14 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  Compass,
-  Pause,
-  Play,
-  Sparkles,
-  Users,
-  Video,
-} from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import { PRINCIPLES } from "@/lib/media";
-import { PrincipleIcon } from "@/components/site/principle-icon";
 import { cn } from "@/lib/utils";
 import { HeroBackdrop } from "@/components/site/hero-backdrop";
 import { CoverImage } from "@/components/site/cover-image";
 import { Aurora, rise } from "@/components/site/public-hero";
+import { PrincipleGlyph } from "@/components/atelier/icons";
 
 const AUTOPLAY_MS = 7000;
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
@@ -37,8 +26,15 @@ export type HeroSlide = {
   primary: { label: string; href: string };
   secondary: { label: string; href: string };
   badge: string;
+  /** Caption engraved on the brass plaque under the framed print. */
+  plaque: string;
 };
 
+/**
+ * Home hero. The copy changes slide by slide; the photograph hangs as a
+ * framed print (matted, gilt frame, brass plaque) and crossfades inside the
+ * frame. Styles: app/(site)/atelier.css.
+ */
 export function HeroCarousel({
   headline,
   subhead,
@@ -75,6 +71,7 @@ export function HeroCarousel({
       primary: { label: "Explore the 15 sessions", href: "/course" },
       secondary: { label: "Read the Purpose Journal", href: "/blog" },
       badge: "Purpose Course",
+      plaque: "A fifteen-week journey",
     },
     {
       eyebrow: "Clarity you can defend",
@@ -93,6 +90,7 @@ export function HeroCarousel({
       primary: { label: "See the assessments", href: "/learn/instruments" },
       secondary: { label: "How the programme works", href: "/course" },
       badge: "Assessment engine",
+      plaque: "Clarity, tested and evidenced",
     },
     {
       eyebrow: "A learning community, not a library",
@@ -111,6 +109,7 @@ export function HeroCarousel({
       primary: { label: "Enter the community", href: "/community" },
       secondary: { label: "Join the next cohort", href: "/course#enrol" },
       badge: "Learning community",
+      plaque: "Live, in a real room",
     },
   ];
 
@@ -135,7 +134,7 @@ export function HeroCarousel({
   }, [go, index]);
 
   const slide = slides[index];
-  // Slides leave quickly and arrive with a softer ease-out, so a click never waits on the exit.
+  // Copy leaves quickly and arrives with a softer ease-out, so a click never waits on the exit.
   const leave = { duration: 0.18, ease: EASE_OUT };
 
   return (
@@ -152,7 +151,7 @@ export function HeroCarousel({
       <HeroBackdrop src="/images/hero-workshop.jpg" />
       <Aurora tone="light" />
 
-      <div className="shell relative z-10 grid items-center gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14 lg:py-20">
+      <div className="shell relative z-10 grid items-center gap-12 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-20">
         <div className="rise min-w-0" style={rise(0)}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
@@ -164,21 +163,16 @@ export function HeroCarousel({
               animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE_OUT } }}
               exit={{ opacity: 0, y: reduceMotion ? 0 : -8, transition: leave }}
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-gold-dark">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {slide.eyebrow}
-                </span>
-                <span className="glass inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-600">
-                  {slide.badge}
-                </span>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="at-plate">{slide.eyebrow}</span>
+                <span className="at-tile !py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-600">{slide.badge}</span>
               </div>
 
-              <h1 className="display mt-5 text-[2.6rem] text-navy sm:text-5xl lg:text-[4rem]">
+              <h1 className="display mt-6 text-[2.6rem] text-navy sm:text-5xl lg:text-[4rem]">
                 {slide.headline}{" "}
-                <span className="relative text-gold-dark">
-                  {slide.highlight}
-                  <svg className="absolute -bottom-2 left-0 h-3 w-full text-gold/60" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden>
+                <span className="relative inline-block">
+                  <span className="at-foil italic">{slide.highlight}</span>
+                  <svg className="at-draw absolute -bottom-2 left-0 h-3 w-full text-gold" viewBox="0 0 200 12" preserveAspectRatio="none" aria-hidden>
                     <path d="M2 9C40 3 80 3 100 6s60 4 98-2" stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round" />
                   </svg>
                 </span>
@@ -188,34 +182,34 @@ export function HeroCarousel({
 
               <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
                 {slide.bullets.map((bullet) => (
-                  <li key={bullet} className="inline-flex items-center gap-1.5 text-[12px] font-medium text-stone-600">
-                    <span className="h-1 w-1 rounded-full bg-gold" /> {bullet}
+                  <li key={bullet} className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-stone-600">
+                    <span aria-hidden className="text-gold-dark">✦</span> {bullet}
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <Link href={slide.primary.href} className={cn(buttonVariants({ variant: "default", size: "lg" }))}>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link href={slide.primary.href} className="at-btn" data-variant="navy">
                   {slide.primary.label}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight aria-hidden />
                 </Link>
-                <Link href={slide.secondary.href} className={cn(buttonVariants({ variant: "outline", size: "lg" }), "bg-paper/70")}>
+                <Link href={slide.secondary.href} className="at-btn">
                   {slide.secondary.label}
                 </Link>
               </div>
 
-              <dl className="glass mt-8 grid max-w-lg grid-cols-3 divide-x divide-navy/10 rounded-2xl py-4">
+              <dl className="at-tray mt-9 grid max-w-lg grid-cols-3 gap-1.5">
                 {slide.stats.map((stat) => (
-                  <div key={stat.label} className="flex flex-col-reverse px-5">
-                    <dt className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-stone-600">{stat.label}</dt>
-                    <dd className="font-serif text-2xl text-navy">{stat.value}</dd>
+                  <div key={stat.label} className="at-tile flex flex-col-reverse">
+                    <dt className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-600">{stat.label}</dt>
+                    <dd className="at-letterpress font-serif text-[1.7rem] leading-none">{stat.value}</dd>
                   </div>
                 ))}
               </dl>
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2.5">
             <div className="flex items-center" role="group" aria-label="Choose a slide">
               {slides.map((item, slideIndex) => {
                 const active = slideIndex === index;
@@ -231,16 +225,11 @@ export function HeroCarousel({
                     }}
                     className="group flex h-11 items-center px-1.5"
                   >
-                    <span
-                      className={cn(
-                        "relative block h-1.5 overflow-hidden rounded-full bg-navy/15 transition-[width,background-color] duration-300 ease-out",
-                        active ? "w-12" : "w-5 group-hover:bg-navy/30",
-                      )}
-                    >
+                    <span className={cn("at-groove", active ? "w-14" : "w-6")}>
                       {active ? (
                         <motion.span
                           key={`bar-${index}-${paused}-${interacted}`}
-                          className="absolute inset-0 origin-left rounded-full bg-gold"
+                          className="absolute inset-0 origin-left rounded-full bg-gradient-to-b from-[#f2d27a] to-[#b98a1f] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]"
                           initial={{ scaleX: paused || interacted || reduceMotion ? 1 : 0 }}
                           animate={{ scaleX: 1 }}
                           transition={{ duration: paused || interacted || reduceMotion ? 0.2 : AUTOPLAY_MS / 1000, ease: "linear" }}
@@ -251,7 +240,7 @@ export function HeroCarousel({
                 );
               })}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -259,9 +248,9 @@ export function HeroCarousel({
                   setInteracted(true);
                 }}
                 aria-label="Previous slide"
-                className="glass inline-flex h-11 w-11 items-center justify-center rounded-full text-navy transition-[color,transform] duration-150 hover:text-gold-dark active:scale-[0.96]"
+                className="at-knob"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft aria-hidden className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -270,81 +259,106 @@ export function HeroCarousel({
                   setInteracted(true);
                 }}
                 aria-label="Next slide"
-                className="glass inline-flex h-11 w-11 items-center justify-center rounded-full text-navy transition-[color,transform] duration-150 hover:text-gold-dark active:scale-[0.96]"
+                className="at-knob"
               >
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight aria-hidden className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={() => setPaused((value) => !value)}
                 aria-label={paused ? "Resume autoplay" : "Pause autoplay"}
-                className="glass inline-flex h-11 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-medium text-stone-700 transition-transform duration-150 active:scale-[0.96]"
+                className="at-btn min-h-11 px-4 text-[12.5px]"
               >
-                {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+                {paused ? <Play aria-hidden /> : <Pause aria-hidden />}
                 {paused ? "Play" : "Pause"}
               </button>
             </div>
-            <p className="ml-1 text-[11px] uppercase tracking-[0.1em] text-stone-500" aria-live="polite">
+            <p className="ml-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-500" aria-live="polite">
               {index + 1} / {slides.length}
             </p>
           </div>
         </div>
 
-        <div className="rise relative" style={rise(2)}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={`image-${index}`}
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1, transition: { duration: 0.55, ease: EASE_OUT } }}
-              exit={{ opacity: 0, scale: reduceMotion ? 1 : 1.01, transition: leave }}
-              className="relative overflow-hidden rounded-[2rem] shadow-editorial ring-1 ring-navy/10"
-            >
-              <div className="relative h-[22rem] sm:h-[28rem]">
-                <CoverImage src={slide.image} alt={slide.imageAlt} eager={index === 0} sizes="(min-width: 1024px) 45vw, 100vw" className={index === 1 ? "object-[center_40%]" : undefined} />
+        <div className="rise relative mx-auto w-full max-w-xl lg:max-w-none" style={rise(2)}>
+          {/* Framed print: gilt frame, bevelled mat, photograph crossfading inside */}
+          <div className="at-frame">
+            <div className="at-mat">
+              <div className="at-mat-window h-[19rem] sm:h-[25rem]">
+                {/* All three prints stay mounted (and loaded); the active one fades up and settles. */}
+                {slides.map((item, slideIndex) => {
+                  const shown = slideIndex === index;
+                  return (
+                    <motion.div
+                      key={item.image}
+                      aria-hidden={!shown}
+                      className="absolute inset-0"
+                      initial={false}
+                      animate={shown ? { opacity: 1, scale: 1 } : { opacity: 0, scale: reduceMotion ? 1 : 1.04 }}
+                      transition={{ duration: shown ? 0.7 : 0.45, ease: EASE_OUT }}
+                    >
+                      <CoverImage
+                        src={item.image}
+                        alt={shown ? item.imageAlt : ""}
+                        eager={slideIndex === 0}
+                        sizes="(min-width: 1024px) 42vw, 100vw"
+                        className={slideIndex === 1 ? "object-[center_40%]" : undefined}
+                      />
+                    </motion.div>
+                  );
+                })}
               </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/65 via-transparent to-transparent" />
-              <div className="glass-dark absolute bottom-4 left-4 right-4 flex items-center justify-between gap-3 rounded-2xl px-4 py-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">{slide.badge}</p>
-                  <p className="mt-0.5 text-[13px] text-paper/90">{slide.primary.label}</p>
-                </div>
-                <span className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-paper/15 px-2.5 text-[11px] font-medium text-paper">
-                  {index === 2 ? <Video className="h-3.5 w-3.5" /> : index === 1 ? <Compass className="h-3.5 w-3.5" /> : <CalendarDays className="h-3.5 w-3.5" />}
-                  {index === 2 ? "Live" : index === 1 ? "Clarity" : "15 weeks"}
-                </span>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+            </div>
+          </div>
 
+          {/* Brass plaque under the frame */}
+          <div className="relative -mt-4 flex justify-center">
+            <div className="at-museum-plaque">
+              <span className="text-[10px] font-bold uppercase tracking-[0.22em]">{slide.badge}</span>
+              <span className="font-serif text-[14px] italic leading-tight">{slide.plaque}</span>
+            </div>
+          </div>
+
+          {/* Leather tag with the five principle medallions */}
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: EASE_OUT }}
-            className="absolute -right-3 -top-8 hidden w-64 rounded-2xl border border-white/10 bg-gradient-to-br from-navy to-ink px-4 py-3.5 text-paper shadow-editorial sm:block"
+            initial={reduceMotion ? false : { opacity: 0, y: -10, rotate: -6 }}
+            animate={{ opacity: 1, y: 0, rotate: -3 }}
+            transition={{ duration: 0.7, delay: 0.55, ease: EASE_OUT }}
+            className="at-tag-leather absolute -right-4 -top-10 hidden w-64 sm:block"
           >
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">Five principles</p>
-              <span className="live-pulse h-1.5 w-1.5 rounded-full bg-source" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold">Five principles</p>
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#7fd39a] shadow-[0_0_6px_#7fd39a]" />
             </div>
-            <div className="mt-2.5 flex items-center justify-between">
+            <div className="mt-3 flex items-center justify-between">
               {PRINCIPLES.map((principle) => (
-                <PrincipleIcon key={principle.name} icon={principle.icon} accent={principle.accent} size="sm" />
+                <span key={principle.name} title={principle.name} className="at-medal" data-size="sm" style={{ "--c": principle.color } as CSSProperties}>
+                  <PrincipleGlyph icon={principle.icon} aria-hidden className="h-4 w-4" strokeWidth={1.8} />
+                </span>
               ))}
             </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-paper/70">Identity · Source · Purpose · Potential · Destiny</p>
+            <p className="mt-2.5 text-[11px] leading-relaxed text-paper/75">Identity · Source · Purpose · Potential · Destiny</p>
           </motion.div>
 
-          <div className="glass absolute -left-2 top-4 hidden items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-navy sm:flex">
-            <Users className="h-3.5 w-3.5 text-gold-dark" /> Cohort-based
-          </div>
+          {/* Gold wax seal pressed onto the frame corner */}
+          <span
+            aria-hidden
+            className="at-seal absolute -left-5 bottom-16 hidden !h-[4.4rem] !w-[4.4rem] rotate-[-10deg] text-center sm:grid"
+            data-tone="gold"
+          >
+            <span className="text-[9px] font-bold uppercase leading-tight tracking-[0.12em]">
+              Cohort
+              <br />
+              based
+            </span>
+          </span>
         </div>
       </div>
 
-      <div className="relative z-10 border-y border-navy/10 bg-navy text-paper">
-        <div className="shell flex flex-wrap items-center justify-center gap-x-8 gap-y-2 py-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-paper/80 sm:justify-between">
+      <div className="at-ribbon-band relative z-10 text-paper">
+        <div className="shell flex flex-wrap items-center justify-center gap-x-8 gap-y-2 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-paper/85 sm:justify-between">
           {["Experiential learning", "Key presentations", "Case studies", "Round tables", "Live classes", "Mentorship"].map((item) => (
             <span key={item} className="inline-flex items-center gap-2">
-              <span className="h-1 w-1 rounded-full bg-gold" />
+              <span aria-hidden className="text-gold">✦</span>
               {item}
             </span>
           ))}
