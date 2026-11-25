@@ -1,9 +1,9 @@
 import { requireAdminPage } from "@/lib/page-access";
-import Link from "next/link";
 import { MediaEditor } from "@/components/media/media-editor";
 import { MediaField } from "@/components/media/media-field";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Plus, Save } from "lucide-react";
+import { Plus, Save } from "lucide-react";
+import { ConsoleHeader, keyClass } from "@/components/admin/console/surfaces";
 import { getAcademyTree } from "@/db/courses";
 import { canAuthorAcademy, getSessionUser } from "@/lib/auth";
 import { saveCourseForm, saveLessonForm, saveModuleForm } from "@/app/actions/academy-forms";
@@ -14,10 +14,11 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ lesson?: string; module?: string }> };
 
-const input = "h-10 w-full rounded-lg border border-navy/15 bg-white px-3 text-[12.5px] outline-none focus:border-gold focus:ring-2 focus:ring-gold/20";
-const label = "mb-1 block text-[11.5px] font-medium text-navy";
-const area = "w-full rounded-lg border border-navy/15 bg-white px-3 py-2 text-[12.5px] outline-none focus:border-gold focus:ring-2 focus:ring-gold/20";
-const submit = "inline-flex h-10 items-center gap-2 rounded-full bg-navy px-5 text-[12px] font-semibold text-paper hover:bg-navy-700";
+/* 16px on phones stops iOS zooming into a focused field; the console skin supplies the debossed well and focus ring. */
+const input = "h-11 w-full rounded-lg border px-3 text-[16px] text-ink outline-none sm:text-[14px]";
+const label = "mb-1.5 block text-[12.5px] font-medium text-navy";
+const area = "w-full rounded-lg border px-3 py-2.5 text-[16px] leading-relaxed text-ink outline-none sm:text-[14px]";
+const submit = keyClass("navy");
 
 export default async function CourseEditPage({ params, searchParams }: Params) {
   await requireAdminPage("/admin/academy/courses/[id]/edit");
@@ -59,16 +60,15 @@ export default async function CourseEditPage({ params, searchParams }: Params) {
           : "Course settings";
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <div>
-        <Link href={`/admin/academy/courses/${course.id}`} className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> {course.title}
-        </Link>
-        <h1 className="mt-2 font-serif text-2xl text-navy">{heading}</h1>
-        <p className="text-[12px] text-stone-600">{course.levelName} level · changes reach students when the item is published.</p>
-      </div>
+    <div className="mx-auto max-w-2xl space-y-6">
+      <ConsoleHeader
+        back={{ href: `/admin/academy/courses/${course.id}`, label: course.title }}
+        eyebrow="Academy builder"
+        title={heading}
+        description={`${course.levelName} level · changes reach students when the item is published.`}
+      />
 
-      <div className="admin-card p-5">
+      <div className="admin-card k-riveted px-5 pb-6 pt-6 sm:px-7">
         {showCourse ? (
           <form action={saveCourseForm} className="space-y-3">
             <input type="hidden" name="courseId" value={course.id} />

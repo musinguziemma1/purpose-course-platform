@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck2, Clock, Users } from "lucide-react";
+import { BookOpenCheck, ClipboardPen, NotebookTabs } from "lucide-react";
 import { db } from "@/db";
 import { profiles, roles } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
@@ -8,10 +8,16 @@ import { getAttendanceForSession, getSessionsForAttendance } from "@/db/learning
 import { getSessionUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/utils";
 import { AttendanceForm } from "@/components/platform/forms";
+import { DeskCalendar, DeskEmpty, DeskHero, DeskSheet, DeskTag, FlapBoard, SheetHead, rise } from "@/components/mentor/desk";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Attendance" };
+
+const MARKS: Record<string, { mark: string; className: string }> = {
+  present: { mark: "✓", className: "text-source" },
+  late: { mark: "L", className: "text-amber-700" },
+};
 
 export default async function MentorAttendancePage() {
   const user = await getSessionUser();
@@ -28,86 +34,94 @@ export default async function MentorAttendancePage() {
   const totalMarked = sessions.reduce((sum, row) => sum + Number(row.marked), 0);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="font-serif text-2xl text-navy">Attendance</h1>
-        <p className="text-[12.5px] text-stone-600">
-          Mark who attended each live session. Attendance rolls into cohort progress, mentor follow-up and certificate
-          eligibility.
-        </p>
-      </div>
+    <div className="space-y-7">
+      <DeskHero
+        compact
+        eyebrow="Register"
+        title="Attendance"
+        description="Mark who attended each live session. Attendance rolls into cohort progress, mentor follow-up and certificate eligibility."
+        aside={
+          <FlapBoard
+            label="Register book"
+            items={[
+              { label: "Sessions", value: sessions.length },
+              { label: "Learners", value: learners.length },
+              { label: "Records", value: totalMarked },
+              { label: "Latest", value: sessions[0] ? Number(sessions[0].marked) : 0 },
+            ]}
+          />
+        }
+      />
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        {[
-          { label: "Sessions", value: sessions.length, icon: CalendarCheck2 },
-          { label: "Learners", value: learners.length, icon: Users },
-          { label: "Records", value: totalMarked, icon: Clock },
-          { label: "Latest session", value: sessions[0] ? sessions[0].marked : 0, icon: Users },
-        ].map((card) => (
-          <div key={card.label} className="admin-card p-4">
-            <card.icon className="h-4 w-4 text-gold-dark" />
-            <p className="mt-2 font-serif text-2xl text-navy">{card.value}</p>
-            <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">{card.label}</p>
-          </div>
-        ))}
-      </div>
+      <div className="grid gap-7 xl:grid-cols-[1.5fr_1fr] xl:items-start">
+        <DeskSheet className="desk-rise overflow-hidden" style={rise(1)} labelledBy="session-register">
+          <SheetHead id="session-register" eyebrow="Ledger" title="Session register" icon={NotebookTabs} tone="navy" count={sessions.length} />
+          {sessions.length === 0 ? (
+            <DeskEmpty>No sessions yet.</DeskEmpty>
+          ) : (
+            <ul className="desk-ledger">
+              {sessions.map((row) => (
+                <li key={row.session.id} className="flex flex-wrap items-center gap-4 py-3.5 pr-5">
+                  <DeskCalendar date={row.session.startsAt} tone={row.session.status === "cancelled" ? "stone" : row.session.status === "ended" ? "green" : "navy"} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-serif text-[16px] text-navy">{row.session.title}</p>
+                    <p className="text-[12px] uppercase tracking-[0.08em] text-stone-500">
+                      {formatDateTime(row.session.startsAt)} · {row.session.status} · {row.cohortName ?? "no cohort"}
+                    </p>
+                  </div>
+                  <DeskTag tone={Number(row.marked) > 0 ? "teal" : undefined}>{row.marked} marked</DeskTag>
+                  <Link
+                    href={`/learn/live/${row.session.id}`}
+                    className="inline-flex min-h-10 items-center text-[13px] font-semibold text-destiny underline decoration-destiny/30 decoration-2 underline-offset-4 hover:decoration-destiny"
+                  >
+                    Feed<span className="sr-only"> for {row.session.title}</span> →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DeskSheet>
 
-      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr] xl:items-start">
-        <div className="admin-card overflow-hidden">
-          <div className="border-b border-navy/10 px-5 py-3">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Session register</p>
-          </div>
-          <ul className="divide-y divide-navy/8">
-            {sessions.map((row) => (
-              <li key={row.session.id} className="flex flex-wrap items-center gap-2 px-5 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12.5px] font-medium text-navy">{row.session.title}</p>
-                  <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">
-                    {formatDateTime(row.session.startsAt)} · {row.session.status} · {row.cohortName ?? "no cohort"}
-                  </p>
-                </div>
-                <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold text-stone-600">
-                  {row.marked} marked
-                </span>
-                <Link href={`/learn/live/${row.session.id}`} className="text-[10.5px] font-semibold text-gold-dark hover:underline">
-                  Feed →
-                </Link>
-              </li>
-            ))}
-            {sessions.length === 0 ? <li className="px-5 py-5 text-[12px] text-stone-500">No sessions yet.</li> : null}
-          </ul>
-        </div>
-
-        <div className="space-y-4">
-          <div className="admin-card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">Mark attendance</p>
-            <div className="mt-2">
+        <div className="space-y-7">
+          <DeskSheet className="desk-rise overflow-hidden" style={rise(2)} labelledBy="mark-attendance">
+            <SheetHead id="mark-attendance" title="Mark attendance" icon={ClipboardPen} tone="teal" />
+            <div className="px-5 pb-5 pt-4">
               <AttendanceForm
                 sessions={sessions.map((row) => ({ id: row.session.id, title: row.session.title, startsAt: row.session.startsAt.toISOString() }))}
                 students={learners}
               />
             </div>
-          </div>
+          </DeskSheet>
 
-          <div className="admin-card overflow-hidden">
-            <div className="border-b border-navy/10 px-4 py-2.5">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-navy">
-                Latest register {sessions[0] ? `· ${sessions[0].session.title}` : ""}
-              </p>
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {withAttendance.map((row) => (
-                <li key={row.attendance.id} className="flex items-center justify-between gap-2 px-4 py-2">
-                  <p className="min-w-0 flex-1 truncate text-[11.5px] text-navy">{row.fullName}</p>
-                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${row.attendance.status === "present" ? "bg-source/10 text-source" : row.attendance.status === "late" ? "bg-amber-100 text-amber-800" : "bg-stone-100 text-stone-500"}`}>
-                    {row.attendance.status}
-                  </span>
-                  <span className="text-[9.5px] text-stone-400">{row.attendance.minutesAttended}m</span>
-                </li>
-              ))}
-              {withAttendance.length === 0 ? <li className="px-4 py-4 text-[12px] text-stone-500">No records for this session.</li> : null}
-            </ul>
-          </div>
+          <DeskSheet className="desk-rise overflow-hidden" style={rise(3)} labelledBy="latest-register">
+            <SheetHead
+              id="latest-register"
+              eyebrow={sessions[0] ? sessions[0].session.title : "Sign-in sheet"}
+              title="Latest register"
+              icon={BookOpenCheck}
+              tone="green"
+              count={withAttendance.length}
+            />
+            {withAttendance.length === 0 ? (
+              <DeskEmpty>No records for this session.</DeskEmpty>
+            ) : (
+              <ul className="desk-ledger">
+                {withAttendance.map((row) => {
+                  const mark = MARKS[row.attendance.status];
+                  return (
+                    <li key={row.attendance.id} className="flex items-center gap-3 py-2.5 pr-5">
+                      <span aria-hidden className={`desk-tick w-5 text-center ${mark?.className ?? "text-stone-400"}`}>
+                        {mark?.mark ?? "–"}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-[13.5px] text-navy">{row.fullName}</p>
+                      <span className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-stone-500">{row.attendance.status}</span>
+                      <span className="numeric w-12 text-right font-serif text-[13px] italic text-stone-600">{row.attendance.minutesAttended}m</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </DeskSheet>
         </div>
       </div>
     </div>

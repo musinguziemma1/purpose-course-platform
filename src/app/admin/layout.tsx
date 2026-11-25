@@ -10,6 +10,7 @@ import { hasAdminWorkspace } from "@/lib/admin-access";
 import { can } from "@/lib/rbac";
 import { profileIsComplete } from "@/lib/profile";
 import { adminNavigation, workspacesFor } from "@/lib/navigation";
+import "./console.css";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const banners = (
     <>
-      {user.isDemoAccount ? <p className="border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-navy sm:px-6">Demo account · Use practice records while exploring. This account has Super Admin permissions.</p> : null}
+      {user.isDemoAccount ? <p className="flex items-center gap-2 border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-navy sm:px-6"><span aria-hidden className="k-led k-led-gold" />Demo account · Use practice records while exploring. This account has Super Admin permissions.</p> : null}
       {user.roleSlug === "author" ? (
         <p className="flex items-center gap-2 border-b border-gold/30 bg-gold/10 px-4 py-2.5 text-[13px] text-stone-700 sm:px-6">
           <ShieldAlert aria-hidden className="h-4 w-4 text-gold-dark" />
@@ -64,6 +65,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       accent="gold"
       reviewMode={Boolean(user.isDemo)}
       banner={banners}
+      skin="console"
     >
       {children}
     </WorkspaceShell>

@@ -1,0 +1,1101 @@
+/* ==========================================================================
+ * Mentor desk: the tactile surfaces of the mentor workspace.
+ * Loaded only by app/mentor/layout.tsx, which wraps every page in .mentor-desk.
+ *
+ * Materials, one per kind of content:
+ *   leather blotter (page heroes) · paper sheets (cards) · desk calendar
+ *   (sessions) · index cards (requests) · in-tray stacks (queues) · ink stamps
+ *   (scores) · analog dial (cohort average) · manila folders (groups) · pinned
+ *   notes (guidance) · ledger paper (registers) · enamel and brass (chips) ·
+ *   brushed-metal console (live controls).
+ *
+ * Motion: transform and opacity only. Entrances run once per page load, stay
+ * at or under 300ms and use a short decelerating stagger, because this desk is
+ * opened many times a day. Hover motion only for fine pointers. Reduced motion
+ * keeps the fades and drops the movement.
+ * ========================================================================== */
+
+/* Same order Tailwind emits, so these layers slot in wherever this file loads. */
+@layer properties, theme, base, components, utilities;
+
+.mentor-desk {
+  --md-ink: #0a1a30;
+  --md-navy: #122a4d;
+  --md-paper: #fffdf8;
+  --md-cream: #f7f2e6;
+  --md-gold: #c9a227;
+  --md-gold-dark: #a5811a;
+  --md-teal: #155e63;
+  --md-green: #2f6b40;
+  --md-rust: #a14a1f;
+  --md-red-rule: rgba(196, 72, 72, 0.42);
+  --md-blue-rule: rgba(21, 94, 99, 0.17);
+  --md-ease: var(--ease-out-soft, cubic-bezier(0.22, 1, 0.36, 1));
+  --md-serif: var(--font-serif, "Fraunces", Georgia, serif);
+  /* Fine paper grain and coarser leather grain: static SVG noise, tiled. */
+  --md-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.05'/%3E%3C/svg%3E");
+  --md-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23l)' opacity='.2'/%3E%3C/svg%3E");
+  --md-sheet-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 1px rgba(10, 26, 48, 0.05),
+    0 2px 5px -2px rgba(10, 26, 48, 0.08),
+    0 16px 32px -24px rgba(10, 26, 48, 0.4);
+}
+
+/* Shared staff components inside the desk (calendar, live room, media, settings)
+   get the same paper. Unlayered on purpose: the base .admin-card is unlayered. */
+.mentor-desk .admin-card {
+  background-color: var(--md-paper);
+  background-image: var(--md-grain), linear-gradient(180deg, #fffefb 0%, #fcf8ef 100%);
+  border-color: rgba(18, 42, 77, 0.1);
+  box-shadow: var(--md-sheet-shadow);
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- *
+   * Entrance
+   * ---------------------------------------------------------------- */
+  .desk-rise {
+    animation: desk-rise 300ms var(--md-ease) backwards;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes desk-rise {
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  }
+  @keyframes desk-fade {
+    from { opacity: 0; }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Leather blotter (page heroes)
+   * ---------------------------------------------------------------- */
+  .desk-leather {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    color: var(--md-paper);
+    background-color: #12233c;
+    background-image:
+      var(--md-leather),
+      radial-gradient(110% 90% at 12% 0%, rgba(201, 162, 39, 0.17), transparent 55%),
+      radial-gradient(90% 80% at 100% 100%, rgba(21, 94, 99, 0.42), transparent 62%),
+      linear-gradient(160deg, #1b3152 0%, #10203a 55%, #0a1628 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+      0 1px 2px rgba(10, 26, 48, 0.25),
+      0 26px 50px -30px rgba(10, 26, 48, 0.7);
+  }
+  /* Saddle stitching: gold thread with its shadow pressed into the leather. */
+  .desk-leather::before,
+  .desk-leather::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 1.05rem;
+  }
+  .desk-leather::before {
+    inset: 11px 10px 9px;
+    border: 1.5px dashed rgba(0, 0, 0, 0.45);
+  }
+  .desk-leather::after {
+    inset: 10px;
+    border: 1.5px dashed rgba(214, 178, 74, 0.5);
+  }
+  .desk-emboss {
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  .desk-foil {
+    font-style: italic;
+    background: linear-gradient(100deg, #f6e7b9 0%, #d4ad3c 38%, #f0d98f 60%, #b98a1f 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.45));
+  }
+
+  /* Engraved brass name plate, screwed on at both ends. */
+  .desk-plate {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 0.4rem;
+    padding: 0.32rem 0.55rem;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #3b2c06;
+    background: linear-gradient(180deg, #f6e0a0 0%, #dbb54f 46%, #b98f26 54%, #e5c76f 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+      0 1px 0 rgba(0, 0, 0, 0.35),
+      0 3px 6px -2px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+  .desk-plate::before,
+  .desk-plate::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex: none;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #fff3c9 0%, #a07a1a 70%);
+    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Pressed leather chips for hero metadata. */
+  .desk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 9999px;
+    padding: 0.3rem 0.75rem;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 253, 248, 0.85);
+    background: rgba(0, 0, 0, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+  .desk-chip > i {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .desk-chip[data-tone="green"] > i { color: #86d89f; }
+  .desk-chip[data-tone="gold"] > i { color: #f2d27a; }
+  .desk-chip[data-tone="teal"] > i { color: #82cdd0; }
+  .desk-chip[data-tone="rose"] > i { color: #f3a39a; }
+
+  /* Recessed panel cut into the leather; holds the split-flap counters. */
+  .desk-board {
+    border-radius: 1.1rem;
+    padding: 0.75rem;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.18));
+    box-shadow:
+      inset 0 2px 9px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+      0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  .desk-flap-cell {
+    display: block;
+    border-radius: 0.8rem;
+    padding: 0.65rem 0.5rem 0.55rem;
+    text-align: center;
+    transition: background-color 200ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    a.desk-flap-cell:hover { background-color: rgba(255, 255, 255, 0.06); }
+  }
+
+  /* Split-flap digits: each leaf drops into place once, one after another. */
+  .desk-flap {
+    display: inline-flex;
+    gap: 3px;
+    perspective: 420px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .desk-flap > span {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 1.12em;
+    height: 1.5em;
+    border-radius: 0.22em;
+    color: #fbf3dc;
+    background: linear-gradient(180deg, #2a3d58 0%, #1d2d45 49.5%, #111d2f 50.5%, #1a2940 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 3px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    transform-origin: 50% 50%;
+    animation: desk-flip 320ms var(--md-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 40ms + 140ms);
+  }
+  .desk-flap > span::after {
+    content: "";
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.65);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+  @keyframes desk-flip {
+    from { opacity: 0; transform: rotateX(-80deg); }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Paper
+   * ---------------------------------------------------------------- */
+  .desk-sheet {
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    background-color: var(--md-paper);
+    background-image: var(--md-grain), linear-gradient(180deg, #fffefb 0%, #fcf8ef 100%);
+    box-shadow: var(--md-sheet-shadow);
+  }
+  .desk-sheet-head {
+    border-bottom: 1px solid rgba(18, 42, 77, 0.08);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .desk-letterpress {
+    color: var(--md-navy);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+
+  /* In-tray: loose sheets under a queue, one more per waiting item (max two). */
+  .desk-stack {
+    position: relative;
+    isolation: isolate;
+  }
+  .desk-stack::before,
+  .desk-stack::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 1rem;
+    border: 1px solid rgba(18, 42, 77, 0.09);
+    background: #f8f3e7;
+    box-shadow: 0 1px 2px rgba(10, 26, 48, 0.08);
+    opacity: 0;
+  }
+  .desk-stack:is([data-depth="1"], [data-depth="2"])::before {
+    opacity: 1;
+    transform: translate(5px, 6px) rotate(0.7deg);
+  }
+  .desk-stack[data-depth="2"]::after {
+    opacity: 1;
+    transform: translate(-4px, 10px) rotate(-0.9deg);
+  }
+
+  /* Lined paper. The rule sits just under each text baseline. */
+  .desk-ruled {
+    --rule: 1.5rem;
+    line-height: var(--rule);
+    background-image: repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent calc(var(--rule) - 1px),
+      var(--md-blue-rule) calc(var(--rule) - 1px),
+      var(--md-blue-rule) var(--rule)
+    );
+    background-origin: content-box;
+    background-position: 0 -5px;
+  }
+  /* A page of written work: ruled, with the double red margin. */
+  .desk-essay {
+    position: relative;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(18, 42, 77, 0.1);
+    background-color: #fffef9;
+    background-image: var(--md-grain);
+    padding: 0.85rem 1rem 0.85rem 3rem;
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.06);
+  }
+  .desk-essay::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 2.1rem;
+    width: 4px;
+    border-inline: 1px solid var(--md-red-rule);
+  }
+
+  /* Index card for requests: red header rule, resting at a slight angle. */
+  .desk-index {
+    position: relative;
+    border-radius: 0.4rem;
+    border: 1px solid rgba(18, 42, 77, 0.08);
+    background-color: #fffef9;
+    background-image: var(--md-grain);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.07), 0 12px 20px -14px rgba(10, 26, 48, 0.42);
+    transform: rotate(var(--tilt, 0deg));
+    transition: transform 200ms var(--md-ease), box-shadow 200ms var(--md-ease);
+  }
+  .desk-index-head {
+    border-bottom: 1.5px solid var(--md-red-rule);
+  }
+  /* Colour band across the top edge (one per Purpose principle). */
+  .desk-index[data-band] {
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .desk-index[data-band]::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 5px;
+    background: var(--band, var(--md-teal));
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .desk-index:not([data-still]):hover {
+      transform: rotate(0deg) translateY(-2px);
+      box-shadow: 0 2px 3px rgba(10, 26, 48, 0.08), 0 20px 30px -18px rgba(10, 26, 48, 0.45);
+    }
+  }
+  /* Steel paper clip over the card's top edge. */
+  .desk-clip {
+    position: absolute;
+    top: -12px;
+    right: 1.25rem;
+    width: 12px;
+    height: 34px;
+    border: 2px solid #8e97a2;
+    border-radius: 6px;
+    transform: rotate(8deg);
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  }
+  .desk-clip::after {
+    content: "";
+    position: absolute;
+    inset: 4px 2px 7px;
+    border: 2px solid #a7b0ba;
+    border-radius: 4px;
+  }
+
+  /* Pinned note for guidance. */
+  .desk-note {
+    position: relative;
+    border-radius: 3px 3px 4px 4px;
+    padding: 1.4rem 1.15rem 1.1rem;
+    color: #3f3a2c;
+    background: linear-gradient(175deg, #fcf1bf 0%, #f6e59e 100%);
+    box-shadow: 0 1px 1px rgba(60, 40, 10, 0.1), 0 16px 24px -16px rgba(60, 40, 10, 0.55);
+    transform: rotate(var(--tilt, -1deg));
+    transition: transform 220ms var(--md-ease);
+  }
+  .desk-note[data-tone="teal"] {
+    color: #1f3739;
+    background: linear-gradient(175deg, #e4f2f1 0%, #cfe6e5 100%);
+  }
+  .desk-note::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin-left: -8px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #f8b3a6 0%, #c8402c 45%, #7d1f12 100%);
+    box-shadow: 0 4px 4px -1px rgba(0, 0, 0, 0.35), inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .desk-note:hover { transform: rotate(0deg); }
+  }
+
+  /* A slip of paper taped down (reflections). */
+  .desk-letter {
+    position: relative;
+    border-radius: 4px;
+    border: 1px solid rgba(18, 42, 77, 0.08);
+    background-color: #fffefa;
+    background-image: var(--md-grain);
+    box-shadow: 0 1px 1px rgba(10, 26, 48, 0.06), 0 10px 16px -12px rgba(10, 26, 48, 0.32);
+    transform: rotate(var(--tilt, 0deg));
+  }
+  .desk-letter::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 1.1rem;
+    width: 4.5rem;
+    height: 1.1rem;
+    background:
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.28) 0 4px, transparent 4px 8px),
+      rgba(201, 162, 39, 0.34);
+    transform: rotate(-3deg);
+    clip-path: polygon(0 12%, 5% 0, 95% 0, 100% 14%, 97% 50%, 100% 86%, 95% 100%, 5% 100%, 0 88%, 3% 50%);
+  }
+
+  /* Photograph pinned to the desk. */
+  .desk-polaroid {
+    position: relative;
+    margin: 0;
+    border-radius: 3px;
+    padding: 0.65rem 0.65rem 2.6rem;
+    background: #fdfcf7;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), 0 20px 32px -18px rgba(10, 26, 48, 0.6);
+    transform: rotate(var(--tilt, 1.8deg));
+    transition: transform 260ms var(--md-ease);
+  }
+  .desk-polaroid img {
+    filter: saturate(0.92) contrast(1.04) sepia(0.06);
+  }
+  .desk-polaroid figcaption {
+    position: absolute;
+    inset: auto 0.9rem 0.7rem;
+    font-family: var(--md-serif);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #3f3a2c;
+  }
+  .desk-polaroid::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: -10px;
+    left: 50%;
+    width: 5.5rem;
+    height: 1.35rem;
+    margin-left: -2.75rem;
+    background: rgba(242, 228, 184, 0.75);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+    transform: rotate(-4deg);
+    clip-path: polygon(0 12%, 5% 0, 95% 0, 100% 14%, 97% 50%, 100% 86%, 95% 100%, 5% 100%, 0 88%, 3% 50%);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .desk-polaroid:hover { transform: rotate(0deg) translateY(-3px); }
+  }
+
+  /* Manila folder with a labelled tab (group work). The tab rises above the
+     folder, so give its container ~1.5rem of top padding (not margin: space-y
+     utilities reset margins). */
+  .desk-folder {
+    position: relative;
+    border-radius: 0 0.9rem 0.9rem 0.9rem;
+    border: 1px solid rgba(124, 92, 32, 0.24);
+    background-color: #efdfb5;
+    background-image: var(--md-grain), linear-gradient(180deg, #f4e6c2 0%, #e9d6a4 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      0 1px 2px rgba(70, 48, 12, 0.12),
+      0 18px 30px -22px rgba(70, 48, 12, 0.6);
+  }
+  .desk-folder-tab {
+    position: absolute;
+    left: -1px;
+    bottom: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    max-width: 75%;
+    height: 1.5rem;
+    padding: 0 0.95rem;
+    border: 1px solid rgba(124, 92, 32, 0.24);
+    border-bottom: 0;
+    border-radius: 0.6rem 0.8rem 0 0;
+    background: #f4e6c2;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6b5220;
+  }
+  .desk-folder-tab::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -2px;
+    height: 3px;
+    background: #f4e6c2;
+  }
+  .desk-folder-tab > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* Ticket for a goal: perforation with punched notches. */
+  .desk-ticket {
+    position: relative;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(18, 42, 77, 0.11);
+    background: linear-gradient(180deg, #fffdf6 0%, #f8f2e3 100%);
+    padding: 0.75rem 0.9rem;
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.07);
+  }
+  .desk-perf {
+    position: relative;
+    margin: 0.6rem -0.9rem;
+    border: 0;
+    border-top: 1px dashed rgba(18, 42, 77, 0.22);
+  }
+  .desk-perf::before,
+  .desk-perf::after {
+    content: "";
+    position: absolute;
+    top: -0.45rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.11);
+    background: #fcf8ef;
+  }
+  .desk-perf::before { left: -0.45rem; }
+  .desk-perf::after { right: -0.45rem; }
+
+  /* Ledger paper: ruled rows and the double red margin. */
+  .desk-ledger {
+    background-color: #fffef8;
+    background-image: var(--md-grain);
+  }
+  .desk-ledger :is(th, td):first-child {
+    position: relative;
+    padding-left: 1.9rem;
+  }
+  .desk-ledger :is(th, td):first-child::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: -1px;
+    left: 1rem;
+    width: 4px;
+    border-inline: 1px solid var(--md-red-rule);
+  }
+  .desk-ledger thead th {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #57534e;
+    background: linear-gradient(180deg, #fbf6ea 0%, #f5eedc 100%);
+    border-bottom: 3px double rgba(18, 42, 77, 0.3);
+  }
+  .desk-ledger tbody tr,
+  .desk-ledger > li {
+    border-bottom: 1px solid var(--md-blue-rule);
+    transition: background-color 150ms ease;
+  }
+  .desk-ledger tbody tr:last-child,
+  .desk-ledger > li:last-child {
+    border-bottom: 0;
+  }
+  .desk-ledger tbody tr:hover,
+  .desk-ledger > li:hover {
+    background-color: rgba(242, 228, 184, 0.24);
+  }
+  :is(ul, ol).desk-ledger > li {
+    position: relative;
+    padding-left: 1.9rem;
+  }
+  :is(ul, ol).desk-ledger > li::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: -1px;
+    left: 1rem;
+    width: 4px;
+    border-inline: 1px solid var(--md-red-rule);
+  }
+  /* Ink marks in the register. */
+  .desk-tick {
+    font-family: var(--md-serif);
+    font-size: 1.15rem;
+    line-height: 1;
+    font-weight: 600;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Desk calendar (sessions)
+   * ---------------------------------------------------------------- */
+  .desk-cal {
+    --band-a: #1f777c;
+    --band-b: #155e63;
+    --band-ink: #f2fafa;
+    position: relative;
+    flex: none;
+    display: block;
+    width: 3.9rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(18, 42, 77, 0.12);
+    background: linear-gradient(180deg, #fffefb 0%, #f7f1e3 100%);
+    text-align: center;
+    box-shadow: inset 0 -2px 0 rgba(18, 42, 77, 0.05), 0 1px 2px rgba(10, 26, 48, 0.12), 0 8px 14px -10px rgba(10, 26, 48, 0.45);
+  }
+  .desk-cal[data-tone="gold"] { --band-a: #dcb54e; --band-b: #b48a22; --band-ink: #2e2205; }
+  .desk-cal[data-tone="green"] { --band-a: #3d8452; --band-b: #2f6b40; }
+  .desk-cal[data-tone="navy"] { --band-a: #26446f; --band-b: #122a4d; }
+  .desk-cal[data-tone="stone"] { --band-a: #aaa39c; --band-b: #8a837d; }
+  /* Binding rings. */
+  .desk-cal::before,
+  .desk-cal::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: -5px;
+    width: 5px;
+    height: 11px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #7f8894 0%, #eef1f5 50%, #7f8894 100%);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+  }
+  .desk-cal::before { left: 26%; }
+  .desk-cal::after { right: 26%; }
+  .desk-cal-month {
+    display: block;
+    border-radius: 0.55rem 0.55rem 0 0;
+    padding: 0.32rem 0 0.22rem;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--band-ink);
+    background: linear-gradient(180deg, var(--band-a), var(--band-b));
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  .desk-cal-day {
+    display: block;
+    padding-top: 0.28rem;
+    font-family: var(--md-serif);
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--md-navy);
+    text-shadow: 0 1px 0 #fff;
+  }
+  .desk-cal-dow {
+    display: block;
+    padding: 0.15rem 0 0.4rem;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Ink stamps (scores and decisions)
+   * ---------------------------------------------------------------- */
+  .desk-stamp {
+    --ink: var(--md-green);
+    position: relative;
+    display: inline-grid;
+    flex: none;
+    place-content: center;
+    width: 3.3rem;
+    height: 3.3rem;
+    border-radius: 9999px;
+    border: 2px solid var(--ink);
+    outline: 1px solid var(--ink);
+    outline-offset: 2px;
+    color: var(--ink);
+    font-family: var(--md-serif);
+    line-height: 1;
+    text-align: center;
+    opacity: 0.92;
+    mix-blend-mode: multiply;
+    transform: rotate(-8deg);
+    animation: desk-stamp 260ms var(--md-ease) backwards;
+    animation-delay: var(--d, 160ms);
+  }
+  .desk-stamp[data-ink="rust"] { --ink: var(--md-rust); }
+  .desk-stamp[data-ink="teal"] { --ink: var(--md-teal); }
+  .desk-stamp[data-ink="navy"] { --ink: var(--md-navy); }
+  .desk-stamp[data-size="sm"] { width: 2.55rem; height: 2.55rem; outline-offset: 1.5px; }
+  .desk-stamp-score { font-size: 1rem; font-weight: 600; }
+  .desk-stamp[data-size="sm"] .desk-stamp-score { font-size: 0.8rem; }
+  .desk-stamp-caption {
+    margin-top: 2px;
+    font-family: var(--font-sans, sans-serif);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  /* Rectangular decision stamp ("Pending", "Approved"). */
+  .desk-stamp-rect {
+    --ink: var(--md-teal);
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.3rem;
+    border: 2px solid var(--ink);
+    outline: 1px solid var(--ink);
+    outline-offset: 1.5px;
+    padding: 0.18rem 0.55rem;
+    color: var(--ink);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.9;
+    mix-blend-mode: multiply;
+    transform: rotate(-3deg);
+    animation: desk-stamp-rect 260ms var(--md-ease) backwards;
+    animation-delay: var(--d, 160ms);
+  }
+  .desk-stamp-rect[data-ink="gold"] { --ink: #8a6a12; }
+  .desk-stamp-rect[data-ink="green"] { --ink: var(--md-green); }
+  .desk-stamp-rect[data-ink="rust"] { --ink: var(--md-rust); }
+  .desk-stamp-rect[data-ink="stone"] { --ink: #78716c; }
+  @keyframes desk-stamp {
+    from { opacity: 0; transform: rotate(-8deg) scale(1.3); }
+  }
+  @keyframes desk-stamp-rect {
+    from { opacity: 0; transform: rotate(-3deg) scale(1.25); }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Enamel, brass and seals
+   * ---------------------------------------------------------------- */
+  :is(.desk-seal, .desk-enamel) {
+    --a: #3a9a9f;
+    --b: #155e63;
+    --c: #0d3f42;
+  }
+  :is(.desk-seal, .desk-enamel)[data-tone="navy"] { --a: #3d5d8a; --b: #122a4d; --c: #0a1a30; }
+  :is(.desk-seal, .desk-enamel)[data-tone="plum"] { --a: #8b66b9; --b: #5a3a8a; --c: #3a2360; }
+  :is(.desk-seal, .desk-enamel)[data-tone="green"] { --a: #519866; --b: #2f6b40; --c: #1d4629; }
+  :is(.desk-seal, .desk-enamel)[data-tone="oxblood"] { --a: #b45b4d; --b: #7d2e24; --c: #521b15; }
+  :is(.desk-seal, .desk-enamel)[data-tone="gold"] { --a: #ecd07b; --b: #c9a227; --c: #8f6c12; }
+  :is(.desk-seal, .desk-enamel)[data-tone="rust"] { --a: #cf7a45; --b: #a14a1f; --c: #6d2f11; }
+
+  /* Monogram pressed in enamel, ringed like a coin. */
+  .desk-seal {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 9999px;
+    font-family: var(--md-serif);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #fdf8ec;
+    background: radial-gradient(circle at 32% 28%, var(--a) 0%, var(--b) 58%, var(--c) 100%);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.35),
+      inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+      0 0 0 2px #fffdf8,
+      0 0 0 3px rgba(18, 42, 77, 0.13),
+      0 4px 8px -2px rgba(10, 26, 48, 0.4);
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.35);
+  }
+  .desk-seal[data-size="lg"] { width: 3.5rem; height: 3.5rem; font-size: 1.2rem; }
+  .desk-seal[data-size="xl"] {
+    width: 4.75rem;
+    height: 4.75rem;
+    font-size: 1.6rem;
+    box-shadow:
+      inset 0 2px 2px rgba(255, 255, 255, 0.3),
+      inset 0 -3px 5px rgba(0, 0, 0, 0.4),
+      0 0 0 3px rgba(214, 178, 74, 0.85),
+      0 0 0 4px rgba(0, 0, 0, 0.35),
+      0 10px 18px -6px rgba(0, 0, 0, 0.6);
+  }
+  .desk-enamel {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.7rem;
+    color: #fdf8ec;
+    background: linear-gradient(160deg, var(--a) 0%, var(--b) 60%, var(--c) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.32),
+      inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+      0 3px 6px -2px rgba(10, 26, 48, 0.4);
+  }
+  .desk-enamel[data-tone="gold"] { color: #3b2c06; }
+
+  /* Brass coin holding a count. */
+  .desk-coin {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.4rem;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #3b2c06;
+    background: radial-gradient(circle at 35% 30%, #f8e6a8 0%, #c9a227 62%, #9c7716 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -1px 1px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(10, 26, 48, 0.3);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  }
+  .desk-coin[data-empty] {
+    color: #57534e;
+    background: radial-gradient(circle at 35% 30%, #ffffff 0%, #d9d5ce 62%, #aaa39c 100%);
+  }
+
+  /* Small paper tags for facts on a sheet. */
+  .desk-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 0.4rem;
+    border: 1px solid rgba(18, 42, 77, 0.12);
+    padding: 0.2rem 0.55rem;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: #57534e;
+    background: linear-gradient(180deg, #fffdf7 0%, #f2ebda 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 1px rgba(10, 26, 48, 0.06);
+  }
+  .desk-tag[data-tone="gold"] { color: #7a5c0e; border-color: rgba(201, 162, 39, 0.45); background: linear-gradient(180deg, #fdf3d3 0%, #f2e1a8 100%); }
+  .desk-tag[data-tone="amber"] { color: #7c3a0b; border-color: rgba(217, 119, 6, 0.35); background: linear-gradient(180deg, #fff4dc 0%, #fde3b0 100%); }
+  .desk-tag[data-tone="green"] { color: #24532f; border-color: rgba(47, 107, 64, 0.3); background: linear-gradient(180deg, #f1f8f2 0%, #dcebdf 100%); }
+  .desk-tag[data-tone="teal"] { color: #114b4f; border-color: rgba(21, 94, 99, 0.3); background: linear-gradient(180deg, #eef7f7 0%, #d6eaea 100%); }
+  .desk-tag[data-tone="rose"] { color: #8f2a20; border-color: rgba(190, 70, 60, 0.3); background: linear-gradient(180deg, #fff1ee 0%, #fbd9d3 100%); }
+
+  /* Groove meter: an inset channel with a glossy fill that slides in once. */
+  .desk-groove {
+    position: relative;
+    display: block;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #e4dac4 0%, #f2ecdd 100%);
+    box-shadow: inset 0 1px 2px rgba(10, 26, 48, 0.26), 0 1px 0 rgba(255, 255, 255, 0.95);
+  }
+  .desk-groove[data-size="sm"] { height: 0.375rem; }
+  .desk-groove > span {
+    --a: #2c8c91;
+    --b: #155e63;
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(180deg, var(--a) 0%, var(--b) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
+    animation: desk-fill 650ms var(--md-ease) backwards;
+    animation-delay: var(--d, 140ms);
+  }
+  .desk-groove[data-tone="gold"] > span { --a: #e6c76b; --b: #b48a22; }
+  .desk-groove[data-tone="navy"] > span { --a: #34558a; --b: #122a4d; }
+  .desk-groove[data-tone="green"] > span { --a: #4a9160; --b: #2f6b40; }
+  @keyframes desk-fill {
+    from { transform: translateX(-100%); }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * Tactile controls
+   * ---------------------------------------------------------------- */
+  .desk-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.5rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(18, 42, 77, 0.16);
+    padding: 0 1rem;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--md-navy);
+    background: linear-gradient(180deg, #fffefb 0%, #f0e9d8 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(18, 42, 77, 0.12), 0 3px 6px -2px rgba(10, 26, 48, 0.2);
+    transition: transform 140ms var(--md-ease), box-shadow 140ms var(--md-ease), filter 160ms ease;
+  }
+  .desk-btn > svg { width: 1rem; height: 1rem; flex: none; }
+  .desk-btn[data-size="sm"] { min-height: 2.25rem; padding: 0 0.85rem; font-size: 12.5px; }
+  .desk-btn[data-size="sm"] > svg { width: 0.875rem; height: 0.875rem; }
+  .desk-btn[data-variant="teal"] {
+    color: #f4fbfb;
+    border-color: #0e4245;
+    background: linear-gradient(180deg, #25797e 0%, #155e63 55%, #114f53 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 0 #0b393c, 0 4px 8px -3px rgba(10, 40, 42, 0.55);
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+  .desk-btn[data-variant="brass"] {
+    color: #2e2205;
+    border-color: #8f6c12;
+    background: linear-gradient(180deg, #f5df9a 0%, #d8b24a 50%, #c09626 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 0 #6f530c, 0 5px 10px -4px rgba(0, 0, 0, 0.55);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .desk-btn[data-variant="leather"] {
+    color: rgba(255, 253, 248, 0.9);
+    border-color: rgba(255, 255, 255, 0.16);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.04) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 0 rgba(0, 0, 0, 0.4), 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .desk-btn:hover { filter: brightness(1.04); }
+  }
+  .desk-btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: inset 0 2px 4px rgba(10, 26, 48, 0.25);
+  }
+  .desk-btn[data-variant="leather"]:active { box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.55); }
+
+  /* Drawer: a <details> with a brass pull; its contents settle in when opened. */
+  .desk-drawer {
+    border-radius: 0.8rem;
+    border: 1px solid rgba(18, 42, 77, 0.12);
+    background: linear-gradient(180deg, #fcf8ef 0%, #f2ebda 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(10, 26, 48, 0.08);
+    transition: background-color 200ms ease, box-shadow 200ms ease;
+  }
+  .desk-drawer > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.75rem;
+    padding: 0 0.95rem;
+    list-style: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-navy);
+    border-radius: inherit;
+  }
+  .desk-drawer > summary::-webkit-details-marker { display: none; }
+  .desk-drawer > summary::before {
+    content: "";
+    flex: none;
+    width: 1.35rem;
+    height: 0.45rem;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #f3db8d 0%, #b48a22 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 1px 1px rgba(0, 0, 0, 0.3);
+  }
+  .desk-drawer[data-tone="rose"] > summary { color: #9f2d22; }
+  .desk-drawer[data-tone="rose"] > summary::before { background: linear-gradient(180deg, #f2a79c 0%, #a83325 100%); }
+  .desk-drawer > summary > svg {
+    margin-left: auto;
+    width: 1rem;
+    height: 1rem;
+    color: #78716c;
+    transition: transform 200ms var(--md-ease);
+  }
+  .desk-drawer[open] {
+    background: #fffdf8;
+    box-shadow: inset 0 2px 5px rgba(10, 26, 48, 0.1);
+  }
+  .desk-drawer[open] > summary > svg { transform: rotate(180deg); }
+  .desk-drawer > div {
+    padding: 0 0.95rem 0.95rem;
+  }
+  .desk-drawer[open] > div {
+    animation: desk-rise 220ms var(--md-ease);
+  }
+
+  /* Notice taped to the desk (learners needing attention, follow-up queue). */
+  .desk-notice {
+    position: relative;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(217, 119, 6, 0.28);
+    background-color: #fff6df;
+    background-image:
+      var(--md-grain),
+      repeating-linear-gradient(-45deg, rgba(217, 119, 6, 0.09) 0 10px, transparent 10px 20px);
+    background-size: auto, 100% 7px;
+    background-repeat: repeat, no-repeat;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 22px -18px rgba(124, 58, 11, 0.6);
+    color: #6b2f0a;
+  }
+  .desk-notice[data-tone="green"] {
+    border-color: rgba(47, 107, 64, 0.25);
+    background-color: #f1f8f2;
+    background-image: var(--md-grain), repeating-linear-gradient(-45deg, rgba(47, 107, 64, 0.08) 0 10px, transparent 10px 20px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 12px 22px -18px rgba(29, 70, 41, 0.5);
+    color: #24532f;
+  }
+
+  /* Brushed-metal console (live room controls). */
+  .desk-console {
+    position: relative;
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.28);
+    color: var(--md-navy);
+    background:
+      radial-gradient(circle at 12px 12px, #8d949c 0 2.5px, transparent 3px),
+      radial-gradient(circle at calc(100% - 12px) 12px, #8d949c 0 2.5px, transparent 3px),
+      radial-gradient(circle at 12px calc(100% - 12px), #8d949c 0 2.5px, transparent 3px),
+      radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), #8d949c 0 2.5px, transparent 3px),
+      repeating-linear-gradient(90deg, transparent 0 2px, rgba(255, 255, 255, 0.2) 2px 3px, rgba(0, 0, 0, 0.025) 3px 4px),
+      linear-gradient(180deg, #f1f3f5 0%, #d5dadf 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+      0 2px 4px rgba(0, 0, 0, 0.35),
+      0 18px 32px -18px rgba(0, 0, 0, 0.65);
+  }
+
+  /* ON AIR lamp. The glow breathes only while the session is live. */
+  .desk-lamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    border-radius: 9999px;
+    padding: 0.4rem 0.85rem 0.4rem 0.45rem;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    background: linear-gradient(180deg, #221a16 0%, #120d0b 100%);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.3);
+  }
+  .desk-lamp-bulb {
+    position: relative;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #6d5d57 0%, #2b2321 100%);
+    box-shadow: inset 0 -1px 1px rgba(0, 0, 0, 0.5);
+  }
+  .desk-lamp[data-on] { color: #ffdcd5; text-shadow: 0 0 8px rgba(239, 79, 58, 0.7); }
+  .desk-lamp[data-on] .desk-lamp-bulb {
+    background: radial-gradient(circle at 35% 30%, #ffd6cc 0%, #f0503b 45%, #a3200f 100%);
+    box-shadow: 0 0 6px 1px rgba(240, 80, 59, 0.85);
+  }
+  .desk-lamp[data-on] .desk-lamp-bulb::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: inherit;
+    background: radial-gradient(closest-side, rgba(240, 80, 59, 0.6), transparent);
+    animation: desk-glow 1.8s ease-in-out infinite alternate;
+  }
+  @keyframes desk-glow {
+    from { opacity: 0.35; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1.12); }
+  }
+
+  /* Analog dial (cohort average). */
+  .desk-dial {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+  }
+  .desk-dial svg {
+    width: min(100%, 16rem);
+    height: auto;
+    overflow: visible;
+    filter: drop-shadow(0 12px 14px rgba(0, 0, 0, 0.4));
+  }
+  .desk-needle {
+    transform-box: view-box;
+    transform-origin: 120px 118px;
+    transform: rotate(var(--angle, -90deg));
+    animation: desk-needle 800ms var(--md-ease) backwards;
+    animation-delay: 180ms;
+  }
+  @keyframes desk-needle {
+    from { transform: rotate(-90deg); }
+  }
+}
+
+/* Reduced motion: keep the fades that explain a change, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .desk-rise,
+  .desk-drawer[open] > div,
+  .desk-flap > span,
+  .desk-stamp,
+  .desk-stamp-rect {
+    animation-name: desk-fade;
+  }
+  .desk-groove > span,
+  .desk-needle,
+  .desk-lamp[data-on] .desk-lamp-bulb::after {
+    animation: none;
+  }
+}

@@ -1,11 +1,15 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
+import { ArrowLeft, ArrowRight, Mail } from "lucide-react";
 import { getContactInbox } from "@/db/contact-inbox";
 import { requireAdminPage } from "@/lib/page-access";
 import { CONTACT_STATUSES } from "@/lib/contact";
 import { formatDate } from "@/lib/utils";
+import { ConsoleEmpty, ConsoleHeader, SegmentedNav, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const metadata = { title: "Contact inbox" };
 const labels: Record<string, string> = { new: "New", in_progress: "In progress", resolved: "Resolved" };
+const stamps: Record<string, string> = { new: "k-stamp-new", in_progress: "k-stamp-progress", resolved: "k-stamp-resolved" };
 
 export default async function ContactInboxPage({ searchParams }: { searchParams: Promise<{ status?: string; page?: string }> }) {
   const actor = await requireAdminPage("/admin/contact");
@@ -14,21 +18,62 @@ export default async function ContactInboxPage({ searchParams }: { searchParams:
   const page = Math.max(1, Math.min(10000, Math.trunc(Number(params.page)) || 1));
   const enquiries = await getContactInbox(actor, status, page);
   const pageLink = (number: number) => `/admin/contact?page=${number}${status ? `&status=${status}` : ""}`;
-  return <div className="mx-auto max-w-5xl space-y-5">
-    <div><h1 className="font-serif text-3xl text-navy">Contact inbox</h1><p className="mt-2 text-sm text-stone-600">Website enquiries, staff ownership and email reply history.</p></div>
-    <nav aria-label="Filter enquiries" className="flex flex-wrap gap-2">
-      {["all", ...CONTACT_STATUSES].map((item) => <Link key={item} href={item === "all" ? "/admin/contact" : `/admin/contact?status=${item}`} aria-current={(status ?? "all") === item ? "page" : undefined} className={`rounded-full border px-4 py-2 text-sm ${(status ?? "all") === item ? "bg-navy text-paper" : "border-navy/15 text-navy"}`}>{labels[item] ?? "All enquiries"}</Link>)}
-    </nav>
-    <ul className="space-y-3">
-      {enquiries.map((item) => <li key={item.id} className="rounded-xl border border-navy/10 bg-paper p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2"><Link className="break-words font-semibold text-navy underline underline-offset-4" href={`/admin/contact/${item.id}`}>{item.subject}</Link><span className="text-xs text-stone-600">{labels[item.status]}</span></div>
-        <p className="mt-2 break-words text-sm text-stone-700">{item.fullName}{item.email ? ` · ${item.email}` : " · Legacy enquiry"}</p>
-        <p className="mt-1 text-xs text-stone-500">{formatDate(item.createdAt)} · {item.assignedName ? `Assigned to ${item.assignedName}` : "Unassigned"}</p>
-      </li>)}
-    </ul>
-    {!enquiries.length ? <p className="rounded-xl border border-navy/10 bg-paper p-6 text-sm">No enquiries on this page.</p> : null}
-    <nav aria-label="Enquiry pages" className="flex items-center gap-5 text-sm text-navy">
-      {page > 1 ? <Link href={pageLink(page - 1)}>Previous page</Link> : null}<span>Page {page}</span>{enquiries.length === 50 && page < 10000 ? <Link href={pageLink(page + 1)}>Next page</Link> : null}
-    </nav>
-  </div>;
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <ConsoleHeader eyebrow="Correspondence" title="Contact inbox" description="Website enquiries, staff ownership and email reply history." />
+      <SegmentedNav
+        label="Filter enquiries"
+        items={["all", ...CONTACT_STATUSES].map((item) => ({
+          href: item === "all" ? "/admin/contact" : `/admin/contact?status=${item}`,
+          label: labels[item] ?? "All enquiries",
+          current: (status ?? "all") === item,
+        }))}
+      />
+      {enquiries.length ? (
+        <ul className="k-stagger space-y-3.5">
+          {enquiries.map((item, index) => (
+            <li key={item.id} style={staggerStyle(index)}>
+              <Link href={`/admin/contact/${item.id}`} className="admin-card k-airmail group flex items-start gap-4 overflow-hidden p-5 pt-6">
+                <div className="min-w-0 flex-1">
+                  <p className="break-words font-serif text-[18px] leading-snug text-navy decoration-gold decoration-2 underline-offset-4 group-hover:underline">{item.subject}</p>
+                  <p className="mt-1.5 break-words text-[14px] text-stone-700">
+                    {item.fullName}
+                    {item.email ? ` · ${item.email}` : " · Legacy enquiry"}
+                  </p>
+                  <p className="mt-1 text-[12.5px] text-stone-600">
+                    {formatDate(item.createdAt)} · {item.assignedName ? `Assigned to ${item.assignedName}` : "Unassigned"}
+                  </p>
+                </div>
+                <span className={`k-stamp ${stamps[item.status] ?? ""}`} style={{ "--tilt": index % 2 ? "-3deg" : "2.5deg" } as CSSProperties}>
+                  <span className="k-stamp-face">
+                    <Mail aria-hidden className="h-4 w-4" />
+                    {labels[item.status] ?? item.status}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ConsoleEmpty icon={Mail} title="No enquiries on this page." description="New website enquiries land here as letters." />
+      )}
+      <nav aria-label="Enquiry pages" className="flex items-center justify-between gap-4 text-[14px] text-navy">
+        {page > 1 ? (
+          <Link href={pageLink(page - 1)} className={keyClass("paper", "sm")}>
+            <ArrowLeft aria-hidden /> Previous page
+          </Link>
+        ) : (
+          <span />
+        )}
+        <span className="numeric font-semibold text-stone-600">Page {page}</span>
+        {enquiries.length === 50 && page < 10000 ? (
+          <Link href={pageLink(page + 1)} className={keyClass("paper", "sm")}>
+            Next page <ArrowRight aria-hidden />
+          </Link>
+        ) : (
+          <span />
+        )}
+      </nav>
+    </div>
+  );
 }

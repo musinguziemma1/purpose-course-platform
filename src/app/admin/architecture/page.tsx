@@ -1,12 +1,14 @@
 import { requireAdminPage } from "@/lib/page-access";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Database, ShieldCheck } from "lucide-react";
+import { ArrowRight, Database, ScrollText, ShieldCheck } from "lucide-react";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { getSessionUser } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getRoleMatrix } from "@/db/learning";
+import { Led } from "@/components/admin/console/instruments";
+import { ConsoleHeader, MetricTile, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
@@ -142,72 +144,84 @@ export default async function ArchitecturePage() {
   const tableCounts = new Map(
     (counts.rows as { table_name: string }[]).map((row) => [row.table_name, 1]),
   );
+  const catalogued = MODULES.reduce((sum, module) => sum + module.tables.length, 0);
+  const missingTotal = MODULES.reduce((sum, module) => sum + module.tables.filter((entry) => !tableCounts.has(entry.table)).length, 0);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold-dark">Enterprise data architecture</p>
-          <h1 className="mt-1.5 font-serif text-2xl text-navy">Eleven modules, one schema</h1>
-          <p className="max-w-2xl text-[12.5px] leading-relaxed text-stone-600">
-            One Postgres schema organised by domain, with consistent UUID identities, foreign keys, versioned content and
-            a full audit trail. Every table below is live in this environment.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/admin/analytics" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-navy px-3.5 text-[11.5px] font-semibold text-paper hover:bg-navy-700">
-            Learning analytics <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-          <Link href="/admin/people" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-navy/15 bg-paper px-3.5 text-[11.5px] font-medium text-navy hover:bg-cream">
-            RBAC & people
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        eyebrow="Enterprise data architecture"
+        title="Eleven modules, one schema"
+        description="One Postgres schema organised by domain, with consistent UUID identities, foreign keys, versioned content and a full audit trail. Every table below is live in this environment."
+        actions={
+          <>
+            <Link href="/admin/analytics" className={keyClass("navy", "sm")}>
+              Learning analytics <ArrowRight aria-hidden />
+            </Link>
+            <Link href="/admin/people" className={keyClass("paper", "sm")}>
+              RBAC & people
+            </Link>
+          </>
+        }
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="admin-card p-4">
-          <Database className="h-4 w-4 text-gold-dark" />
-          <p className="mt-2 font-serif text-2xl text-navy">{tableCounts.size}</p>
-          <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">tables across 11 modules</p>
-        </div>
-        <div className="admin-card p-4">
-          <ShieldCheck className="h-4 w-4 text-gold-dark" />
-          <p className="mt-2 font-serif text-2xl text-navy">{roles.length}</p>
-          <p className="text-[10px] uppercase tracking-[0.08em] text-stone-500">roles with permission sets</p>
-        </div>
-        <div className="admin-card p-4">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gold-dark">Audit</p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-stone-600">
-            activity_logs · security_events · data_changes — every mutation is attributable.
-          </p>
-        </div>
+        <MetricTile label="Tables across 11 modules" value={tableCounts.size} icon={Database} />
+        <MetricTile label="Roles with permission sets" value={roles.length} icon={ShieldCheck} tone="gold" />
+        <MetricTile
+          label="Catalogue check"
+          value={missingTotal ? `${missingTotal} missing` : "All live"}
+          icon={ScrollText}
+          tone={missingTotal ? "rose" : "source"}
+          led={missingTotal ? { tone: "red", pulse: true } : { tone: "green" }}
+          hint={`${catalogued} catalogued tables. Audit: activity_logs · security_events · data_changes — every mutation is attributable.`}
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        {MODULES.map((module) => (
-          <div key={module.name} className="admin-card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-navy/10 bg-cream/40 px-4 py-2.5">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-navy">{module.name}</p>
-              <span className="text-[9.5px] uppercase tracking-[0.08em] text-stone-500">{module.tables.length} tables</span>
-            </div>
-            <ul className="divide-y divide-navy/8">
-              {module.tables.map((entry) => (
-                <li key={entry.table} className="flex items-start justify-between gap-3 px-4 py-1.5">
-                  <div className="min-w-0">
-                    <p className="font-mono text-[11px] text-navy">{entry.table}</p>
-                    <p className="text-[10px] leading-relaxed text-stone-500">{entry.purpose}</p>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${tableCounts.has(entry.table) ? "bg-source/10 text-source" : "bg-rose-50 text-rose-600"}`}
-                  >
-                    {tableCounts.has(entry.table) ? "live" : "missing"}
+      <section aria-labelledby="catalogue-heading">
+        <h2 id="catalogue-heading" className="sr-only">
+          Module catalogue
+        </h2>
+        <p className="mb-3 text-[13px] text-stone-600">Pull a drawer to see its tables. Drawers with a missing table open by themselves.</p>
+        <div className="k-stagger grid gap-4 lg:grid-cols-2 lg:items-start">
+          {MODULES.map((module, index) => {
+            const missing = module.tables.filter((entry) => !tableCounts.has(entry.table)).length;
+            return (
+              <details key={module.name} open={missing > 0} style={staggerStyle(index)} className="admin-card k-drawer group overflow-hidden">
+                <summary className="flex cursor-pointer flex-col items-center gap-3 px-5 pb-3 pt-5">
+                  <span className="k-labelholder">
+                    <span>
+                      {module.name} · {module.tables.length} tables
+                    </span>
                   </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+                  <span className="flex items-center gap-2 text-[12.5px] text-stone-600">
+                    <Led tone={missing ? "red" : "green"} pulse={missing > 0} />
+                    {missing ? `${missing} missing` : "All live"}
+                  </span>
+                  <span aria-hidden className="k-pull" />
+                </summary>
+                <ul className="k-drawer-body divide-y divide-navy/8 border-t border-navy/10">
+                  {module.tables.map((entry) => {
+                    const live = tableCounts.has(entry.table);
+                    return (
+                      <li key={entry.table} className="flex items-start justify-between gap-3 px-5 py-2.5">
+                        <div className="min-w-0">
+                          <p className="k-mono text-navy">{entry.table}</p>
+                          <p className="text-[12.5px] leading-relaxed text-stone-600">{entry.purpose}</p>
+                        </div>
+                        <span className={`inline-flex shrink-0 items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[0.08em] ${live ? "text-source" : "text-rose-700"}`}>
+                          <Led tone={live ? "green" : "red"} />
+                          {live ? "live" : "missing"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

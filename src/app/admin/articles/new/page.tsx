@@ -1,12 +1,11 @@
 import { requireAdminPage } from "@/lib/page-access";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { ArticleForm } from "@/components/admin/article-form";
 import { getCategoryOptions } from "@/app/actions/publishing";
 import { db } from "@/db";
 import { profiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { canReviewArticles, getSessionUser } from "@/lib/auth";
+import { ConsoleHeader } from "@/components/admin/console/surfaces";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +20,13 @@ export default async function NewArticlePage() {
   ]);
 
   return (
-    <div className="space-y-5">
-      <div>
-        <Link href="/admin/articles" className="inline-flex items-center gap-1.5 text-[11.5px] text-stone-600 hover:text-navy">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to articles
-        </Link>
-        <h1 className="mt-2 font-serif text-2xl text-navy">New article</h1>
-        <p className="text-[12.5px] text-stone-600">
-          Drafts stay private until you submit them. Saving creates revision 1 in the history.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <ConsoleHeader
+        back={{ href: "/admin/articles", label: "Back to articles" }}
+        eyebrow="Publishing"
+        title="New article"
+        description="Drafts stay private until you submit them. Saving creates revision 1 in the history."
+      />
       <ArticleForm
         categories={categories.map((category) => ({ id: category.id, name: category.name }))}
         authors={authors}

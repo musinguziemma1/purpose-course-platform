@@ -1,3 +1,4 @@
+import "./learn-kit.css";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { and, count, eq, gte } from "drizzle-orm";
@@ -29,7 +30,9 @@ export default async function LearnLayout({ children }: { children: ReactNode })
     db.select({ value: count() }).from(liveSessions).where(and(gte(liveSessions.startsAt, new Date()), liveReadable(user))),
   ]);
 
+  // `contents` keeps the shell's layout untouched; the attribute scopes the learner skin in learn-kit.css.
   return (
+    <div data-learn-shell className="contents">
     <WorkspaceShell
       sections={learnerNavigation({
         upcomingLive: Number(upcomingLive[0]?.value ?? 0),
@@ -46,5 +49,6 @@ export default async function LearnLayout({ children }: { children: ReactNode })
     >
       {children}
     </WorkspaceShell>
+    </div>
   );
 }

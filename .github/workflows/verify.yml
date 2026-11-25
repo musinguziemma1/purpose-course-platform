@@ -48,7 +48,10 @@ jobs:
       - run: npm run test:database
       - run: npm run test:passwords
       - run: npm run test:migrations
-      - run: npm run test:security
+      - name: Run integration and security tests
+        run: npm run test:security
+        # A stuck test should fail fast and name itself, not exhaust the 20-minute job limit.
+        timeout-minutes: 8
       - run: npm run lint
       - name: Build without database credentials
         run: npm run build
