@@ -80,7 +80,7 @@ export function EventCalendar({
         {visible.map((event) => (
           <article
             key={event.id}
-            className="flex min-w-0 flex-col rounded-xl border border-navy/15 bg-paper p-5"
+            className="flex min-w-0 flex-col rounded-2xl border border-navy/10 bg-paper p-5 shadow-card"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider">
               <span className="text-gold-dark">
@@ -130,7 +130,7 @@ export function EventCalendar({
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
                 href={`/events/${event.id}`}
-                className="rounded-full bg-navy px-4 py-2 text-xs font-semibold text-paper"
+                className="inline-flex h-10 items-center rounded-full bg-navy px-4 text-xs font-semibold text-paper transition-colors hover:bg-navy-700"
               >
                 {event.canJoin && ["scheduled", "live"].includes(event.status)
                   ? "Open session"

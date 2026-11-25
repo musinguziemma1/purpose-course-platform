@@ -49,7 +49,7 @@ export function Stagger({
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, margin: "-60px" }}
-      variants={{ visible: { transition: { staggerChildren: 0.09, delayChildren: delay } } }}
+      variants={{ visible: { transition: { staggerChildren: 0.06, delayChildren: delay } } }}
       className={className}
     >
       {children}

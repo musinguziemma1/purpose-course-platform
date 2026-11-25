@@ -5,6 +5,7 @@ import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { serializeStructuredData } from "@/lib/structured-data";
+import { MotionProvider } from "@/components/motion/motion-provider";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -57,7 +58,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className="min-h-screen bg-paper text-ink antialiased">
         <a href="#main" className="skip-link">Skip to content</a>
-        <div id="main">{children}</div>
+        <MotionProvider>
+          <div id="main">{children}</div>
+        </MotionProvider>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
