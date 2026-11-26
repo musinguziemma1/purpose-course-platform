@@ -48,6 +48,7 @@
       0 2px 0 -1px #efe7d4,
       0 3px 0 -1px rgba(120, 96, 52, 0.18),
       0 28px 50px -30px rgba(10, 26, 48, 0.55);
+    animation: jr-page-settle 800ms var(--jr-ease) backwards;
   }
   /* The fold down the middle of a broadsheet. */
   .jr-sheet::after {
@@ -189,13 +190,17 @@
     background-repeat: no-repeat;
     background-position: 0 60%;
     background-size: 0% 72%;
-    transition: background-size 260ms var(--jr-ease), color 150ms ease;
+    transition: background-size 260ms var(--jr-ease), color 150ms ease, transform 150ms var(--jr-ease);
   }
   @media (hover: hover) and (pointer: fine) {
     .jr-topic:hover {
       background-size: 100% 72%;
       color: var(--jr-ink);
+      transform: translateY(-1px);
     }
+  }
+  .jr-topic:active {
+    transform: translateY(0);
   }
   .jr-topic[aria-current="page"] {
     background-size: 100% 72%;
@@ -241,12 +246,12 @@
     background-image: linear-gradient(currentColor, currentColor);
     background-repeat: no-repeat;
     background-position: 0 100%;
-    background-size: 0% 1.5px;
+    background-size: 0% 2px;
     transition: background-size 280ms var(--jr-ease);
   }
   @media (hover: hover) and (pointer: fine) {
     .group:hover .jr-headline-link {
-      background-size: 100% 1.5px;
+      background-size: 100% 2px;
     }
   }
 
@@ -255,6 +260,7 @@
    * ---------------------------------------------------------------- */
   .jr-clip-wrap {
     filter: drop-shadow(0 1px 1px rgba(60, 44, 16, 0.18)) drop-shadow(0 12px 14px rgba(10, 26, 48, 0.16));
+    transition: filter 260ms var(--jr-ease);
   }
   .jr-clip {
     --jr-tilt: -0.6deg;
@@ -289,8 +295,11 @@
     --jr-tilt: -0.2deg;
   }
   @media (hover: hover) and (pointer: fine) {
+    .jr-clip-wrap:hover {
+      filter: drop-shadow(0 2px 2px rgba(60, 44, 16, 0.22)) drop-shadow(0 18px 20px rgba(10, 26, 48, 0.24));
+    }
     .jr-clip:hover {
-      transform: rotate(0deg) translateY(-4px);
+      transform: rotate(0deg) translateY(-6px);
     }
   }
   .jr-clip:active {
@@ -309,10 +318,19 @@
     border: 1px solid rgba(26, 29, 36, 0.05);
     box-shadow: 0 1px 2px rgba(10, 26, 48, 0.12);
     pointer-events: none;
+    transition: transform 260ms var(--jr-ease);
   }
   .jr-clip-wrap:nth-child(even) .jr-tape {
     left: 28%;
     transform: translateX(-50%) rotate(3deg);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-clip:hover .jr-tape {
+      transform: translateX(-50%) rotate(0deg);
+    }
+    .jr-clip-wrap:nth-child(even) .jr-clip:hover .jr-tape {
+      transform: translateX(-50%) rotate(0deg);
+    }
   }
 
   /* ---------------------------------------------------------------- *
@@ -381,6 +399,12 @@
     background-size: 100% 1.9rem;
     border-radius: 3px;
     box-shadow: 0 1px 1px rgba(60, 44, 16, 0.15), 0 10px 18px -12px rgba(60, 40, 10, 0.45);
+    transition: transform 300ms var(--jr-ease);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-envelope:hover .jr-letter {
+      transform: translateY(-8px);
+    }
   }
   /* A postage stamp with perforated edges. */
   .jr-stamp {
@@ -393,6 +417,13 @@
     mask: radial-gradient(circle 3.2px at 4px 4px, #0000 97%, #000) -4px -4px / 8px 8px;
     filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
     transform: rotate(4deg);
+    transition: transform 300ms var(--jr-ease), filter 300ms ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .jr-envelope:hover .jr-stamp {
+      transform: rotate(2deg) translateY(-2px);
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+    }
   }
   .jr-stamp-face {
     display: flex;
@@ -460,6 +491,12 @@
     transform: translate3d(0, 48px, 0);
   }
 }
+@keyframes jr-page-settle {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0) rotate3d(1, 0, 0, 2deg);
+  }
+}
 
 /* Scroll-driven reveals: each clipping settles onto the desk as it enters the
    viewport, and the letter rises out of its envelope. Browsers without view
@@ -481,13 +518,20 @@
 
 @media (prefers-reduced-motion: reduce) {
   .jr-rule,
-  .jr-masthead-rise {
+  .jr-masthead-rise,
+  .jr-sheet {
     animation: none;
   }
   .jr-clip,
+  .jr-clip-wrap,
   .jr-tab,
   .jr-topic,
-  .jr-headline-link {
+  .jr-headline-link,
+  .jr-tape,
+  .jr-envelope,
+  .jr-letter,
+  .jr-stamp {
     transition: none;
+    animation: none;
   }
 }

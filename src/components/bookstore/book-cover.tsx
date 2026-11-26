@@ -23,7 +23,8 @@ export function BookCover({ title, author, tone = "navy", imageUrl, size = "card
         <span className={cn("mt-auto font-serif font-semibold leading-[1.03] tracking-[-0.025em] text-balance", size === "hero" ? "text-3xl sm:text-4xl" : size === "mini" ? "text-[10px]" : "text-xl sm:text-2xl")}>{title}</span>
         <span className={cn("mt-3 border-t border-current/25 pt-3 font-medium opacity-80", size === "mini" ? "text-[5px]" : "text-[9px] uppercase tracking-[0.12em]")}>{author}</span>
       </div>
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity duration-500 group-hover/cover:opacity-100" aria-hidden />
+      <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/0 via-white/15 to-white/0 opacity-0 transition-opacity duration-700 group-hover/cover:opacity-100" aria-hidden />
+      <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.08),transparent_60%)]" aria-hidden />
       </> : null}
     </div>
   );
