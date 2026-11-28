@@ -12,7 +12,26 @@ in one transaction. It does not grant course enrollment. The inviter's current
 permissions are checked during creation and redemption; only a Super Admin can
 invite another Super Admin. No email contains a password.
 
-## Configure the provider
+## Test Resend without a sending domain
+
+Set `RESEND_API_KEY`, `RESEND_FROM_EMAIL="Purpose Course <onboarding@resend.dev>"`
+and `APP_URL=http://localhost:3000` in ignored `.env.local` for local testing.
+Use the address associated with your Resend account to test a real inbox, or
+`delivered@resend.dev` to simulate delivery. Resend requires a verified sending
+domain for delivery to learners and staff at other addresses. You can keep
+the application's Vercel URL for invitation links and webhooks even with a
+separate sending domain.
+
+Run `npm run email:prepare` to generate any missing local secrets, then queue
+a test invitation in **Admin → People** using a local database. Dispatch it
+from **Admin → Notifications**. A signed webhook through a reachable HTTPS
+endpoint is required for the outbox to show **Delivered**. The local dispatch
+can confirm **Accepted** without a webhook.
+
+See [Resend's testing sender restrictions](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain)
+and [simulated delivery addresses](https://resend.com/changelog/sending-test-emails).
+
+## Configure production delivery
 
 1. Verify a domain you control in Resend and complete its DNS records. A Gmail
    address can receive invitations but cannot be your verified sending domain.
@@ -31,7 +50,8 @@ invite another Super Admin. No email contains a password.
    | `CRON_SECRET` | Generated worker bearer secret, at least 32 characters |
    | `RESEND_WEBHOOK_SECRET` | Signing secret from the Resend webhook endpoint |
 
-5. Create a Resend webhook for `https://YOUR_DOMAIN/api/webhooks/resend`. Subscribe
+5. Create a Resend webhook at `/api/webhooks/resend` on the HTTPS origin set
+   in `APP_URL`, such as `https://purpose-course-platform.vercel.app/api/webhooks/resend`. Subscribe
    to `email.sent`, `email.delivered`, `email.bounced`, `email.complained`,
    `email.failed`, `email.suppressed`, and `email.delivery_delayed`. Open/click
    events are supported if tracking is enabled. The endpoint verifies the raw

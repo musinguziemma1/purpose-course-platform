@@ -12,11 +12,13 @@ or carrier-grade NAT networks.
 
 ## Infrastructure requirements
 
-Provision a small public Linux host under the project's control and assign a
-dedicated DNS name such as `relay.example.org`. Install Coturn from the host's
-maintained package repository and configure:
+Provision a small public Linux host under the project's control with a stable
+public IPv4 address. Use the address directly or assign a DNS name such as
+`relay.example.org`. Install Coturn from the host's maintained package
+repository and configure:
 
-- authenticated long-term credentials and a realm matching the relay domain;
+- authenticated long-term credentials and a realm matching the relay hostname
+  or public IP address;
 - TLS certificate and key owned by the TURN service account;
 - UDP and TCP listeners on 3478, plus TLS/TCP on 5349;
 - a deliberately small UDP relay range, for example 49160-49200, opened in the
@@ -31,6 +33,20 @@ The application then signs a short-lived credential for each participant, so a
 browser never sees a reusable relay password. Keep the shared secret in the
 deployment platform's encrypted environment settings, never in Git,
 screenshots, client-side variables or `NEXT_PUBLIC_*` values.
+
+### Relay without a custom domain
+
+For a connectivity check, set `realm` to the public IPv4 address and use that
+address in the `turn:` UDP and TCP endpoints. For this initial check, set
+`no-tls` and `no-dtls` in Coturn and omit the TLS listener and certificate
+settings. Verify that Trickle ICE gathers a `relay` candidate.
+
+Before opening live sessions to cohorts, enable the `turns:` endpoint and
+test it on representative browsers and networks. For an IP-only deployment,
+use a trusted certificate with the public IP address in its subject
+alternative names. Let's Encrypt issues short-lived IP certificates. Automate
+renewal and install the renewed certificate for Coturn with a deploy hook.
+See [Let's Encrypt's Certbot instructions](https://letsencrypt.org/2026/03/11/shorter-certs-certbot).
 
 ### Example Coturn configuration (`/etc/turnserver.conf`)
 
