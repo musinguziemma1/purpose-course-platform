@@ -28,10 +28,12 @@ function ShopWindow({ book }: { book: StorefrontBook }) {
   return (
     <div className="bs-window p-6 sm:p-8">
       <span aria-hidden className="bs-glint" />
-      <div className="relative z-[1] grid items-end gap-7 sm:grid-cols-[minmax(0,190px)_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[minmax(0,190px)_minmax(0,1fr)]">
-        <div className="bs-stand mx-auto w-44 sm:w-full lg:w-44 xl:w-full">
+      {/* Side by side only while the window is wide (phones in landscape to tablets); in the
+          two-column hero it stacks, so the edition chooser keeps a comfortable width. */}
+      <div className="relative z-[1] grid items-end gap-7 sm:grid-cols-[minmax(0,190px)_minmax(0,1fr)] lg:grid-cols-1">
+        <div className="bs-stand mx-auto w-44 sm:w-full lg:w-48">
           <div className="relative">
-            <BookCover title={book.title} author={book.authorName} tone={book.coverTone} imageUrl={book.coverImageUrl} size="hero" />
+            <BookCover title={book.title} author={book.authorName} tone={book.coverTone} imageUrl={book.coverImageUrl} />
             <span className="bs-pricetag">{formatUgx(book.priceUgx)}</span>
           </div>
         </div>
