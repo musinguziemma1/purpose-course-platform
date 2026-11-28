@@ -26,10 +26,13 @@ export function MobileNav({ user }: MobileNavProps) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
-  // Close menu when route changes
-  React.useEffect(() => {
+  // Close the menu when the route changes. Adjusting state during render (not in an
+  // effect) avoids a second, cascading render; same pattern as WorkspaceShell.
+  const [previousPathname, setPreviousPathname] = React.useState(pathname);
+  if (pathname !== previousPathname) {
+    setPreviousPathname(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   // Prevent body scroll when menu is open
   React.useEffect(() => {

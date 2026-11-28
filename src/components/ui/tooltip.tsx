@@ -25,7 +25,7 @@ interface TooltipProps {
 
 export function Tooltip({ children, delayDuration = 400 }: TooltipProps) {
   const [open, setOpen] = React.useState(false);
-  const timeoutRef = React.useRef<NodeJS.Timeout>();
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleMouseEnter = React.useCallback(() => {
     timeoutRef.current = setTimeout(() => setOpen(true), delayDuration);

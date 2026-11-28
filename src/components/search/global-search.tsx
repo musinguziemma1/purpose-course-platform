@@ -51,12 +51,15 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
     }
   }, [open]);
 
+  // An empty query clears the results where it is set, not in an effect (no cascading render).
+  const updateQuery = React.useCallback((value: string) => {
+    setQuery(value);
+    if (!value.trim()) setResults([]);
+  }, []);
+
   // Debounced search
   React.useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
+    if (!query.trim()) return;
 
     const timer = setTimeout(async () => {
       setLoading(true);
@@ -80,7 +83,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const handleResultClick = (result: SearchResult) => {
     router.push(result.url);
     setOpen(false);
-    setQuery("");
+    updateQuery("");
   };
 
   const popularSearches = [
@@ -132,13 +135,13 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                   ref={inputRef}
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => updateQuery(e.target.value)}
                   placeholder="Search articles, courses, discussions..."
                   className="flex-1 bg-transparent text-lg outline-none placeholder:text-stone-400"
                 />
                 {query && (
                   <button
-                    onClick={() => setQuery("")}
+                    onClick={() => updateQuery("")}
                     className="rounded-lg p-1 transition-colors hover:bg-stone-100"
                   >
                     <X className="h-5 w-5 text-stone-400" />
@@ -219,7 +222,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
                     key="default"
                     popularSearches={popularSearches}
                     recentSearches={recentSearches}
-                    onSearchClick={(search) => setQuery(search)}
+                    onSearchClick={(search) => updateQuery(search)}
                   />
                 )}
               </AnimatePresence>
@@ -376,7 +379,7 @@ function EmptyState({ query }: { query: string }) {
       </div>
       <h3 className="font-serif text-xl font-semibold text-navy">No results found</h3>
       <p className="mt-2 text-sm text-stone-600">
-        We couldn't find anything for "{query}". Try different keywords or browse our categories.
+        We couldn&apos;t find anything for &ldquo;{query}&rdquo;. Try different keywords or browse our categories.
       </p>
     </div>
   );

@@ -1,15 +1,17 @@
-import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Calendar, Target, TrendingUp, Award, BookOpen } from "lucide-react";
+import { ArrowRight, Award, BookOpen, ClipboardCheck, PenLine, Target, TrendingUp } from "lucide-react";
 import { JourneyTimeline } from "@/components/journey/journey-timeline";
-import { MilestoneList } from "@/components/journey/milestone-card";
+import { MilestoneList, type Milestone } from "@/components/journey/milestone-card";
 import { ReflectionTimeline } from "@/components/journey/reflection-timeline";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CircularProgress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FeaturePending } from "@/components/ui/feature-pending";
 import { getSessionUser } from "@/lib/auth";
-import { db } from "@/db";
-import { eq } from "drizzle-orm";
+import { getPurposeJourney, type PurposeJourney } from "@/db/purpose-journey";
+import { getOwnLearnerRecords, type LearnerRecords } from "@/db/learner-records";
+import { PRINCIPLE_INFO, goalIsDone } from "@/lib/purpose-journey";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "My Purpose Journey",
@@ -21,6 +23,8 @@ export default async function JourneyPage() {
   if (!user) {
     notFound();
   }
+  const [journey, records] = await Promise.all([getPurposeJourney(user.profileId, user), getOwnLearnerRecords(user)]);
+  if (!journey || !records) return <FeaturePending feature="Your Purpose Journey" />;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-warm-ivory via-white to-warm-ivory pb-20">
@@ -32,7 +36,7 @@ export default async function JourneyPage() {
             backgroundSize: '40px 40px'
           }} />
         </div>
-        
+
         <div className="shell relative">
           <div className="mx-auto max-w-4xl text-center">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gold/20 px-4 py-2 text-sm font-semibold text-gold">
@@ -51,15 +55,13 @@ export default async function JourneyPage() {
 
       {/* Stats Overview */}
       <section className="shell -mt-8 relative z-10">
-        <Suspense fallback={<StatsGridSkeleton />}>
-          <StatsGrid userId={user.id} />
-        </Suspense>
+        <StatsGrid journey={journey} records={records} />
       </section>
 
       {/* Main Content */}
       <section className="shell mt-12">
         <Tabs defaultValue="timeline" className="w-full">
-          <div className="flex items-center justify-between gap-4 mb-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <h2 className="font-serif text-3xl font-semibold text-navy">
               Track Your Progress
             </h2>
@@ -70,25 +72,16 @@ export default async function JourneyPage() {
             </TabsList>
           </div>
 
-          {/* Timeline View */}
           <TabsContent value="timeline" className="mt-6">
-            <Suspense fallback={<TimelineSkeleton />}>
-              <JourneyTimelineView userId={user.id} />
-            </Suspense>
+            <JourneyTimelineView journey={journey} />
           </TabsContent>
 
-          {/* Milestones View */}
           <TabsContent value="milestones" className="mt-6">
-            <Suspense fallback={<MilestonesSkeleton />}>
-              <MilestonesView userId={user.id} />
-            </Suspense>
+            <MilestonesView journey={journey} records={records} />
           </TabsContent>
 
-          {/* Reflections View */}
           <TabsContent value="reflections" className="mt-6">
-            <Suspense fallback={<ReflectionsSkeleton />}>
-              <ReflectionsView userId={user.id} />
-            </Suspense>
+            <ReflectionsView records={records} />
           </TabsContent>
         </Tabs>
       </section>
@@ -96,43 +89,38 @@ export default async function JourneyPage() {
   );
 }
 
-async function StatsGrid({ userId }: { userId: string }) {
-  // Fetch user progress data
-  const stats = {
-    overallProgress: 68,
-    completedModules: 12,
-    totalModules: 51,
-    currentStreak: 7,
-    reflectionsCount: 23,
-    certificatesEarned: 2,
-  };
+function StatsGrid({ journey, records }: { journey: PurposeJourney; records: LearnerRecords }) {
+  const lessonsDone = journey.principles.reduce((sum, principle) => sum + principle.learning.done, 0);
+  const lessonsTotal = journey.principles.reduce((sum, principle) => sum + principle.learning.total, 0);
+  const instruments = journey.principles.flatMap((principle) => principle.assessments);
+  const taken = instruments.filter((instrument) => instrument.result).length;
 
   const statCards = [
     {
       icon: TrendingUp,
       label: "Overall Progress",
-      value: `${stats.overallProgress}%`,
-      subtext: `${stats.completedModules}/${stats.totalModules} modules`,
+      value: `${journey.overall}%`,
+      subtext: lessonsTotal ? `${lessonsDone}/${lessonsTotal} lessons completed` : "Across the five principles",
       color: "from-blue-500 to-blue-600",
     },
     {
-      icon: Calendar,
-      label: "Learning Streak",
-      value: `${stats.currentStreak} days`,
-      subtext: "Keep it going!",
+      icon: ClipboardCheck,
+      label: "Assessments Taken",
+      value: instruments.length ? `${taken}/${instruments.length}` : "0",
+      subtext: "Purpose instruments",
       color: "from-amber-500 to-amber-600",
     },
     {
       icon: BookOpen,
       label: "Reflections",
-      value: stats.reflectionsCount.toString(),
+      value: records.reflectionCount.toString(),
       subtext: "Personal insights",
       color: "from-purple-500 to-purple-600",
     },
     {
       icon: Award,
       label: "Certificates",
-      value: stats.certificatesEarned.toString(),
+      value: records.certificates.length.toString(),
       subtext: "Achievements earned",
       color: "from-green-500 to-green-600",
     },
@@ -154,7 +142,7 @@ async function StatsGrid({ userId }: { userId: string }) {
                 style={{ transform: "translate(25%, -25%)" }}
               />
             </div>
-            
+
             <div className="relative">
               <div className={`inline-flex rounded-xl bg-gradient-to-br ${stat.color} p-3`}>
                 <Icon className="h-6 w-6 text-white" />
@@ -170,233 +158,163 @@ async function StatsGrid({ userId }: { userId: string }) {
   );
 }
 
-async function JourneyTimelineView({ userId }: { userId: string }) {
-  // Mock data - replace with actual database queries
-  const stages = [
-    {
-      id: "identity",
-      name: "Identity",
-      question: "Who Am I?",
-      color: "#071F46",
-      icon: null,
-      progress: 100,
-      status: "completed" as const,
-      completedModules: 10,
-      totalModules: 10,
-      description: "Understanding your unique identity, values, and core strengths.",
-    },
-    {
-      id: "source",
-      name: "Source",
-      question: "Where Am I From?",
-      color: "#2f6b40",
-      icon: null,
-      progress: 80,
-      status: "current" as const,
-      completedModules: 8,
-      totalModules: 10,
-      description: "Exploring your foundations, experiences, and influences.",
-    },
-    {
-      id: "purpose",
-      name: "Purpose",
-      question: "Why Am I Here?",
-      color: "#b98a1f",
-      icon: null,
-      progress: 45,
-      status: "current" as const,
-      completedModules: 5,
-      totalModules: 11,
-      description: "Discovering your unique purpose and contribution to the world.",
-    },
-    {
-      id: "potential",
-      name: "Potential",
-      question: "What Can I Do?",
-      color: "#5a3a8a",
-      icon: null,
-      progress: 20,
-      status: "current" as const,
-      completedModules: 2,
-      totalModules: 10,
-      description: "Developing your skills, capabilities, and talents.",
-    },
-    {
-      id: "destiny",
-      name: "Destiny",
-      question: "Where Am I Going?",
-      color: "#155e63",
-      icon: null,
-      progress: 0,
-      status: "locked" as const,
-      completedModules: 0,
-      totalModules: 10,
-      description: "Creating your vision, direction, and meaningful impact.",
-    },
-  ];
+function JourneyTimelineView({ journey }: { journey: PurposeJourney }) {
+  const stages = journey.principles.map((principle) => ({
+    id: principle.key,
+    name: principle.name,
+    question: principle.question,
+    color: principle.color,
+    icon: null,
+    progress: principle.score,
+    // Every principle stays open in this programme; nothing is locked.
+    status: principle.score >= 100 ? ("completed" as const) : ("current" as const),
+    completedModules: principle.learning.modules.filter((module) => module.lessonCount > 0 && module.completedCount >= module.lessonCount).length,
+    totalModules: principle.learning.modules.length,
+    description: principle.focus,
+  }));
+  // Focus on the first principle, in journey order, that is not yet complete.
+  const current = journey.principles.find((principle) => principle.score < 100) ?? journey.principles[journey.principles.length - 1];
+  const next = journey.recommendations.find((item) => item.principle === current.key) ?? journey.recommendations[0];
 
   return (
     <div>
-      <JourneyTimeline stages={stages} currentStageId="purpose" />
-      
+      <JourneyTimeline stages={stages} currentStageId={current.key} />
+
       <div className="mt-12 rounded-2xl border border-gold/20 bg-gradient-to-br from-gold/5 to-transparent p-8">
         <h3 className="font-serif text-2xl font-semibold text-navy mb-4">
-          Your Current Focus: Purpose
+          Your Current Focus: {current.name}
         </h3>
-        <p className="text-stone-600 leading-relaxed mb-6">
-          You're currently exploring the Purpose principle, discovering why you're here and what unique contribution you can make to the world. Continue with the next module to deepen your understanding.
+        <p className="text-stone-600 leading-relaxed mb-2">
+          {current.question} {current.focus}
         </p>
-        <button className="inline-flex items-center gap-2 rounded-xl bg-navy px-6 py-3 font-semibold text-white transition-all hover:bg-navy/90 hover:shadow-lg">
+        <p className="text-stone-600 leading-relaxed mb-6">
+          {current.score}% of the evidence for {current.name} is in place
+          {current.learning.total ? ` · ${current.learning.done} of ${current.learning.total} lessons complete` : ""}.
+        </p>
+        <Link
+          href={next?.href ?? "/learn/courses"}
+          className="inline-flex items-center gap-2 rounded-xl bg-navy px-6 py-3 font-semibold text-white transition-all hover:bg-navy/90 hover:shadow-lg"
+        >
           <BookOpen className="h-5 w-5" />
-          Continue Learning
-        </button>
+          {next?.title ?? "Continue Learning"}
+        </Link>
       </div>
     </div>
   );
 }
 
-async function MilestonesView({ userId }: { userId: string }) {
-  // Mock data - replace with actual database queries
-  const milestones = [
-    {
-      id: "1",
-      title: "Complete Identity Assessment",
-      description: "Discover your core values, strengths, and unique identity markers.",
-      type: "assessment" as const,
-      completedAt: new Date("2026-11-15"),
-      relatedContent: "Identity",
-    },
-    {
-      id: "2",
-      title: "Foundations of Purpose Course",
-      description: "Understanding the fundamental principles of living with purpose.",
-      type: "course" as const,
-      completedAt: new Date("2026-11-20"),
-      relatedContent: "Purpose",
-    },
-    {
-      id: "3",
-      title: "Weekly Reflection: Identity",
-      description: "Reflect on your identity journey and key learnings this week.",
-      type: "reflection" as const,
+function milestoneType(href: string): Milestone["type"] {
+  if (href.startsWith("/learn/courses")) return "course";
+  if (href.startsWith("/learn/instruments")) return "assessment";
+  if (href.startsWith("/learn/goals")) return "goal";
+  if (href.startsWith("/learn/profile")) return "profile";
+  return "reflection";
+}
+
+function MilestonesView({ journey, records }: { journey: PurposeJourney; records: LearnerRecords }) {
+  const upcoming: Milestone[] = [
+    ...journey.recommendations.map((item, index) => ({
+      id: `next-${index}`,
+      title: item.title,
+      description: item.detail,
+      type: milestoneType(item.href),
       completedAt: null,
-      dueDate: new Date("2026-11-30"),
-      progress: 60,
-      relatedContent: "Identity",
-    },
-    {
-      id: "4",
-      title: "Purpose Discovery Module",
-      description: "Deep dive into discovering your unique purpose and calling.",
-      type: "course" as const,
-      completedAt: null,
-      progress: 45,
-      relatedContent: "Purpose",
-    },
+      href: item.href,
+      relatedContent: item.principle ? PRINCIPLE_INFO[item.principle].name : undefined,
+    })),
+    ...records.goals
+      .filter((goal) => goal.status === "active" && !goalIsDone(goal))
+      .map((goal) => ({
+        id: `goal-${goal.id}`,
+        title: goal.title,
+        description: goal.description ?? "An active goal you are working on with your mentor.",
+        type: "goal" as const,
+        completedAt: null,
+        dueDate: goal.dueAt ?? undefined,
+        progress: goal.progress,
+        href: "/learn/goals",
+      })),
   ];
+  const completed: Milestone[] = [
+    ...records.certificates.map((certificate) => ({
+      id: `certificate-${certificate.id}`,
+      title: certificate.title,
+      description: certificate.kind === "level" ? "Level certificate issued." : "Course certificate issued.",
+      type: "certificate" as const,
+      completedAt: certificate.issuedAt,
+    })),
+    ...journey.principles.flatMap((principle) =>
+      principle.assessments.flatMap((instrument) =>
+        instrument.result
+          ? [{
+              id: `assessment-${instrument.slug}`,
+              title: instrument.title,
+              description: `Latest result: ${instrument.result.band} (score ${instrument.result.score}).`,
+              type: "assessment" as const,
+              completedAt: instrument.result.createdAt,
+              relatedContent: principle.name,
+            }]
+          : [],
+      ),
+    ),
+    ...records.goals.filter(goalIsDone).map((goal) => ({
+      id: `goal-${goal.id}`,
+      title: goal.title,
+      description: goal.description ?? "Goal achieved.",
+      type: "goal" as const,
+      completedAt: goal.updatedAt,
+    })),
+  ].sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0));
+  const milestones = [...upcoming, ...completed];
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <p className="text-stone-600">
-          Track your key achievements and upcoming milestones in your journey.
+          Your next steps, and the achievements already behind you.
         </p>
         <span className="text-sm text-stone-500">
-          {milestones.filter(m => m.completedAt).length} of {milestones.length} completed
+          {completed.length} of {milestones.length} completed
         </span>
       </div>
-      <MilestoneList milestones={milestones} />
+      {milestones.length ? (
+        <MilestoneList milestones={milestones} />
+      ) : (
+        <p className="rounded-xl border border-stone-200 bg-white p-6 text-stone-600">
+          No milestones yet. Start your first course or assessment and they will appear here.
+        </p>
+      )}
     </div>
   );
 }
 
-async function ReflectionsView({ userId }: { userId: string }) {
-  // Mock data - replace with actual database queries
-  const reflections = [
-    {
-      id: "1",
-      date: new Date("2026-11-25"),
-      principle: "purpose" as const,
-      title: "Understanding My Why",
-      content: "Today I realized that my purpose is deeply connected to helping others discover their own potential. The assessment helped me see patterns in my life that I hadn't noticed before. I'm excited to explore this further.",
-      mood: "inspired" as const,
-      tags: ["breakthrough", "clarity", "vision"],
-    },
-    {
-      id: "2",
-      date: new Date("2026-11-20"),
-      principle: "identity" as const,
-      title: "Core Values Reflection",
-      content: "Identifying my core values was eye-opening. Integrity, growth, and compassion keep showing up in my decisions. This explains so many of my life choices.",
-      mood: "grateful" as const,
-      tags: ["values", "self-awareness"],
-    },
-    {
-      id: "3",
-      date: new Date("2026-11-15"),
-      principle: "source" as const,
-      title: "Looking Back to Move Forward",
-      content: "Reflecting on my background and experiences has given me perspective on how I've arrived at this point. The challenges I've faced have shaped me in ways I'm only now beginning to understand.",
-      mood: "hopeful" as const,
-      tags: ["growth", "perspective"],
-    },
-  ];
+function ReflectionsView({ records }: { records: LearnerRecords }) {
+  const reflections = records.reflections.map((reflection) => ({
+    id: String(reflection.id),
+    date: reflection.createdAt,
+    principle: reflection.principle ?? undefined,
+    title: reflection.prompt,
+    content: reflection.body,
+  }));
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-stone-600">
           Your personal reflections and insights throughout your journey.
+          {records.reflectionCount > reflections.length ? ` Showing your latest ${reflections.length} of ${records.reflectionCount}.` : ""}
         </p>
+        <Link href="/learn/reflections" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-navy hover:text-gold-dark">
+          <PenLine className="h-4 w-4" aria-hidden /> Write a reflection <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
       </div>
-      <ReflectionTimeline reflections={reflections} />
-    </div>
-  );
-}
-
-function StatsGridSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="rounded-2xl border border-stone-200 bg-white p-6">
-          <Skeleton className="h-12 w-12 rounded-xl" />
-          <Skeleton className="mt-4 h-4 w-24" />
-          <Skeleton className="mt-2 h-8 w-16" />
-          <Skeleton className="mt-1 h-3 w-20" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TimelineSkeleton() {
-  return (
-    <div className="space-y-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-64 rounded-2xl" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MilestonesSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-48 rounded-xl" />
-      ))}
-    </div>
-  );
-}
-
-function ReflectionsSkeleton() {
-  return (
-    <div className="space-y-6">
-      {[1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-40 rounded-xl" />
-      ))}
+      {reflections.length ? (
+        <ReflectionTimeline reflections={reflections} />
+      ) : (
+        <p className="rounded-xl border border-stone-200 bg-white p-6 text-stone-600">
+          You have not written a reflection yet. Your reflections appear here as a timeline.
+        </p>
+      )}
     </div>
   );
 }

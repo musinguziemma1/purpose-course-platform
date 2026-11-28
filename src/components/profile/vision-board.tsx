@@ -12,7 +12,7 @@ interface VisionItem {
   description?: string;
   imageUrl?: string;
   category: "career" | "personal" | "impact" | "lifestyle" | "relationships";
-  priority: "high" | "medium" | "low";
+  priority?: "high" | "medium" | "low";
   targetDate?: Date;
 }
 
@@ -140,6 +140,7 @@ function VisionCard({
       {/* Image or Placeholder */}
       {item.imageUrl ? (
         <div className="relative aspect-video overflow-hidden bg-stone-100">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={item.imageUrl}
             alt={item.title}
@@ -152,19 +153,21 @@ function VisionCard({
         </div>
       )}
 
-      {/* Priority Badge */}
-      <div className="absolute left-3 top-3">
-        <span
-          className={cn(
-            "inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase",
-            item.priority === "high" && "bg-red-500 text-white",
-            item.priority === "medium" && "bg-amber-500 text-white",
-            item.priority === "low" && "bg-green-500 text-white"
-          )}
-        >
-          {item.priority}
-        </span>
-      </div>
+      {/* Priority Badge (only when the item has a priority) */}
+      {item.priority ? (
+        <div className="absolute left-3 top-3">
+          <span
+            className={cn(
+              "inline-block rounded-full px-2.5 py-1 text-xs font-bold uppercase",
+              item.priority === "high" && "bg-red-500 text-white",
+              item.priority === "medium" && "bg-amber-500 text-white",
+              item.priority === "low" && "bg-green-500 text-white"
+            )}
+          >
+            {item.priority}
+          </span>
+        </div>
+      ) : null}
 
       {/* Edit/Delete Actions */}
       {editable && (
@@ -256,25 +259,16 @@ function VisionDialog({
   item: VisionItem | null;
   onSave: (data: Partial<VisionItem>) => Promise<void>;
 }) {
-  const [formData, setFormData] = React.useState<Partial<VisionItem>>({
-    title: "",
-    description: "",
-    category: "personal",
-    priority: "medium",
-  });
+  const emptyForm: Partial<VisionItem> = { title: "", description: "", category: "personal", priority: "medium" };
+  const [formData, setFormData] = React.useState<Partial<VisionItem>>(item ?? emptyForm);
 
-  React.useEffect(() => {
-    if (item) {
-      setFormData(item);
-    } else {
-      setFormData({
-        title: "",
-        description: "",
-        category: "personal",
-        priority: "medium",
-      });
-    }
-  }, [item, open]);
+  // Reload the form whenever the dialog opens or switches item. Adjusting state during
+  // render (not in an effect) avoids a second, cascading render.
+  const [loadedFor, setLoadedFor] = React.useState({ item, open });
+  if (loadedFor.item !== item || loadedFor.open !== open) {
+    setLoadedFor({ item, open });
+    setFormData(item ?? emptyForm);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
