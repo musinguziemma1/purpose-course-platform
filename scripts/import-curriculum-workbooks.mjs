@@ -262,13 +262,13 @@ for (const programme of PROGRAMMES) {
     const where = `${programme.folder} level ${levelNumber}`;
     if (level.overview.length < 200) problems.push(`${where}: level overview not found`);
     if (level.modules.length !== programme.modulesPerLevel[levelNumber - 1]) problems.push(`${where}: ${level.modules.length} modules`);
-    for (const module of level.modules) {
-      const id = `${where} module ${module.number}`;
-      if (!module.levelIntroduction || !module.introduction || !module.nextModule) problems.push(`${id}: missing A, B or G`);
-      if (module.objectives.length !== 5) problems.push(`${id}: ${module.objectives.length} objectives`);
-      if (module.keyAreas.length !== programme.areasPerModule || module.keyAreas.some((area) => !area.description)) problems.push(`${id}: key learning areas malformed`);
-      if (module.reflections.length !== 2) problems.push(`${id}: ${module.reflections.length} reflections`);
-      if (module.assessmentQuestions.length !== 5) problems.push(`${id}: ${module.assessmentQuestions.length} assessment questions`);
+    for (const mod of level.modules) {
+      const id = `${where} module ${mod.number}`;
+      if (!mod.levelIntroduction || !mod.introduction || !mod.nextModule) problems.push(`${id}: missing A, B or G`);
+      if (mod.objectives.length !== 5) problems.push(`${id}: ${mod.objectives.length} objectives`);
+      if (mod.keyAreas.length !== programme.areasPerModule || mod.keyAreas.some((area) => !area.description)) problems.push(`${id}: key learning areas malformed`);
+      if (mod.reflections.length !== 2) problems.push(`${id}: ${mod.reflections.length} reflections`);
+      if (mod.assessmentQuestions.length !== 5) problems.push(`${id}: ${mod.assessmentQuestions.length} assessment questions`);
     }
     output[programme.slug][levelNumber] = { source: name, ...level };
   }
