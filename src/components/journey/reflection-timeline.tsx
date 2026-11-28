@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 
-interface Reflection {
+export interface Reflection {
   id: string;
   date: Date;
-  principle: "identity" | "source" | "purpose" | "potential" | "destiny";
+  /** Absent when a reflection has not been linked to a principle. */
+  principle?: "identity" | "source" | "purpose" | "potential" | "destiny";
   title: string;
   content: string;
   mood?: "inspired" | "grateful" | "challenged" | "hopeful";
@@ -28,6 +29,7 @@ const principleColors = {
   potential: { bg: "bg-purple-500/5", border: "border-purple-500/20", text: "text-purple-700" },
   destiny: { bg: "bg-blue-500/5", border: "border-blue-500/20", text: "text-blue-700" },
 };
+const unassignedColors = { bg: "bg-stone-100", border: "border-stone-200", text: "text-stone-600" };
 
 const moodIcons = {
   inspired: { icon: Sparkles, color: "text-amber-500" },
@@ -74,7 +76,7 @@ export function ReflectionTimeline({ reflections, onReflectionClick }: Reflectio
             <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-gold via-gold/50 to-transparent" />
 
             {monthReflections.map((reflection, index) => {
-              const colors = principleColors[reflection.principle];
+              const colors = reflection.principle ? principleColors[reflection.principle] : unassignedColors;
               const isSelected = selectedId === reflection.id;
 
               return (
@@ -115,15 +117,17 @@ export function ReflectionTimeline({ reflections, onReflectionClick }: Reflectio
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <span
-                            className={cn(
-                              "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
-                              colors.bg,
-                              colors.text
-                            )}
-                          >
-                            {reflection.principle}
-                          </span>
+                          {reflection.principle ? (
+                            <span
+                              className={cn(
+                                "inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+                                colors.bg,
+                                colors.text
+                              )}
+                            >
+                              {reflection.principle}
+                            </span>
+                          ) : null}
                           {reflection.mood && (
                             <div className="flex items-center gap-1">
                               {React.createElement(moodIcons[reflection.mood].icon, {

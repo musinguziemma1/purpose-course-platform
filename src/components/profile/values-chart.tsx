@@ -37,19 +37,19 @@ export function ValuesChart({ values, variant = "pie", className }: ValuesChartP
 function PieChart({ values, total, className }: { values: Value[]; total: number; className?: string }) {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
   
-  let cumulativePercentage = 0;
-  
+  // Each slice starts where the previous ones end; computed up front so render never mutates a variable.
+  const percentages = values.map((value) => (value.score / total) * 100);
+  const offsets = percentages.map((_, index) => percentages.slice(0, index).reduce((sum, part) => sum + part, 0));
+
   return (
     <div className={cn("relative", className)}>
       <div className="mx-auto aspect-square max-w-sm">
         <svg viewBox="0 0 200 200" className="rotate-[-90deg]">
           {values.map((value, index) => {
-            const percentage = (value.score / total) * 100;
-            const startAngle = (cumulativePercentage / 100) * 360;
-            const endAngle = ((cumulativePercentage + percentage) / 100) * 360;
-            
-            cumulativePercentage += percentage;
-            
+            const percentage = percentages[index];
+            const startAngle = (offsets[index] / 100) * 360;
+            const endAngle = ((offsets[index] + percentage) / 100) * 360;
+
             const largeArcFlag = percentage > 50 ? 1 : 0;
             const startX = 100 + 90 * Math.cos((Math.PI * startAngle) / 180);
             const startY = 100 + 90 * Math.sin((Math.PI * startAngle) / 180);

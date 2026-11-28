@@ -159,11 +159,11 @@ export function PurposeStatement({
               className="relative"
             >
               {/* Quote Marks */}
-              <div className="absolute -left-2 -top-2 font-serif text-6xl leading-none text-gold/20">
-                "
+              <div aria-hidden className="absolute -left-2 -top-2 font-serif text-6xl leading-none text-gold/20">
+                &ldquo;
               </div>
-              <div className="absolute -bottom-6 -right-2 font-serif text-6xl leading-none text-gold/20">
-                "
+              <div aria-hidden className="absolute -bottom-6 -right-2 font-serif text-6xl leading-none text-gold/20">
+                &rdquo;
               </div>
               
               {/* Statement */}
@@ -186,7 +186,7 @@ export function PurposeStatement({
         >
           <p className="font-semibold">Tips for writing your purpose statement:</p>
           <ul className="ml-5 list-disc space-y-1 text-blue-800">
-            <li>Start with "I exist to..." or "My purpose is to..."</li>
+            <li>Start with &ldquo;I exist to...&rdquo; or &ldquo;My purpose is to...&rdquo;</li>
             <li>Focus on impact and contribution, not just skills</li>
             <li>Be specific about who you serve and how</li>
             <li>Keep it concise and memorable (2-3 sentences)</li>

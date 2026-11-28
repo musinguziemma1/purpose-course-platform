@@ -68,9 +68,9 @@ interface DropdownTriggerProps {
 export function DropdownTrigger({ children, asChild, className }: DropdownTriggerProps) {
   const { open, setOpen } = useDropdown();
 
-  if (asChild && React.isValidElement(children)) {
+  if (asChild && React.isValidElement<React.HTMLAttributes<HTMLElement>>(children)) {
     return React.cloneElement(children, {
-      onClick: (e: React.MouseEvent) => {
+      onClick: (e: React.MouseEvent<HTMLElement>) => {
         setOpen(!open);
         children.props.onClick?.(e);
       },

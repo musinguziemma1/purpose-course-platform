@@ -1,20 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, CheckCircle2, Clock, Target } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Calendar, CheckCircle2, Clock, Flag, Target, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/utils";
 
-interface Milestone {
+export interface Milestone {
   id: string;
   title: string;
   description: string;
-  type: "assessment" | "course" | "reflection" | "certificate";
+  type: "assessment" | "course" | "reflection" | "certificate" | "goal" | "profile";
   completedAt: Date | null;
   dueDate?: Date;
   progress?: number;
   relatedContent?: string;
+  /** Where to act on an open milestone; shown as a "Start" link until it is completed. */
+  href?: string;
 }
 
 interface MilestoneCardProps {
@@ -51,6 +54,20 @@ const typeConfig = {
     bgColor: "bg-green-50",
     textColor: "text-green-700",
     borderColor: "border-green-200",
+  },
+  goal: {
+    icon: Flag,
+    color: "from-rose-500 to-rose-600",
+    bgColor: "bg-rose-50",
+    textColor: "text-rose-700",
+    borderColor: "border-rose-200",
+  },
+  profile: {
+    icon: UserRound,
+    color: "from-teal-500 to-teal-600",
+    bgColor: "bg-teal-50",
+    textColor: "text-teal-700",
+    borderColor: "border-teal-200",
   },
 };
 
@@ -196,6 +213,14 @@ export function MilestoneCard({ milestone, index, variant = "expanded" }: Milest
         {milestone.relatedContent && (
           <span className="ml-auto text-gold-dark">{milestone.relatedContent}</span>
         )}
+        {!isCompleted && milestone.href ? (
+          <Link
+            href={milestone.href}
+            className={cn("inline-flex min-h-10 items-center gap-1 font-semibold text-navy hover:text-gold-dark", !milestone.relatedContent && "ml-auto")}
+          >
+            Start <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
+        ) : null}
       </div>
     </motion.div>
   );
