@@ -54,7 +54,10 @@ export function LeadStory({ article }: { article: ArticleCard }) {
         <p className="mt-4 border-y border-[rgba(26,29,36,0.25)] py-2 text-[13px] font-semibold uppercase tracking-[0.1em] text-[#3f3a30]">
           By {article.authorName ?? "The Purpose Course team"} · {formatDate(article.publishedAt)}
         </p>
-        {article.excerpt ? <p className="jr-columns jr-dropcap mt-4 text-[15px] leading-[1.7] text-[#2c2a24] sm:columns-2">{article.excerpt}</p> : null}
+        {/* Set in two columns only when there is enough text to fill them evenly. */}
+        {article.excerpt ? (
+          <p className={cn("jr-columns jr-dropcap mt-4 text-[15px] leading-[1.7] text-[#2c2a24]", article.excerpt.length > 280 && "sm:columns-2")}>{article.excerpt}</p>
+        ) : null}
         <Link
           href={`/blog/${article.slug}`}
           className="mt-5 inline-flex min-h-11 items-center gap-2 text-[15px] font-semibold text-[#122a4d] underline decoration-[#a5811a] decoration-2 underline-offset-4"
