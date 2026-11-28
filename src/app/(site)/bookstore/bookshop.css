@@ -183,8 +183,9 @@
   /* A paper price tag hanging from a thread; it sways when the window is hovered. */
   .bs-pricetag {
     position: absolute;
-    right: -0.75rem;
-    top: 18%;
+    /* Hangs off the cover's top-left corner, clear of the title. */
+    left: -1.25rem;
+    top: -0.85rem;
     z-index: 4;
     padding: 0.45rem 0.7rem 0.45rem 1.05rem;
     font-family: var(--font-serif, "Fraunces", Georgia, serif);
@@ -361,7 +362,7 @@
   .bs-book {
     position: relative;
     display: block;
-    width: 9.5rem;
+    width: 11rem;
     transform-origin: 50% 100%;
     transition: transform 320ms var(--bs-ease);
   }

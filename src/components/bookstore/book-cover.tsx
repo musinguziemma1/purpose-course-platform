@@ -11,7 +11,7 @@ const TONE: Record<string, string> = {
 
 export function BookCover({ title, author, tone = "navy", imageUrl, size = "card", className }: { title: string; author: string; tone?: string; imageUrl?: string | null; size?: "card" | "hero" | "mini"; className?: string }) {
   return (
-    <div className={cn("group/cover relative isolate overflow-hidden rounded-r-lg rounded-l-sm bg-gradient-to-br shadow-[10px_14px_30px_-14px_rgba(7,19,36,.62)]", TONE[tone] ?? TONE.navy, size === "hero" ? "aspect-[3/4] w-full max-w-[290px]" : size === "mini" ? "h-24 w-[72px]" : "aspect-[3/4] w-full", className)} aria-label={`${title} book cover`}>
+    <div className={cn("group/cover @container relative isolate overflow-hidden rounded-r-lg rounded-l-sm bg-gradient-to-br shadow-[10px_14px_30px_-14px_rgba(7,19,36,.62)]", TONE[tone] ?? TONE.navy, size === "hero" ? "aspect-[3/4] w-full max-w-[290px]" : size === "mini" ? "h-24 w-[72px]" : "aspect-[3/4] w-full", className)} aria-label={`${title} book cover`}>
       {imageUrl ? <img src={imageUrl} alt={`${title} by ${author}`} className="absolute inset-0 h-full w-full object-cover" /> : null}
       {!imageUrl ? <>
       <span className="absolute inset-y-0 left-0 w-[7%] border-r border-white/20 bg-black/15" aria-hidden />
@@ -20,7 +20,9 @@ export function BookCover({ title, author, tone = "navy", imageUrl, size = "card
       <span className="absolute -right-4 top-10 h-16 w-16 rounded-full border border-white/15" aria-hidden />
       <div className={cn("relative flex h-full flex-col", size === "mini" ? "px-3 py-3 pl-4" : "px-[13%] py-[12%]")}>
         <span className={cn("font-semibold uppercase tracking-[0.18em] opacity-75", size === "mini" ? "text-[5px]" : "text-[8px]")}>Purpose library</span>
-        <span className={cn("mt-auto font-serif font-semibold leading-[1.03] tracking-[-0.025em] text-balance", size === "hero" ? "text-3xl sm:text-4xl" : size === "mini" ? "text-[10px]" : "text-xl sm:text-2xl")}>{title}</span>
+        {/* Title type scales with the cover's own width (cqi), so long words fit narrow covers;
+            hyphenation and wrapping remain as a fallback instead of clipping at the edge. */}
+        <span className={cn("mt-auto font-serif font-semibold leading-[1.03] tracking-[-0.025em] text-balance hyphens-auto break-words", size === "hero" ? "text-[clamp(1.6rem,12cqi,2.4rem)]" : size === "mini" ? "text-[10px]" : "text-[clamp(1rem,10.5cqi,1.6rem)]")}>{title}</span>
         <span className={cn("mt-3 border-t border-current/25 pt-3 font-medium opacity-80", size === "mini" ? "text-[5px]" : "text-[9px] uppercase tracking-[0.12em]")}>{author}</span>
       </div>
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/0 via-white/15 to-white/0 opacity-0 transition-opacity duration-700 group-hover/cover:opacity-100" aria-hidden />

@@ -1,4 +1,5 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, like, notExists, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "./index";
 import {
   assessmentQuestions,
@@ -15,82 +16,37 @@ import {
 } from "./schema";
 import {
   ACADEMIC_PROGRAMMES,
+  RENAMED_SLUGS,
   academicSessionDesign,
   academicModuleKey,
   type AcademicModule,
 } from "../lib/academic-programmes";
+import { capstoneBrief, lessonArea, lessonBody, moduleAssignmentBrief } from "../lib/curriculum/compose";
+import type { AssessmentItem } from "../lib/curriculum/types";
 
 const LEVEL_IMAGES: Record<string, string> = {
   "purpose-program-adults": "/images/level-foundation.jpg",
-  "purpose-program-students": "/images/student-study.jpg",
+  "purpose-program-schools": "/images/student-study.jpg",
   youlead: "/images/hero-workshop.jpg",
   "purpose-to-peace": "/images/community.jpg",
 };
 
-const normalize = (value: string) =>
-  value.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type QuestionValues = Pick<AssessmentItem, "prompt" | "options" | "correctIndex" | "explanation">;
 
-const formativePrompts = (module: AcademicModule) =>
-  module.concepts.map(
-    (concept) =>
-      `Explain this principle in your own words, illustrate it with a realistic example, and identify one responsible application: ${concept}`,
-  );
+const asQuestion = (item: AssessmentItem): QuestionValues => ({
+  prompt: item.prompt,
+  options: [...item.options],
+  correctIndex: item.correctIndex,
+  explanation: item.explanation,
+});
 
-const assignmentBrief = (module: AcademicModule) =>
-  `Prepare an evidence-based application portfolio for ${module.code} – ${module.title}. Address all five taught principles, apply them to a real personal, relational, educational, organisational or community context, and conclude with a specific action plan. Submit 700–1,000 words or an equivalent structured presentation. Your work will be assessed for conceptual accuracy, quality of evidence, ethical reasoning, practical application and clarity.`;
-
-const teachingBody = (module: AcademicModule, concept: string, index: number) => `# ${module.code}: Principle ${index + 1}
-
-## Core explanation
-
-${concept}
-
-This principle should be understood as a claim that guides reflection and action. It is not a slogan or a substitute for evidence. A strong response identifies what the principle means, distinguishes it from a common misconception, and demonstrates how it affects an actual decision.
-
-## Academic application
-
-Analyse a relevant personal, relational, educational, organisational or community situation. Identify the available evidence, the people affected, the values at stake and the likely consequences of each option. Apply the principle without ignoring context, responsibility or the dignity of others.
-
-## Reflective check
-
-1. What evidence supports your interpretation?
-2. Which assumption might distort your judgement?
-3. What responsible action follows from the principle?
-4. How will you evaluate the result and learn from it?
-
-Record your response in your learning journal before continuing.`;
-
-const distractors = [
-  "Public recognition and rapid results are the most reliable measures of purposeful growth.",
-  "Good intentions are sufficient even when evidence, responsibility and consequences are ignored.",
-  "A principle should be adopted without reflection whenever it is popular or culturally familiar.",
-  "Ethical character becomes optional when the desired outcome appears beneficial.",
-  "Purpose is a private idea that should not influence practical choices or contribution.",
-];
-
-function questionFor(module: AcademicModule, concept: string, index: number, exam = false) {
-  const correctIndex = index % 4;
-  const alternatives = [
-    distractors[index % distractors.length],
-    distractors[(index + 2) % distractors.length],
-    distractors[(index + 4) % distractors.length],
-  ];
-  const options = alternatives.toSpliced(correctIndex, 0, concept);
-  return {
-    prompt: exam
-      ? `Within ${module.code}, which statement best represents taught principle ${index + 1}?`
-      : `Which statement best reflects principle ${index + 1} in ${module.code}?`,
-    options,
-    correctIndex,
-    explanation: `${concept} The aligned lesson requires learners to interpret this claim with evidence, ethical responsibility and a concrete application.`,
-  };
-}
-
-async function replaceQuestionSet(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
-  assessmentId: number,
-  questions: ReturnType<typeof questionFor>[],
-) {
+/**
+ * Rewrites an assessment's questions in place, in order. Updating existing
+ * rows (rather than deleting them) keeps every learner's recorded answers and
+ * scores attached; only surplus questions beyond the new set are removed.
+ */
+async function replaceQuestionSet(tx: Transaction, assessmentId: number, questions: QuestionValues[]) {
   const existing = await tx
     .select({ id: assessmentQuestions.id })
     .from(assessmentQuestions)
@@ -100,19 +56,29 @@ async function replaceQuestionSet(
   for (const [index, question] of questions.entries()) {
     const values = { ...question, sortOrder: index + 1 };
     if (existing[index]) {
-      await tx
-        .update(assessmentQuestions)
-        .set(values)
-        .where(eq(assessmentQuestions.id, existing[index].id));
+      await tx.update(assessmentQuestions).set(values).where(eq(assessmentQuestions.id, existing[index].id));
     } else {
       await tx.insert(assessmentQuestions).values({ assessmentId, ...values });
     }
   }
 
   for (const staleQuestion of existing.slice(questions.length)) {
-    await tx
-      .delete(assessmentQuestions)
-      .where(eq(assessmentQuestions.id, staleQuestion.id));
+    await tx.delete(assessmentQuestions).where(eq(assessmentQuestions.id, staleQuestion.id));
+  }
+}
+
+/** Renames slugs in place (same ids) when the target slug is not taken yet. */
+async function applySlugRenames(tx: Transaction) {
+  const tables = { programmes, courseLevels, courses } as const;
+  for (const [name, pairs] of Object.entries(RENAMED_SLUGS) as [keyof typeof tables, readonly (readonly [string, string])[]][]) {
+    const table = tables[name];
+    const taken = alias(table, "taken");
+    for (const [from, to] of pairs) {
+      await tx
+        .update(table)
+        .set({ slug: to })
+        .where(and(eq(table.slug, from), notExists(tx.select({ id: taken.id }).from(taken).where(eq(taken.slug, to)))));
+    }
   }
 }
 
@@ -120,10 +86,13 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
   const includeAssessments = options.includeAssessments ?? true;
 
   return db.transaction(async (tx) => {
+    await applySlugRenames(tx);
+
     let levelCount = 0;
     let moduleCount = 0;
     let lessonCount = 0;
     let assignmentCount = 0;
+    let capstoneCount = 0;
     let sessionCount = 0;
     let assessmentCount = 0;
     let questionCount = 0;
@@ -155,14 +124,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
         .returning({ id: programmes.id });
 
       for (const [levelIndex, levelSeed] of programmeSeed.levels.entries()) {
-        const examConcepts = levelSeed.modules.flatMap((module) =>
-          module.concepts
-            .slice(0, levelSeed.modules.length === 5 ? 4 : 5)
-            .map((concept, conceptIndex) => ({ module, concept, conceptIndex })),
-        );
-        const examPrompts = examConcepts.map(
-          ({ module, concept }) => `Explain and apply the ${module.code} principle: ${concept}`,
-        );
+        const examItems = levelSeed.modules.flatMap((module) => module.content.exam);
         const [programmeLevel] = await tx
           .insert(programmeLevels)
           .values({
@@ -171,7 +133,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
             name: levelSeed.name,
             introduction: levelSeed.introduction,
             outcomes: levelSeed.outcomes,
-            examPrompts,
+            examPrompts: examItems.map((item) => item.prompt),
             sortOrder: levelIndex + 1,
           })
           .onConflictDoUpdate({
@@ -262,8 +224,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
 
         for (const [moduleIndex, moduleSeed] of levelSeed.modules.entries()) {
           const moduleSlug = `module-${moduleIndex + 1}`;
-          const prompts = formativePrompts(moduleSeed);
-          const brief = assignmentBrief(moduleSeed);
+          const brief = moduleAssignmentBrief(moduleSeed);
           const [programmeModule] = await tx
             .insert(programmeModules)
             .values({
@@ -271,9 +232,9 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
               slug: moduleSlug,
               title: `${moduleSeed.code} – ${moduleSeed.title}`,
               code: moduleSeed.code,
-              introduction: moduleSeed.summary,
-              outcomes: moduleSeed.concepts,
-              formativePrompts: prompts,
+              introduction: moduleSeed.introduction,
+              outcomes: moduleSeed.objectives,
+              formativePrompts: moduleSeed.reflections,
               assignmentBrief: brief,
               sortOrder: moduleIndex + 1,
             })
@@ -298,7 +259,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
               courseId: course.id,
               slug: moduleSlug,
               title: `${moduleSeed.code} – ${moduleSeed.title}`,
-              summary: moduleSeed.summary,
+              summary: moduleSeed.focus,
               sessionCode: moduleSeed.code,
               estimatedMinutes: 150,
               isPreview: programmeIndex === 0 && levelIndex === 0 && moduleIndex === 0,
@@ -318,24 +279,37 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
             })
             .returning({ id: courseModules.id });
 
-          const session = academicSessionDesign(moduleSeed, moduleIndex, levelSeed.modules.length);
-          const sessionValues = {
-            levelId: level.id,
-            code: moduleSeed.code,
-            title: moduleSeed.title,
-            summary: session.summary,
-            focusQuestions: session.focusQuestions,
-            format: session.format,
-            durationMinutes: session.durationMinutes,
-            sortOrder: moduleIndex + 1,
-          };
-          const sessionInsert = tx.insert(courseSessions).values(sessionValues);
-          if (programmeSeed.slug === "purpose-program-adults") {
-            await sessionInsert.onConflictDoNothing({
-              target: [courseSessions.levelId, courseSessions.code],
-            });
-          } else {
-            await sessionInsert.onConflictDoUpdate({
+          // A session whose module code changed (STU 101 → PURP 101) keeps its id, so attendance and progress carry over.
+          const sessionAtSlot = alias(courseSessions, "session_at_slot");
+          await tx
+            .update(courseSessions)
+            .set({ code: moduleSeed.code })
+            .where(
+              and(
+                eq(courseSessions.levelId, level.id),
+                eq(courseSessions.sortOrder, moduleIndex + 1),
+                notExists(
+                  tx
+                    .select({ id: sessionAtSlot.id })
+                    .from(sessionAtSlot)
+                    .where(and(eq(sessionAtSlot.levelId, level.id), eq(sessionAtSlot.code, moduleSeed.code))),
+                ),
+              ),
+            );
+          const session = academicSessionDesign(programmeSeed, moduleSeed, moduleIndex, levelSeed.modules.length);
+          await tx
+            .insert(courseSessions)
+            .values({
+              levelId: level.id,
+              code: moduleSeed.code,
+              title: moduleSeed.title,
+              summary: session.summary,
+              focusQuestions: session.focusQuestions,
+              format: session.format,
+              durationMinutes: session.durationMinutes,
+              sortOrder: moduleIndex + 1,
+            })
+            .onConflictDoUpdate({
               target: [courseSessions.levelId, courseSessions.code],
               set: {
                 title: sql`excluded.title`,
@@ -346,25 +320,25 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
                 sortOrder: sql`excluded.sort_order`,
               },
             });
-          }
           sessionCount += 1;
 
-          for (const [conceptIndex, concept] of moduleSeed.concepts.entries()) {
-            const lessonSlug = `academic-principle-${conceptIndex + 1}`;
+          // Lesson slugs are stable (academic-principle-N): rewriting them in place keeps learners' progress.
+          for (const [lessonIndex, lesson] of moduleSeed.content.lessons.entries()) {
+            const area = lessonArea(moduleSeed, lessonIndex);
             await tx
               .insert(lessons)
               .values({
                 moduleId: courseModule.id,
-                slug: lessonSlug,
-                title: `Principle ${conceptIndex + 1}: ${concept.split(/[.;]/)[0]}`,
-                kind: conceptIndex === 4 ? "practice" : "reading",
-                summary: concept,
-                body: teachingBody(moduleSeed, concept, conceptIndex),
-                practicePrompt: prompts[conceptIndex],
-                durationMinutes: 20,
+                slug: `academic-principle-${lessonIndex + 1}`,
+                title: area.title,
+                kind: lessonIndex === moduleSeed.content.lessons.length - 1 ? "practice" : "reading",
+                summary: area.description,
+                body: lessonBody(moduleSeed, lessonIndex),
+                practicePrompt: lesson.practice,
+                durationMinutes: lessonIndex === 0 ? 25 : 20,
                 isPreview: false,
                 status: "published",
-                sortOrder: 20 + conceptIndex,
+                sortOrder: 20 + lessonIndex,
               })
               .onConflictDoUpdate({
                 target: [lessons.moduleId, lessons.slug],
@@ -381,32 +355,61 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
               });
             lessonCount += 1;
           }
+          // Retire generated lessons beyond the module's current set (kept, not deleted, for learner history).
+          const surplus = Array.from({ length: 10 }, (_, index) => `academic-principle-${moduleSeed.content.lessons.length + index + 1}`);
+          await tx
+            .update(lessons)
+            .set({ status: "draft" })
+            .where(and(eq(lessons.moduleId, courseModule.id), inArray(lessons.slug, surplus)));
 
           const key = academicModuleKey(programmeSeed.slug, levelSeed.slug, moduleSeed.code);
-          await tx
-            .insert(assignments)
-            .values({
-              curriculumKey: `assignment:${key}`,
-              levelId: level.id,
-              moduleId: courseModule.id,
-              title: `${moduleSeed.code} – Applied learning assignment`,
-              brief,
-              sortOrder: moduleIndex + 1,
-            })
-            .onConflictDoUpdate({
-              target: assignments.curriculumKey,
-              set: {
-                levelId: level.id,
-                moduleId: courseModule.id,
-                title: sql`excluded.title`,
-                brief: sql`excluded.brief`,
-                sortOrder: sql`excluded.sort_order`,
-              },
-            });
+          const assignmentValues = {
+            curriculumKey: `assignment:${key}`,
+            levelId: level.id,
+            moduleId: courseModule.id,
+            title: `${moduleSeed.code} – ${moduleSeed.output ?? "Module assessment"}`,
+            brief,
+            sortOrder: moduleIndex + 1,
+          };
+          // A key can change with a renamed programme or module code; the module's existing assignment is reused.
+          const [existingAssignment] = await tx
+            .select({ id: assignments.id })
+            .from(assignments)
+            .where(and(eq(assignments.moduleId, courseModule.id), like(assignments.curriculumKey, "assignment:%")))
+            .limit(1);
+          if (existingAssignment) {
+            await tx.update(assignments).set(assignmentValues).where(eq(assignments.id, existingAssignment.id));
+          } else {
+            await tx
+              .insert(assignments)
+              .values(assignmentValues)
+              .onConflictDoUpdate({
+                target: assignments.curriculumKey,
+                set: { levelId: level.id, moduleId: courseModule.id, title: sql`excluded.title`, brief: sql`excluded.brief`, sortOrder: sql`excluded.sort_order` },
+              });
+          }
 
           assignmentCount += 1;
           moduleCount += 1;
           moduleRecords.push({ module: moduleSeed, courseModuleId: courseModule.id, key });
+        }
+
+        if (levelSeed.capstone) {
+          await tx
+            .insert(assignments)
+            .values({
+              curriculumKey: `capstone:${programmeSeed.slug}:${levelSeed.slug}`,
+              levelId: level.id,
+              moduleId: null,
+              title: `Level capstone – ${levelSeed.capstone.title}`,
+              brief: capstoneBrief(levelSeed.capstone),
+              sortOrder: 100,
+            })
+            .onConflictDoUpdate({
+              target: assignments.curriculumKey,
+              set: { levelId: level.id, title: sql`excluded.title`, brief: sql`excluded.brief`, sortOrder: sql`excluded.sort_order` },
+            });
+          capstoneCount += 1;
         }
 
         if (!includeAssessments) continue;
@@ -433,7 +436,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
             courseId: course.id,
             moduleId: record.courseModuleId,
             title: `${record.module.code} – Module Quiz`,
-            description: `Five aligned questions covering the five taught principles in ${record.module.code}.`,
+            description: `${record.module.content.quiz.length} questions on the key learning areas of ${record.module.code} – ${record.module.title}.`,
             passMark: levelSeed.passMark,
             timeLimitMinutes: 15,
             maxAttempts: 3,
@@ -447,9 +450,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
             [assessment] = await tx.insert(assessments).values(values).returning({ id: assessments.id });
           }
 
-          const quizQuestions = record.module.concepts.map((concept, index) =>
-            questionFor(record.module, concept, index),
-          );
+          const quizQuestions = record.module.content.quiz.map(asQuestion);
           await replaceQuestionSet(tx, assessment.id, quizQuestions);
           assessmentCount += 1;
           questionCount += quizQuestions.length;
@@ -476,9 +477,9 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
           courseId: course.id,
           moduleId: null,
           title: `${programmeSeed.name}: ${levelSeed.name} Examination`,
-          description: `${examConcepts.length} aligned questions assessing all modules in this level. Every question includes an academic teaching explanation.`,
+          description: `${examItems.length} questions covering every module in this level. Each answer is explained after you submit.`,
           passMark: levelSeed.passMark,
-          timeLimitMinutes: examConcepts.length <= 15 ? 35 : 45,
+          timeLimitMinutes: examItems.length <= 15 ? 35 : 45,
           maxAttempts: 3,
           isRequired: true,
           status: "published" as const,
@@ -489,9 +490,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
         } else {
           [exam] = await tx.insert(assessments).values(examValues).returning({ id: assessments.id });
         }
-        const levelQuestions = examConcepts.map(({ module, concept, conceptIndex }) =>
-          questionFor(module, concept, conceptIndex, true),
-        );
+        const levelQuestions = examItems.map(asQuestion);
         await replaceQuestionSet(tx, exam.id, levelQuestions);
         assessmentCount += 1;
         questionCount += levelQuestions.length;
@@ -504,6 +503,7 @@ export async function syncAcademicProgrammes(options: { includeAssessments?: boo
       modules: moduleCount,
       lessons: lessonCount,
       assignments: assignmentCount,
+      capstones: capstoneCount,
       sessions: sessionCount,
       assessments: assessmentCount,
       questions: questionCount,
