@@ -20,6 +20,33 @@ export function emailConfigurationError() {
   try { emailConfiguration(); return null; } catch (error) { return error instanceof Error ? error.message : "Email is not configured."; }
 }
 
+/*
+ * Resend test mode. Until a sending domain is verified, the sender is on
+ * Resend's shared resend.dev domain (e.g. onboarding@resend.dev), and Resend
+ * only delivers to the address that owns the Resend account; every other
+ * recipient is refused with HTTP 403. Detection uses the configured sender,
+ * never the provider's response body.
+ */
+const RESEND_TESTING_DOMAIN = "resend.dev";
+
+/** True when `from` (a bare address or `Name <address>`) is on Resend's shared testing domain. */
+export function isResendTestingSender(from: string | null | undefined) {
+  if (!from) return false;
+  const address = (from.match(/<([^<>]+)>\s*$/)?.[1] ?? from).trim().toLowerCase();
+  return address.endsWith(`@${RESEND_TESTING_DOMAIN}`);
+}
+
+/** True when the configured sender means only the Resend account owner can receive email. */
+export function emailTestMode() {
+  return isResendTestingSender(process.env.RESEND_FROM_EMAIL?.trim());
+}
+
+export const EMAIL_TEST_MODE_NOTICE =
+  "Resend test mode: email is sent from resend.dev, so it only reaches the address on your Resend account. Learners and staff at other addresses will not receive it until a sending domain is verified in Resend.";
+
+export const EMAIL_TEST_MODE_REFUSAL =
+  "Not sent: Resend test mode only delivers to the address on your Resend account. Verify a sending domain in Resend to email this recipient.";
+
 // The immutable provider request includes activation tokens. Store only authenticated ciphertext.
 export function encryptEmail(request: EmailRequest) {
   const iv = randomBytes(12), cipher = createCipheriv("aes-256-gcm", emailConfiguration().key, iv);

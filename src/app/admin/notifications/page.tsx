@@ -9,7 +9,7 @@ import { getSessionUser } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { NOTIFICATION_CATEGORIES, TEMPLATES } from "@/lib/notifications";
 import { formatDateTime, relativeTime } from "@/lib/utils";
-import { emailConfigurationError } from "@/lib/email";
+import { EMAIL_TEST_MODE_NOTICE, emailConfigurationError, emailTestMode } from "@/lib/email";
 import { EmailDeliveryForm } from "@/components/admin/email-delivery-form";
 import { Led, type LedTone } from "@/components/admin/console/instruments";
 import { ConsoleHeader, MetricTile, Panel, keyClass, staggerStyle } from "@/components/admin/console/surfaces";
@@ -71,7 +71,7 @@ export default async function AdminNotificationsPage() {
       <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         <Panel title="Outbox queue" icon={Inbox} description="Latest 50 messages. Accepted means Resend received the request; delivered requires a signed provider callback.">
           <div className="border-b border-navy/8 px-5 py-3">
-            <EmailDeliveryForm error={emailConfigurationError()} />
+            <EmailDeliveryForm error={emailConfigurationError()} testModeNotice={emailTestMode() ? EMAIL_TEST_MODE_NOTICE : null} />
           </div>
           <ul className="k-stagger divide-y divide-navy/8">
             {outbox.map(({ outbox: row, recipient }, index) => (

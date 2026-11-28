@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { queueContactReply, updateContactEnquiry } from "@/db/contact-inbox";
 import { getSessionUser } from "@/lib/auth";
 import { can } from "@/lib/rbac";
-import { emailConfigurationError } from "@/lib/email";
+import { emailConfigurationError, emailTestMode } from "@/lib/email";
 
 export type ContactStaffState = { ok?: boolean; error?: string; message?: string };
 function refresh(id: string) {
@@ -30,6 +30,9 @@ export async function replyToContact(_prev: ContactStaffState, form: FormData): 
   try {
     const result = await queueContactReply({ id, replyId: String(form.get("replyId") ?? ""), body: String(form.get("body") ?? ""), recipientEmail: String(form.get("recipientEmail") ?? "") }, actor);
     if (result.ok) refresh(id);
+    if (result.ok && emailTestMode()) {
+      return { ...result, message: `${result.message ?? "Reply queued."} Resend is in test mode, so it reaches the enquirer only if theirs is the address on your Resend account.` };
+    }
     return result;
   } catch { return { error: "The reply could not be queued. Refresh to check the reply history before trying again." }; }
 }
