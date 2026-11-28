@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accountInvitations, emailEvents, notificationOutbox, notificationPreferences, profiles, users } from "@/db/schema";
-import { decryptEmail, emailConfiguration, encryptEmail, type EmailRequest } from "@/lib/email";
+import { EMAIL_TEST_MODE_REFUSAL, decryptEmail, emailConfiguration, encryptEmail, isResendTestingSender, type EmailRequest } from "@/lib/email";
 import { TEMPLATES } from "@/lib/notifications";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -14,6 +14,8 @@ const RETRY_WINDOW = 23 * 60 * 60 * 1000; // Resend retains idempotency keys for
 export async function sendWithResend(request: EmailRequest, key: string): Promise<SendResult> {
   try {
     const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${emailConfiguration().apiKey}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(request), signal: AbortSignal.timeout(12_000), redirect: "error" });
+    // Test mode: the resend.dev sender is refused for anyone but the account owner. Permanent, so never retried.
+    if (response.status === 403 && isResendTestingSender(request.from)) return { error: EMAIL_TEST_MODE_REFUSAL, retryable: false };
     if (!response.ok) return { error: `Resend returned HTTP ${response.status}.`, retryable: response.status === 429 || response.status === 408 || response.status >= 500 };
     const result = await response.json();
     if (typeof result.id !== "string" || result.id.length > 96) return { error: "Resend returned an incomplete response; delivery requires reconciliation.", retryable: true };

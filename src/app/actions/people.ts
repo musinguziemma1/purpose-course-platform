@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { canManagePeople, getSessionUser } from "@/lib/auth";
 import { changeProfileRole } from "@/db/people-roles";
 import { createInvitation, revokeInvitation } from "@/db/invitations";
-import { emailConfigurationError } from "@/lib/email";
+import { emailConfigurationError, emailTestMode } from "@/lib/email";
 
 export type PeopleState = { ok?: boolean; error?: string; message?: string };
 
@@ -33,6 +33,9 @@ export async function inviteAccount(_prev: PeopleState, formData: FormData): Pro
   const result = await createInvitation({ email: String(formData.get("email") ?? ""), fullName: String(formData.get("fullName") ?? ""), roleSlug: String(formData.get("roleSlug") ?? "student") }, user);
   revalidatePath("/admin/people");
   revalidatePath("/admin/notifications");
+  if ("ok" in result && emailTestMode()) {
+    return { ...result, message: `${result.message} Resend is in test mode, so it arrives only if this is the address on your Resend account.` };
+  }
   return result;
 }
 

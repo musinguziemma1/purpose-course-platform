@@ -176,6 +176,25 @@ test("Resend transport supplies authorization and stable idempotency, and never 
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test("Resend test mode: a resend.dev sender is detected and its refusals are explained, permanent and free of provider details", async () => {
+  for (const sender of ["onboarding@resend.dev", "Purpose Course <onboarding@resend.dev>", "Purpose <ONBOARDING@Resend.Dev>"]) assert.equal(mail.isResendTestingSender(sender), true, sender);
+  for (const sender of ["Purpose Course <accounts@example.invalid>", "accounts@resend.dev.example.invalid", "resend.dev <accounts@example.invalid>", "", null, undefined]) assert.equal(mail.isResendTestingSender(sender), false, String(sender));
+  const originalFetch = globalThis.fetch, request = { from: "Purpose Course <onboarding@resend.dev>", to: ["learner@example.invalid"], subject: "Fixture", text: "Fixture" };
+  try {
+    globalThis.fetch = async () => new Response("Provider details must not reach logs", { status: 403 });
+    const refused = await delivery.sendWithResend(request, "fixture-message");
+    assert.deepEqual(refused, { error: mail.EMAIL_TEST_MODE_REFUSAL, retryable: false });
+    // A 403 for a verified-domain sender keeps the generic permanent error.
+    const verified = await delivery.sendWithResend({ ...request, from: "accounts@example.invalid" }, "fixture-message");
+    assert.equal(verified.retryable, false); assert.notEqual(verified.error, mail.EMAIL_TEST_MODE_REFUSAL);
+  } finally { globalThis.fetch = originalFetch; }
+  const previous = process.env.RESEND_FROM_EMAIL;
+  try {
+    process.env.RESEND_FROM_EMAIL = "Purpose Course <onboarding@resend.dev>"; assert.equal(mail.emailTestMode(), true);
+    process.env.RESEND_FROM_EMAIL = "Purpose Course <accounts@example.invalid>"; assert.equal(mail.emailTestMode(), false);
+  } finally { process.env.RESEND_FROM_EMAIL = previous; }
+});
+
 test("stored activation email cannot be decrypted after ciphertext tampering or key replacement", () => {
   const cipher = mail.encryptEmail({ from: "accounts@example.invalid", to: ["recipient@example.invalid"], subject: "Fixture", text: "Private activation token" });
   const parts = cipher.split("."); parts[3] = (parts[3][0] === "A" ? "B" : "A") + parts[3].slice(1);

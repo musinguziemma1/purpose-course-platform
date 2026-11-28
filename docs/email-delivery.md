@@ -31,6 +31,46 @@ can confirm **Accepted** without a webhook.
 See [Resend's testing sender restrictions](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain)
 and [simulated delivery addresses](https://resend.com/changelog/sending-test-emails).
 
+## Run the live site in Resend test mode
+
+Until a sending domain is verified, the deployed site can use the testing
+sender. Email then reaches **only the address on your Resend account**; Resend
+refuses every other recipient.
+
+1. In Resend, create an API key with **Sending access**.
+2. Run `npm run email:prepare` to generate `EMAIL_OUTBOX_ENCRYPTION_KEY` and
+   `CRON_SECRET` in ignored `.env.local`.
+3. In Vercel → Project → Settings → Environment Variables (Production), set:
+
+   | Variable | Value |
+   | --- | --- |
+   | `RESEND_API_KEY` | The Sending access key |
+   | `RESEND_FROM_EMAIL` | `Purpose Course <onboarding@resend.dev>` |
+   | `APP_URL` | `https://purpose-course-platform.vercel.app` |
+   | `EMAIL_OUTBOX_ENCRYPTION_KEY` | The generated key; keep it unchanged |
+   | `CRON_SECRET` | The generated secret; Vercel sends it to the scheduled email job |
+   | `RESEND_WEBHOOK_SECRET` | Optional: signing secret of a webhook at `/api/webhooks/resend` |
+
+4. Redeploy so the new values take effect.
+
+In test mode the application says so instead of failing silently:
+
+- **Admin → Notifications** shows a test-mode notice above **Send due email**.
+- Invitation and contact-reply confirmations note that delivery reaches only
+  the Resend account address.
+- A message Resend refuses is marked **failed** with "Not sent: Resend test
+  mode…". It is not retried and has no sent timestamp.
+
+Applicants still apply from the sign-up page, choosing a password or using
+Google, and sign in with it once an administrator approves them. Neither step
+depends on email, but approved applicants are not emailed, so tell them
+directly. Email invitations need a verified domain.
+
+To leave test mode, verify a domain, create a domain-restricted key, then change
+`RESEND_API_KEY` and `RESEND_FROM_EMAIL` and redeploy. Invitations that
+failed in test mode are not resent automatically: create new ones from
+**Admin → People**.
+
 ## Configure production delivery
 
 1. Verify a domain you control in Resend and complete its DNS records. A Gmail
